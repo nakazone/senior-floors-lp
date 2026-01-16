@@ -1,0 +1,16 @@
+{
+  "name": "senior-floors-landing",
+  "version": "1.0.0",
+  "description": "High-conversion landing page for Senior Floors",
+  "scripts": {
+    "start": "npx http-server -p 8000 -o",
+    "dev": "npx http-server -p 8000 -o -c-1"
+  },
+  "keywords": [
+    "landing-page",
+    "flooring",
+    "conversion"
+  ],
+  "author": "",
+  "license": "ISC"
+}
