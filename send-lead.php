@@ -134,6 +134,40 @@ if (file_exists($db_config_file)) {
     }
 }
 
+// ============================================
+// TELEGRAM NOTIFICATION (FASE 1 - MÓDULO 02)
+// ============================================
+// Enviar notificação via Telegram se o lead foi salvo com sucesso
+$telegram_sent = false;
+if ($db_saved || $csv_saved) {
+    $telegram_lib = dirname(__DIR__) . '/libs/telegram-notifier.php';
+    if (file_exists($telegram_lib)) {
+        require_once $telegram_lib;
+        
+        $lead_data = [
+            'name' => $name,
+            'email' => $email,
+            'phone' => $phone,
+            'zipcode' => $zipcode,
+            'message' => $message,
+            'source' => ($form_name === 'hero-form') ? 'LP-Hero' : 'LP-Contact',
+            'form_type' => $form_name,
+            'ip_address' => isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'Unknown'
+        ];
+        
+        $telegram_result = sendTelegramNotification($lead_data);
+        $telegram_sent = $telegram_result['success'];
+        
+        // Log do resultado
+        if ($telegram_sent) {
+            $log_entry = date('Y-m-d H:i:s') . " | ✅ Telegram notification sent\n";
+        } else {
+            $log_entry = date('Y-m-d H:i:s') . " | ⚠️ Telegram notification failed: " . ($telegram_result['error'] ?? 'Unknown error') . "\n";
+        }
+        @file_put_contents(dirname(__DIR__) . '/telegram-notifications.log', $log_entry, FILE_APPEND | LOCK_EX);
+    }
+}
+
 // Always save to CSV (backup/compatibilidade)
 // Save to public_html/leads.csv (same location CRM reads from)
 // send-lead.php is in public_html/lp, so go up one directory
@@ -283,12 +317,63 @@ if ($phpmailer_available) {
     $mail->send();
     $mail_sent = true;
     
-    // Log success
-    $success_log = date('Y-m-d H:i:s') . " | ✅ Email sent successfully using PHPMailer\n";
+    // Log success (internal email)
+    $success_log = date('Y-m-d H:i:s') . " | ✅ Internal email sent successfully using PHPMailer\n";
     $success_log .= "   To: " . SMTP_TO_EMAIL . "\n";
     $success_log .= "   From: " . SMTP_FROM_EMAIL . "\n";
     $success_log .= "   Subject: $subject\n";
     @file_put_contents($log_dir . '/email-status.log', $success_log, FILE_APPEND | LOCK_EX);
+    
+    // ============================================
+    // EMAIL CONFIRMATION TO CLIENT (FASE 1 - MÓDULO 03)
+    // ============================================
+    // Enviar email de confirmação ao cliente/lead
+    if ($db_saved || $csv_saved) {
+        $confirmation_template = dirname(__DIR__) . '/templates/email-confirmation.php';
+        if (file_exists($confirmation_template)) {
+            require_once $confirmation_template;
+            
+            try {
+                $client_mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+                
+                // SMTP Configuration (same as internal email)
+                $client_mail->isSMTP();
+                $client_mail->Host = 'smtp.gmail.com';
+                $client_mail->SMTPAuth = true;
+                $client_mail->Username = SMTP_USER;
+                $client_mail->Password = SMTP_PASS;
+                $client_mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+                $client_mail->Port = 587;
+                $client_mail->CharSet = 'UTF-8';
+                
+                // Sender and Recipient (CLIENT EMAIL)
+                $client_mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
+                $client_mail->addAddress($email, $name); // Send to the lead
+                $client_mail->addReplyTo(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
+                
+                // Email Content (Confirmation)
+                $client_mail->isHTML(true);
+                $client_mail->Subject = 'Thank You for Contacting Senior Floors';
+                $client_mail->Body = getEmailConfirmationTemplate($name, $email, $phone, $zipcode, $message);
+                $client_mail->AltBody = getEmailConfirmationText($name, $email, $phone, $zipcode, $message);
+                
+                // Send confirmation email to client
+                $client_mail->send();
+                
+                // Log success
+                $confirmation_log = date('Y-m-d H:i:s') . " | ✅ Confirmation email sent to client\n";
+                $confirmation_log .= "   To: $email ($name)\n";
+                @file_put_contents($log_dir . '/email-status.log', $confirmation_log, FILE_APPEND | LOCK_EX);
+                
+            } catch (\PHPMailer\PHPMailer\Exception $e) {
+                // Log error but don't fail the form submission
+                $confirmation_error = date('Y-m-d H:i:s') . " | ⚠️ Failed to send confirmation email to client\n";
+                $confirmation_error .= "   To: $email\n";
+                $confirmation_error .= "   Error: " . $e->getMessage() . "\n";
+                @file_put_contents($log_dir . '/email-status.log', $confirmation_error, FILE_APPEND | LOCK_EX);
+            }
+        }
+    }
     
 } catch (\PHPMailer\PHPMailer\Exception $e) {
     $mail_sent = false;

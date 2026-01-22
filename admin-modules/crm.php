@@ -423,6 +423,7 @@ if (isset($_GET['export'])) {
                     <th>Email</th>
                     <th>Zip Code</th>
                     <th>Message</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -434,7 +435,19 @@ if (isset($_GET['export'])) {
                                 <?php echo htmlspecialchars($lead['Form'] ?? ''); ?>
                             </span>
                         </td>
-                        <td><strong><?php echo htmlspecialchars($lead['Name'] ?? ''); ?></strong></td>
+                        <td>
+                            <?php 
+                            // Se tiver ID (MySQL), criar link para detalhe
+                            $lead_id = $lead['id'] ?? null;
+                            if ($lead_id && $data_source === 'MySQL Database'): 
+                            ?>
+                                <a href="?module=lead-detail&id=<?php echo $lead_id; ?>" class="link" style="font-weight: 600;">
+                                    <?php echo htmlspecialchars($lead['Name'] ?? ''); ?>
+                                </a>
+                            <?php else: ?>
+                                <strong><?php echo htmlspecialchars($lead['Name'] ?? ''); ?></strong>
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <a href="tel:<?php echo htmlspecialchars($lead['Phone'] ?? ''); ?>" class="link">
                                 <?php echo htmlspecialchars($lead['Phone'] ?? ''); ?>
@@ -447,6 +460,13 @@ if (isset($_GET['export'])) {
                         </td>
                         <td><?php echo htmlspecialchars($lead['ZipCode'] ?? ''); ?></td>
                         <td><?php echo htmlspecialchars(substr($lead['Message'] ?? '', 0, 50)); ?><?php echo strlen($lead['Message'] ?? '') > 50 ? '...' : ''; ?></td>
+                        <td>
+                            <?php if ($lead_id && $data_source === 'MySQL Database'): ?>
+                                <a href="?module=lead-detail&id=<?php echo $lead_id; ?>" class="link" style="font-size: 12px;">Ver Detalhes</a>
+                            <?php else: ?>
+                                <span style="color: #999; font-size: 12px;">—</span>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

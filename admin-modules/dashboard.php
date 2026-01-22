@@ -75,6 +75,31 @@ $month_count = count(array_filter($leads, function($l) {
     return $lead_date >= strtotime('-30 days');
 }));
 
+// FASE 3 - MÓDULO 06: Métricas de conversão por status
+$status_counts = [
+    'new' => 0,
+    'contacted' => 0,
+    'qualified' => 0,
+    'proposal' => 0,
+    'closed_won' => 0,
+    'closed_lost' => 0
+];
+
+foreach ($leads as $lead) {
+    $status = $lead['status'] ?? 'new';
+    if (isset($status_counts[$status])) {
+        $status_counts[$status]++;
+    }
+}
+
+// Métricas de origem dos leads
+$source_counts = [];
+foreach ($leads as $lead) {
+    $source = $lead['source'] ?? 'Unknown';
+    $source_counts[$source] = ($source_counts[$source] ?? 0) + 1;
+}
+arsort($source_counts);
+
 // Get recent leads (last 5)
 if ($data_source === 'MySQL Database') {
     $recent_leads = array_slice($leads, 0, 5); // MySQL já vem ordenado DESC
@@ -203,6 +228,56 @@ if ($data_source === 'MySQL Database') {
     </div>
 </div>
 
+<!-- FASE 3 - MÓDULO 06: Métricas de Conversão -->
+<div class="metrics-section">
+    <h2 style="color: #1a2036; margin-bottom: 20px;">Métricas de Conversão</h2>
+    
+    <div class="metrics-grid">
+        <!-- Conversão por Status -->
+        <div class="metric-card">
+            <h3>Leads por Status</h3>
+            <?php 
+            $status_labels = [
+                'new' => 'Novo',
+                'contacted' => 'Contatado',
+                'qualified' => 'Qualificado',
+                'proposal' => 'Proposta',
+                'closed_won' => 'Fechado - Ganho',
+                'closed_lost' => 'Fechado - Perdido'
+            ];
+            foreach ($status_counts as $status => $count): 
+                $percentage = $total_leads > 0 ? round(($count / $total_leads) * 100, 1) : 0;
+            ?>
+                <div class="metric-item">
+                    <span class="metric-label"><?php echo $status_labels[$status] ?? $status; ?></span>
+                    <span class="metric-value">
+                        <?php echo number_format($count); ?>
+                        <span class="metric-percentage">(<?php echo $percentage; ?>%)</span>
+                    </span>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        
+        <!-- Origem dos Leads -->
+        <div class="metric-card">
+            <h3>Origem dos Leads</h3>
+            <?php 
+            $top_sources = array_slice($source_counts, 0, 10, true);
+            foreach ($top_sources as $source => $count): 
+                $percentage = $total_leads > 0 ? round(($count / $total_leads) * 100, 1) : 0;
+            ?>
+                <div class="metric-item">
+                    <span class="metric-label"><?php echo htmlspecialchars($source); ?></span>
+                    <span class="metric-value">
+                        <?php echo number_format($count); ?>
+                        <span class="metric-percentage">(<?php echo $percentage; ?>%)</span>
+                    </span>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+
 <div class="section-title">Recent Leads</div>
 <div class="recent-leads">
     <?php if (empty($recent_leads)): ?>
@@ -228,4 +303,59 @@ if ($data_source === 'MySQL Database') {
             </div>
         <?php endforeach; ?>
     <?php endif; ?>
+</div>
+
+<!-- FASE 3 - MÓDULO 06: Métricas de Conversão -->
+<div class="metrics-section" style="margin-top: 40px;">
+    <h2 style="color: #1a2036; margin-bottom: 20px; font-size: 24px;">Métricas de Conversão</h2>
+    
+    <div class="metrics-grid">
+        <!-- Conversão por Status -->
+        <div class="metric-card">
+            <h3>Leads por Status</h3>
+            <?php 
+            $status_labels = [
+                'new' => 'Novo',
+                'contacted' => 'Contatado',
+                'qualified' => 'Qualificado',
+                'proposal' => 'Proposta',
+                'closed_won' => 'Fechado - Ganho',
+                'closed_lost' => 'Fechado - Perdido'
+            ];
+            foreach ($status_counts as $status => $count): 
+                $percentage = $total_leads > 0 ? round(($count / $total_leads) * 100, 1) : 0;
+            ?>
+                <div class="metric-item">
+                    <span class="metric-label"><?php echo $status_labels[$status] ?? $status; ?></span>
+                    <span class="metric-value">
+                        <?php echo number_format($count); ?>
+                        <span class="metric-percentage">(<?php echo $percentage; ?>%)</span>
+                    </span>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        
+        <!-- Origem dos Leads -->
+        <div class="metric-card">
+            <h3>Origem dos Leads</h3>
+            <?php 
+            $top_sources = array_slice($source_counts, 0, 10, true);
+            if (empty($top_sources)): 
+            ?>
+                <p style="color: #718096; font-style: italic;">Nenhum lead ainda.</p>
+            <?php else: ?>
+                <?php foreach ($top_sources as $source => $count): 
+                    $percentage = $total_leads > 0 ? round(($count / $total_leads) * 100, 1) : 0;
+                ?>
+                    <div class="metric-item">
+                        <span class="metric-label"><?php echo htmlspecialchars($source); ?></span>
+                        <span class="metric-value">
+                            <?php echo number_format($count); ?>
+                            <span class="metric-percentage">(<?php echo $percentage; ?>%)</span>
+                        </span>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+    </div>
 </div>

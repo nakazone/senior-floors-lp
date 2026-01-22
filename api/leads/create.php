@@ -104,6 +104,40 @@ if (isDatabaseConfigured()) {
     }
 }
 
+// ============================================
+// TELEGRAM NOTIFICATION (FASE 1 - MÓDULO 02)
+// ============================================
+// Enviar notificação via Telegram se o lead foi salvo com sucesso
+$telegram_sent = false;
+if ($db_saved) {
+    $telegram_lib = __DIR__ . '/../../libs/telegram-notifier.php';
+    if (file_exists($telegram_lib)) {
+        require_once $telegram_lib;
+        
+        $lead_data = [
+            'name' => $name,
+            'email' => $email,
+            'phone' => $phone,
+            'zipcode' => $zipcode,
+            'message' => $message,
+            'source' => $source,
+            'form_type' => $form_name,
+            'ip_address' => $ip_address
+        ];
+        
+        $telegram_result = sendTelegramNotification($lead_data);
+        $telegram_sent = $telegram_result['success'];
+        
+        // Log do resultado
+        if ($telegram_sent) {
+            $log_entry = date('Y-m-d H:i:s') . " | ✅ Telegram notification sent\n";
+        } else {
+            $log_entry = date('Y-m-d H:i:s') . " | ⚠️ Telegram notification failed: " . ($telegram_result['error'] ?? 'Unknown error') . "\n";
+        }
+        @file_put_contents(__DIR__ . '/../../telegram-notifications.log', $log_entry, FILE_APPEND | LOCK_EX);
+    }
+}
+
 // Salvar também no CSV (backup/compatibilidade)
 $csv_saved = false;
 $log_dir = dirname(__DIR__, 2); // Voltar para public_html
@@ -143,7 +177,8 @@ if ($db_saved || $csv_saved) {
         'data' => [
             'lead_id' => $db_saved ? $lead_id : null,
             'saved_to_db' => $db_saved,
-            'saved_to_csv' => (bool)$csv_saved
+            'saved_to_csv' => (bool)$csv_saved,
+            'telegram_sent' => $telegram_sent
         ],
         'timestamp' => date('Y-m-d H:i:s')
     ]);

@@ -1,0 +1,21 @@
+<?php
+/**
+ * Telegram Bot Configuration - EXAMPLE FILE
+ * Copy this file to telegram.php and configure your bot token and chat ID
+ */
+
+// Token do bot (obtido do @BotFather)
+define('TELEGRAM_BOT_TOKEN', 'YOUR_BOT_TOKEN_HERE');
+
+// ID do chat/grupo onde as mensagens serão enviadas
+define('TELEGRAM_CHAT_ID', 'YOUR_CHAT_ID_HERE');
+
+// URL da API do Telegram
+define('TELEGRAM_API_URL', 'https://api.telegram.org/bot' . TELEGRAM_BOT_TOKEN);
+
+// Habilitar/desabilitar notificações
+define('TELEGRAM_ENABLED', !empty(TELEGRAM_BOT_TOKEN) && !empty(TELEGRAM_CHAT_ID));
+
+function isTelegramConfigured() {
+    return TELEGRAM_ENABLED;
+}

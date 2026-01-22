@@ -209,6 +209,12 @@ $modules = [
         'icon' => '??',
         'file' => 'admin-modules/crm.php'
     ],
+    'lead-detail' => [
+        'name' => 'Lead Detail',
+        'icon' => '??',
+        'file' => 'admin-modules/lead-detail.php',
+        'hidden' => true // Não aparece no menu, só acessível via URL
+    ],
     'settings' => [
         'name' => 'Settings',
         'icon' => '??',
