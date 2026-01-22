@@ -1,12 +1,29 @@
-# Dependencies
-node_modules/
-package-lock.json
-yarn.lock
+# Senior Floors - Git Ignore
 
-# Environment variables
+# Sensitive files
+config/database.php
+admin-config.php
+*.log
+leads.csv
+form-submissions.log
+email-status.log
+system-integration.log
+system-api.log
+api-leads.log
+smtp-debug.log
+
+# Environment files
 .env
 .env.local
 .env.*.local
+
+# Credentials
+*credentials*
+*password*
+*secret*
+
+# PHPMailer (if manually installed)
+PHPMailer/
 
 # OS files
 .DS_Store
@@ -16,30 +33,34 @@ yarn.lock
 .Trashes
 ehthumbs.db
 Thumbs.db
-
-# Editor directories and files
-.vscode/
-.idea/
 *.swp
 *.swo
 *~
-.project
-.classpath
-.settings/
 
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Build outputs
-dist/
-build/
-*.min.js
-*.min.css
+# IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
 
 # Temporary files
 *.tmp
 *.temp
-.cache/
+*.bak
+*.backup
+
+# Test files (optional - remove if you want to track them)
+test-*.html
+test-*.php
+debug-*.html
+
+# Documentation (optional - keep if you want)
+# *.md
+
+# Node modules (if any)
+node_modules/
+package-lock.json
+
+# Build files
+dist/
+build/

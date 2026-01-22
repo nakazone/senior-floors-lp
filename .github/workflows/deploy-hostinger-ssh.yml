@@ -1,0 +1,39 @@
+name: Deploy to Hostinger (SSH)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  deploy:
+    name: Deploy to Hostinger via SSH
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Deploy via SSH
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_SSH_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
+          source: "."
+          target: "/home/${{ secrets.HOSTINGER_SSH_USER }}/domains/${{ secrets.HOSTINGER_DOMAIN }}/public_html"
+          exclude: |
+            .git
+            .github
+            node_modules
+            .DS_Store
+            *.log
+            leads.csv
+            config/database.php
+            admin-config.php
+            PHPMailer
+            test-*.html
+            test-*.php
+            debug-*.html

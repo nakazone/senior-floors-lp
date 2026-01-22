@@ -13,9 +13,17 @@
     const nav = document.getElementById('nav');
     
     if (mobileMenuToggle && nav) {
-        mobileMenuToggle.addEventListener('click', function() {
-            mobileMenuToggle.classList.toggle('active');
-            nav.classList.toggle('active');
+        mobileMenuToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isActive = mobileMenuToggle.classList.toggle('active');
+            nav.classList.toggle('active', isActive);
+            
+            // Prevent body scroll when menu is open
+            if (isActive) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
         });
 
         // Close menu when clicking on a nav link
@@ -24,14 +32,27 @@
             link.addEventListener('click', function() {
                 mobileMenuToggle.classList.remove('active');
                 nav.classList.remove('active');
+                document.body.style.overflow = '';
             });
         });
 
         // Close menu when clicking outside
         document.addEventListener('click', function(e) {
-            if (!nav.contains(e.target) && !mobileMenuToggle.contains(e.target)) {
+            if (nav.classList.contains('active') && 
+                !nav.contains(e.target) && 
+                !mobileMenuToggle.contains(e.target)) {
                 mobileMenuToggle.classList.remove('active');
                 nav.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+        
+        // Close menu on window resize (if resizing to desktop)
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 767) {
+                mobileMenuToggle.classList.remove('active');
+                nav.classList.remove('active');
+                document.body.style.overflow = '';
             }
         });
     }
@@ -130,143 +151,350 @@
     });
 
     // ============================================
-    // Hero Form Handling
+    // Hero Form Handling (Using same code as test-form.html)
     // ============================================
     const heroForm = document.getElementById('heroForm');
+    const heroSuccessMessage = document.getElementById('heroSuccessMessage');
+    const heroErrorMessage = document.getElementById('heroErrorMessage');
     
     if (heroForm) {
-        // Form validation and submission
-        heroForm.addEventListener('submit', function(e) {
+        const submitBtn = heroForm.querySelector('button[type="submit"]');
+        
+        // Hide messages initially
+        if (heroSuccessMessage) heroSuccessMessage.classList.remove('show');
+        if (heroErrorMessage) heroErrorMessage.classList.remove('show');
+        
+        // Hide all error messages on page load
+        const heroErrorMessages = heroForm.querySelectorAll('.error-message');
+        heroErrorMessages.forEach(errorMsg => {
+            errorMsg.classList.remove('show');
+        });
+        
+        // Remove error styling on input
+        const inputs = heroForm.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                input.classList.remove('error');
+                const errorDiv = document.getElementById(input.id + 'Error');
+                if (errorDiv) {
+                    errorDiv.classList.remove('show');
+                }
+            });
+        });
+
+        heroForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            console.log('Hero form submitted');
+
+            // Hide previous messages
+            if (heroSuccessMessage) heroSuccessMessage.classList.remove('show');
+            if (heroErrorMessage) heroErrorMessage.classList.remove('show');
+
+            // Remove all error styling
+            inputs.forEach(input => {
+                input.classList.remove('error');
+                const errorDiv = document.getElementById(input.id + 'Error');
+                if (errorDiv) {
+                    errorDiv.classList.remove('show');
+                }
+            });
 
             // Get form data
             const formData = new FormData(heroForm);
-            const data = {
-                name: formData.get('name'),
-                phone: formData.get('phone'),
-                email: formData.get('email'),
-                zipcode: formData.get('zipcode'),
-                message: formData.get('message') || ''
-            };
+            formData.append('form-name', 'hero-form');
 
-            // Validate required fields
-            if (!validateForm(data)) {
+            // Validate
+            let hasErrors = false;
+
+            // Name validation
+            const name = (formData.get('name') || '').trim();
+            if (!name || name.length < 2) {
+                document.getElementById('hero-name').classList.add('error');
+                document.getElementById('hero-nameError').classList.add('show');
+                hasErrors = true;
+            }
+
+            // Email validation
+            const email = (formData.get('email') || '').trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!email || !emailRegex.test(email)) {
+                document.getElementById('hero-email').classList.add('error');
+                document.getElementById('hero-emailError').classList.add('show');
+                hasErrors = true;
+            }
+
+            // Phone validation
+            const phone = (formData.get('phone') || '').trim();
+            if (!phone) {
+                document.getElementById('hero-phone').classList.add('error');
+                document.getElementById('hero-phoneError').classList.add('show');
+                hasErrors = true;
+            }
+
+            // Zipcode validation
+            const zipcode = (formData.get('zipcode') || '').trim();
+            const zipcodeRegex = /^\d{5}(-\d{4})?$/;
+            if (!zipcode || !zipcodeRegex.test(zipcode)) {
+                document.getElementById('hero-zipcode').classList.add('error');
+                document.getElementById('hero-zipcodeError').classList.add('show');
+                hasErrors = true;
+            }
+
+            if (hasErrors) {
                 return;
             }
 
-            // Show loading state
-            const submitButton = heroForm.querySelector('button[type="submit"]');
-            const originalButtonText = submitButton.textContent;
-            submitButton.disabled = true;
-            submitButton.textContent = 'Sending...';
+            // Disable submit button and show loading
+            submitBtn.disabled = true;
+            const originalButtonText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="loading"></span>Submitting...';
 
-            // Simulate form submission (replace with actual API call)
-            setTimeout(() => {
-                // Success state
-                showFormMessage('success', 'Thank you! We\'ll contact you within 24 hours.', heroForm);
-                heroForm.reset();
-                submitButton.disabled = false;
-                submitButton.textContent = originalButtonText;
+            try {
+                const response = await fetch('send-lead.php', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
 
-                // Track conversion
-                if (typeof gtag !== 'undefined') {
-                    gtag('event', 'form_submission', {
-                        'event_category': 'Contact',
-                        'event_label': 'Hero Form'
-                    });
-                }
-            }, 1000);
-        });
+                const text = await response.text();
+                let data;
 
-        // Real-time validation feedback
-        const requiredFields = heroForm.querySelectorAll('[required]');
-        requiredFields.forEach(field => {
-            field.addEventListener('blur', function() {
-                validateField(this);
-            });
-
-            field.addEventListener('input', function() {
-                if (this.classList.contains('error')) {
-                    this.classList.remove('error');
-                    const errorMsg = this.parentElement.querySelector('.error-message');
-                    if (errorMsg) {
-                        errorMsg.remove();
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    // If response is not JSON, check status
+                    if (response.status === 404) {
+                        throw new Error('Form handler not found (404). Please check if send-lead.php is uploaded correctly.');
+                    } else if (response.status === 500) {
+                        throw new Error('Server error (500). Please check PHP configuration or contact support.');
+                    } else {
+                        throw new Error('Unexpected response from server. Please try again.');
                     }
                 }
-            });
+
+                if (data.success) {
+                    // Success!
+                    if (heroSuccessMessage) heroSuccessMessage.classList.add('show');
+                    heroForm.reset();
+                    
+                    // Scroll to top to show success message
+                    heroForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    // Track conversion
+                    if (typeof gtag !== 'undefined') {
+                        gtag('event', 'form_submission', {
+                            'event_category': 'Contact',
+                            'event_label': 'Hero Form'
+                        });
+                    }
+                } else {
+                    // Show error message
+                    if (heroErrorMessage) {
+                        heroErrorMessage.textContent = data.message || 'There was an error submitting the form. Please try again.';
+                        heroErrorMessage.classList.add('show');
+                    }
+                }
+            } catch (error) {
+                console.error('Form submission error:', error);
+                
+                // Better error messages for common issues
+                let errorMsg = error.message;
+                
+                if (error.message.includes('Failed to fetch') || error.message === 'Failed to fetch') {
+                    errorMsg = 'Failed to connect to server. Please try again or call us at (720) 751-9813.';
+                } else if (error.message.includes('404')) {
+                    errorMsg = 'PHP handler not found. Make sure send-lead.php is in the same directory.';
+                } else if (error.message.includes('500')) {
+                    errorMsg = 'Server error. Check PHP configuration or contact support.';
+                } else if (!errorMsg || errorMsg === 'Failed to fetch') {
+                    errorMsg = 'There was an error submitting the form. Please try again.';
+                }
+                
+                if (heroErrorMessage) {
+                    heroErrorMessage.textContent = errorMsg;
+                    heroErrorMessage.classList.add('show');
+                }
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalButtonText;
+            }
         });
     }
 
     // ============================================
-    // Contact Form Handling
+    // Contact Form Handling (Using same code as test-form.html)
     // ============================================
     const contactForm = document.getElementById('contactForm');
+    const contactSuccessMessage = document.getElementById('contactSuccessMessage');
+    const contactErrorMessage = document.getElementById('contactErrorMessage');
     
     if (contactForm) {
-        // Form validation and submission
-        contactForm.addEventListener('submit', function(e) {
+        const submitBtn = contactForm.querySelector('button[type="submit"]');
+        
+        // Hide messages initially
+        if (contactSuccessMessage) contactSuccessMessage.classList.remove('show');
+        if (contactErrorMessage) contactErrorMessage.classList.remove('show');
+        
+        // Hide all error messages on page load
+        const contactErrorMessages = contactForm.querySelectorAll('.error-message');
+        contactErrorMessages.forEach(errorMsg => {
+            errorMsg.classList.remove('show');
+        });
+        
+        // Remove error styling on input
+        const inputs = contactForm.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                input.classList.remove('error');
+                const errorDiv = document.getElementById(input.id + 'Error');
+                if (errorDiv) {
+                    errorDiv.classList.remove('show');
+                }
+            });
+        });
+
+        contactForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            console.log('Contact form submitted');
+
+            // Hide previous messages
+            if (contactSuccessMessage) contactSuccessMessage.classList.remove('show');
+            if (contactErrorMessage) contactErrorMessage.classList.remove('show');
+
+            // Remove all error styling
+            inputs.forEach(input => {
+                input.classList.remove('error');
+                const errorDiv = document.getElementById(input.id + 'Error');
+                if (errorDiv) {
+                    errorDiv.classList.remove('show');
+                }
+            });
 
             // Get form data
             const formData = new FormData(contactForm);
-            const data = {
-                name: formData.get('name'),
-                phone: formData.get('phone'),
-                email: formData.get('email'),
-                zipcode: formData.get('zipcode'),
-                message: formData.get('message')
-            };
+            formData.append('form-name', 'contact-form');
 
-            // Validate required fields
-            if (!validateForm(data)) {
+            // Validate
+            let hasErrors = false;
+
+            // Name validation
+            const name = (formData.get('name') || '').trim();
+            if (!name || name.length < 2) {
+                document.getElementById('name').classList.add('error');
+                document.getElementById('nameError').classList.add('show');
+                hasErrors = true;
+            }
+
+            // Email validation
+            const email = (formData.get('email') || '').trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!email || !emailRegex.test(email)) {
+                document.getElementById('email').classList.add('error');
+                document.getElementById('emailError').classList.add('show');
+                hasErrors = true;
+            }
+
+            // Phone validation
+            const phone = (formData.get('phone') || '').trim();
+            if (!phone) {
+                document.getElementById('phone').classList.add('error');
+                document.getElementById('phoneError').classList.add('show');
+                hasErrors = true;
+            }
+
+            // Zipcode validation
+            const zipcode = (formData.get('zipcode') || '').trim();
+            const zipcodeRegex = /^\d{5}(-\d{4})?$/;
+            if (!zipcode || !zipcodeRegex.test(zipcode)) {
+                document.getElementById('zipcode').classList.add('error');
+                document.getElementById('zipcodeError').classList.add('show');
+                hasErrors = true;
+            }
+
+            if (hasErrors) {
                 return;
             }
 
-            // Show loading state
-            const submitButton = contactForm.querySelector('button[type="submit"]');
-            const originalButtonText = submitButton.textContent;
-            submitButton.disabled = true;
-            submitButton.textContent = 'Sending...';
+            // Disable submit button and show loading
+            submitBtn.disabled = true;
+            const originalButtonText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="loading"></span>Submitting...';
 
-            // Simulate form submission (replace with actual API call)
-            // In production, this would send data to your backend/email service
-            setTimeout(() => {
-                // Success state
-                showFormMessage('success', 'Thank you! We\'ll contact you within 24 hours.');
-                contactForm.reset();
-                submitButton.disabled = false;
-                submitButton.textContent = originalButtonText;
+            try {
+                const response = await fetch('send-lead.php', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
 
-                // Track conversion (Google Analytics, Facebook Pixel, etc.)
-                if (typeof gtag !== 'undefined') {
-                    gtag('event', 'form_submission', {
-                        'event_category': 'Contact',
-                        'event_label': 'Contact Form'
-                    });
-                }
+                const text = await response.text();
+                let data;
 
-                // Scroll to top of form to show success message
-                contactForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 1000);
-        });
-
-        // Real-time validation feedback
-        const requiredFields = contactForm.querySelectorAll('[required]');
-        requiredFields.forEach(field => {
-            field.addEventListener('blur', function() {
-                validateField(this);
-            });
-
-            field.addEventListener('input', function() {
-                // Clear error state on input
-                if (this.classList.contains('error')) {
-                    this.classList.remove('error');
-                    const errorMsg = this.parentElement.querySelector('.error-message');
-                    if (errorMsg) {
-                        errorMsg.remove();
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    // If response is not JSON, check status
+                    if (response.status === 404) {
+                        throw new Error('Form handler not found (404). Please check if send-lead.php is uploaded correctly.');
+                    } else if (response.status === 500) {
+                        throw new Error('Server error (500). Please check PHP configuration or contact support.');
+                    } else {
+                        throw new Error('Unexpected response from server. Please try again.');
                     }
                 }
-            });
+
+                if (data.success) {
+                    // Success!
+                    if (contactSuccessMessage) contactSuccessMessage.classList.add('show');
+                    contactForm.reset();
+                    
+                    // Scroll to top to show success message
+                    contactForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    // Track conversion
+                    if (typeof gtag !== 'undefined') {
+                        gtag('event', 'form_submission', {
+                            'event_category': 'Contact',
+                            'event_label': 'Contact Form'
+                        });
+                    }
+                } else {
+                    // Show error message
+                    if (contactErrorMessage) {
+                        contactErrorMessage.textContent = data.message || 'There was an error submitting the form. Please try again.';
+                        contactErrorMessage.classList.add('show');
+                    }
+                }
+            } catch (error) {
+                console.error('Form submission error:', error);
+                
+                // Better error messages for common issues
+                let errorMsg = error.message;
+                
+                if (error.message.includes('Failed to fetch') || error.message === 'Failed to fetch') {
+                    errorMsg = 'Failed to connect to server. Please try again or call us at (720) 751-9813.';
+                } else if (error.message.includes('404')) {
+                    errorMsg = 'PHP handler not found. Make sure send-lead.php is in the same directory.';
+                } else if (error.message.includes('500')) {
+                    errorMsg = 'Server error. Check PHP configuration or contact support.';
+                } else if (!errorMsg || errorMsg === 'Failed to fetch') {
+                    errorMsg = 'There was an error submitting the form. Please try again.';
+                }
+                
+                if (contactErrorMessage) {
+                    contactErrorMessage.textContent = errorMsg;
+                    contactErrorMessage.classList.add('show');
+                }
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalButtonText;
+            }
         });
     }
 
@@ -566,4 +794,7 @@
     }
 
     console.log('Senior Floors landing page initialized');
+    console.log('Hero form found:', !!heroForm);
+    console.log('Contact form found:', !!contactForm);
+
 })();

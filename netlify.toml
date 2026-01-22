@@ -10,3 +10,11 @@
 
 [build.environment]
   NODE_VERSION = "18"
+
+# Form Configuration
+# To configure email notifications for forms:
+# 1. Go to Netlify Dashboard > Site Settings > Forms
+# 2. Under "Form notifications", add email notification
+# 3. Set recipient email to: leads@senior-floors.com
+# 4. Both forms (hero-form and contact-form) will send to this address
+

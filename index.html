@@ -5,7 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Denver's #1 Hardwood Flooring Company | Senior Floors | Free In-Home Estimates | Licensed & Insured | 5-Star Rated | Serving Denver, Cherry Creek, Greenwood Village, Lakewood, Morrison | Hardwood Installation, Refinishing, LVP, Laminate | Call (720) 573-0326">
     <meta name="keywords" content="Denver flooring, hardwood flooring Denver, flooring contractor Denver CO, floor installation Denver, hardwood refinishing Denver, luxury vinyl plank Denver, laminate flooring Denver, flooring company Denver metro, Cherry Creek flooring, Greenwood Village flooring, Lakewood flooring, Morrison flooring, Denver flooring contractor, hardwood floors Denver">
-    <title>Denver Hardwood Flooring Experts | Senior Floors | Free Estimate | (720) 573-0326</title>
+    <title>Denver Hardwood Flooring Experts | Senior Floors | Free Estimate | (720) 751-9813</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/logoSeniorFloors.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/logoSeniorFloors.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/logoSeniorFloors.png">
+    <link rel="icon" type="image/png" href="assets/logoSeniorFloors.png">
+    
     <link rel="stylesheet" href="styles.css">
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -35,7 +42,7 @@
                 
                 <div class="header-cta">
                     <a href="#contact" class="btn btn-call">Get Free Estimate</a>
-                    <a href="tel:+17205730326" class="btn btn-call">Call Now</a>
+                    <a href="tel:+17207519813" class="btn btn-call">Call Now</a>
                 </div>
                 
                 <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle mobile menu">
@@ -75,32 +82,41 @@
                     <div class="hero-phone">
                         <div class="hero-ctas">
                             <a href="#contact" class="btn btn-primary">Free In-Home Estimates</a>
-                            <a href="tel:+17205730326" class="btn btn-secondary">Call (720) 573-0326</a>
+                            <a href="tel:+17207519813" class="btn btn-secondary">Call (720) 751-9813</a>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Hero Form -->
                 <div class="hero-form-wrapper">
-                    <form class="hero-form" id="heroForm" novalidate aria-label="Quick estimate form">
+                    <div class="success-message" id="heroSuccessMessage">
+                        ✓ Thank you! We'll contact you within 24 hours.
+                    </div>
+                    <div class="error-message-general" id="heroErrorMessage"></div>
+                    <form class="hero-form" id="heroForm" name="hero-form" method="POST" action="send-lead.php" novalidate aria-label="Quick estimate form">
+                        <input type="hidden" name="form-name" value="hero-form">
                         <h2 class="hero-form-title">Get Your Free In-Home Flooring Estimate</h2>
                         <p class="hero-form-subtitle">Schedule your free consultation today. We'll visit your Denver home within 24 hours to provide a detailed, no-obligation estimate.</p>
                         
                         <div class="form-group">
                             <label for="hero-name">Full Name *</label>
                             <input type="text" id="hero-name" name="name" required aria-required="true" autocomplete="name">
+                            <div class="error-message" id="hero-nameError">Name is required</div>
                         </div>
                         <div class="form-group">
                             <label for="hero-phone">Phone Number *</label>
                             <input type="tel" id="hero-phone" name="phone" required aria-required="true" autocomplete="tel">
+                            <div class="error-message" id="hero-phoneError">Phone number is required</div>
                         </div>
                         <div class="form-group">
                             <label for="hero-email">Email Address *</label>
                             <input type="email" id="hero-email" name="email" required aria-required="true" autocomplete="email">
+                            <div class="error-message" id="hero-emailError">Valid email is required</div>
                         </div>
                         <div class="form-group">
                             <label for="hero-zipcode">Zip Code *</label>
                             <input type="text" id="hero-zipcode" name="zipcode" required aria-required="true" autocomplete="postal-code" pattern="[0-9]{5}(-[0-9]{4})?" placeholder="12345" maxlength="10">
+                            <div class="error-message" id="hero-zipcodeError">Valid zip code is required</div>
                         </div>
                         <button type="submit" class="btn btn-primary btn-block">Get My Free Estimate</button>
                         <p class="form-disclaimer">✓ No obligation · ✓ Free in-home consultation · ✓ Clear pricing, no hidden fees</p>
@@ -278,7 +294,7 @@
                 <h2 class="section-title">Denver's Local Flooring Experts You Can Trust</h2>
                 <p class="local-text">As a locally owned and operated Denver flooring company, we understand the unique needs of Colorado homes. We proudly serve residential homeowners across Denver, Cherry Creek, Greenwood Village, Lakewood, Morrison, and the entire metro area with fast response times, local expertise, and dependable service. When you choose Senior Floors, you're supporting a local business that values your time, your home, and your community.</p>
                 <div class="local-cta">
-                    <a href="tel:+17205730326" class="btn btn-secondary">Call Your Local Experts</a>
+                    <a href="tel:+17207519813" class="btn btn-secondary">Call Your Local Experts</a>
                     <a href="#contact" class="btn btn-primary">Request Free Estimate</a>
                 </div>
             </div>
@@ -324,25 +340,34 @@
                 
                 <!-- Contact Form -->
                 <div class="contact-form-wrapper">
-                    <form class="contact-form" id="contactForm" novalidate aria-label="Contact form">
+                    <div class="success-message" id="contactSuccessMessage">
+                        ✓ Thank you! We'll contact you within 24 hours.
+                    </div>
+                    <div class="error-message-general" id="contactErrorMessage"></div>
+                    <form class="contact-form" id="contactForm" name="contact-form" method="POST" action="send-lead.php" novalidate aria-label="Contact form">
+                        <input type="hidden" name="form-name" value="contact-form">
                         <h3 class="form-title">Get Your Free Flooring Estimate</h3>
                         <p class="form-subtitle">Fill out the form below and we'll contact you within 24 hours</p>
                         
                         <div class="form-group">
                             <label for="name">Full Name *</label>
                             <input type="text" id="name" name="name" required aria-required="true" autocomplete="name">
+                            <div class="error-message" id="nameError">Name is required</div>
                         </div>
                         <div class="form-group">
                             <label for="phone">Phone Number *</label>
                             <input type="tel" id="phone" name="phone" required aria-required="true" autocomplete="tel">
+                            <div class="error-message" id="phoneError">Phone number is required</div>
                         </div>
                         <div class="form-group">
                             <label for="email">Email Address *</label>
                             <input type="email" id="email" name="email" required aria-required="true" autocomplete="email">
+                            <div class="error-message" id="emailError">Valid email is required</div>
                         </div>
                         <div class="form-group">
                             <label for="zipcode">Zip Code *</label>
                             <input type="text" id="zipcode" name="zipcode" required aria-required="true" autocomplete="postal-code" pattern="[0-9]{5}(-[0-9]{4})?" placeholder="12345" maxlength="10">
+                            <div class="error-message" id="zipcodeError">Valid zip code is required</div>
                         </div>
                         <div class="form-group">
                             <label for="message">Message (Optional)</label>
@@ -363,7 +388,7 @@
             <p class="final-cta-text">Join hundreds of satisfied Denver homeowners who chose Senior Floors for their hardwood installation, refinishing, and luxury vinyl plank projects. Get your free in-home estimate today — no obligation, same-day response.</p>
             <div class="final-cta-buttons">
                 <a href="#contact" class="btn btn-primary btn-large">Get a Free Estimate Today</a>
-                <a href="tel:+17205730326" class="btn btn-secondary btn-large">Call (720) 573-0326</a>
+                <a href="tel:+17207519813" class="btn btn-secondary btn-large">Call (720) 751-9813</a>
             </div>
         </div>
     </section>
@@ -408,7 +433,7 @@
                     <div class="footer-contact-info">
                         <p class="footer-contact-item">
                             <strong>Phone:</strong><br>
-                            <a href="tel:+17205730326">(720) 573-0326</a>
+                            <a href="tel:+17207519813">(720) 751-9813</a>
                         </p>
                         <p class="footer-contact-item">
                             <strong>Email:</strong><br>
