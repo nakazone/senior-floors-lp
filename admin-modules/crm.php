@@ -1,28 +1,77 @@
 <?php
 /**
  * CRM Module - Lead Management System
+ * Lê leads do MySQL (prioridade) ou CSV (fallback)
  */
 
-$CSV_FILE = __DIR__ . '/../leads.csv';
+require_once __DIR__ . '/../config/database.php';
+
 $LEADS_PER_PAGE = 25;
 
-// Read leads from CSV
+// Read leads from MySQL (if configured) or CSV (fallback)
 $leads = [];
-if (file_exists($CSV_FILE)) {
-    if (($handle = fopen($CSV_FILE, 'r')) !== FALSE) {
-        $header = fgetcsv($handle);
-        while (($data = fgetcsv($handle)) !== FALSE) {
-            if (count($data) === count($header)) {
-                $lead = array_combine($header, $data);
-                $leads[] = $lead;
+$data_source = '';
+
+// Try MySQL first
+if (isDatabaseConfigured()) {
+    try {
+        $pdo = getDBConnection();
+        
+        if ($pdo) {
+            $stmt = $pdo->query("
+                SELECT 
+                    id,
+                    name as Name,
+                    email as Email,
+                    phone as Phone,
+                    zipcode as ZipCode,
+                    message as Message,
+                    form_type as Form,
+                    source,
+                    status,
+                    priority,
+                    created_at as Date,
+                    ip_address
+                FROM leads 
+                ORDER BY created_at DESC
+            ");
+            
+            $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Format date to match CSV format
+            foreach ($leads as &$lead) {
+                $lead['Date'] = $lead['Date'];
             }
+            
+            $data_source = 'MySQL Database';
         }
-        fclose($handle);
+    } catch (PDOException $e) {
+        error_log("CRM: Database error - " . $e->getMessage());
+        // Fall through to CSV
     }
 }
 
-// Reverse to show newest first
-$leads = array_reverse($leads);
+// Fallback to CSV if MySQL not available or failed
+if (empty($leads)) {
+    $CSV_FILE = __DIR__ . '/../leads.csv';
+    
+    if (file_exists($CSV_FILE)) {
+        if (($handle = fopen($CSV_FILE, 'r')) !== FALSE) {
+            $header = fgetcsv($handle);
+            while (($data = fgetcsv($handle)) !== FALSE) {
+                if (count($data) === count($header)) {
+                    $lead = array_combine($header, $data);
+                    $leads[] = $lead;
+                }
+            }
+            fclose($handle);
+        }
+    }
+    
+    // Reverse to show newest first (CSV)
+    $leads = array_reverse($leads);
+    $data_source = 'CSV File';
+}
 
 // Filtering & Search
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
@@ -279,7 +328,19 @@ if (isset($_GET['export'])) {
 </style>
 
 <div class="crm-header">
-    <h1>CRM - Lead Management</h1>
+    <div>
+        <h1>CRM - Lead Management</h1>
+        <?php if (!empty($data_source)): ?>
+            <p style="margin: 5px 0 0 0; font-size: 12px; color: #718096;">
+                📊 Fonte de dados: <strong><?php echo htmlspecialchars($data_source); ?></strong>
+                <?php if ($data_source === 'MySQL Database'): ?>
+                    <span style="color: #48bb78;">✅ Banco de dados ativo</span>
+                <?php else: ?>
+                    <span style="color: #f59e0b;">⚠️ Usando CSV (banco não configurado)</span>
+                <?php endif; ?>
+            </p>
+        <?php endif; ?>
+    </div>
     <a href="?module=crm&export=1<?php echo $search ? '&search=' . urlencode($search) : ''; ?><?php echo $form_filter ? '&form=' . urlencode($form_filter) : ''; ?>" class="btn btn-primary">?? Export CSV</a>
 </div>
 

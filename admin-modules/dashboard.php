@@ -1,22 +1,62 @@
 <?php
 /**
  * Dashboard Module - Overview statistics
+ * Lê leads do MySQL (prioridade) ou CSV (fallback)
  */
 
-// Read leads for statistics
-$CSV_FILE = __DIR__ . '/../leads.csv';
-$leads = [];
+require_once __DIR__ . '/../config/database.php';
 
-if (file_exists($CSV_FILE)) {
-    if (($handle = fopen($CSV_FILE, 'r')) !== FALSE) {
-        $header = fgetcsv($handle);
-        while (($data = fgetcsv($handle)) !== FALSE) {
-            if (count($data) === count($header)) {
-                $leads[] = array_combine($header, $data);
-            }
+// Read leads from MySQL (if configured) or CSV (fallback)
+$leads = [];
+$data_source = '';
+
+// Try MySQL first
+if (isDatabaseConfigured()) {
+    try {
+        $pdo = getDBConnection();
+        
+        if ($pdo) {
+            $stmt = $pdo->query("
+                SELECT 
+                    name as Name,
+                    email as Email,
+                    phone as Phone,
+                    zipcode as ZipCode,
+                    message as Message,
+                    form_type as Form,
+                    source,
+                    status,
+                    created_at as Date
+                FROM leads 
+                ORDER BY created_at DESC
+            ");
+            
+            $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $data_source = 'MySQL Database';
         }
-        fclose($handle);
+    } catch (PDOException $e) {
+        error_log("Dashboard: Database error - " . $e->getMessage());
+        // Fall through to CSV
     }
+}
+
+// Fallback to CSV if MySQL not available or failed
+if (empty($leads)) {
+    $CSV_FILE = __DIR__ . '/../leads.csv';
+    
+    if (file_exists($CSV_FILE)) {
+        if (($handle = fopen($CSV_FILE, 'r')) !== FALSE) {
+            $header = fgetcsv($handle);
+            while (($data = fgetcsv($handle)) !== FALSE) {
+                if (count($data) === count($header)) {
+                    $leads[] = array_combine($header, $data);
+                }
+            }
+            fclose($handle);
+        }
+    }
+    
+    $data_source = 'CSV File';
 }
 
 // Calculate statistics
@@ -36,7 +76,11 @@ $month_count = count(array_filter($leads, function($l) {
 }));
 
 // Get recent leads (last 5)
-$recent_leads = array_slice(array_reverse($leads), 0, 5);
+if ($data_source === 'MySQL Database') {
+    $recent_leads = array_slice($leads, 0, 5); // MySQL já vem ordenado DESC
+} else {
+    $recent_leads = array_slice(array_reverse($leads), 0, 5); // CSV precisa reverter
+}
 ?>
 <style>
     .dashboard-grid {
@@ -118,7 +162,19 @@ $recent_leads = array_slice(array_reverse($leads), 0, 5);
     }
 </style>
 
-<h1 style="margin-bottom: 30px;">Dashboard Overview</h1>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+    <h1 style="margin: 0;">Dashboard Overview</h1>
+    <?php if (!empty($data_source)): ?>
+        <p style="margin: 0; font-size: 12px; color: #718096;">
+            📊 Fonte: <strong><?php echo htmlspecialchars($data_source); ?></strong>
+            <?php if ($data_source === 'MySQL Database'): ?>
+                <span style="color: #48bb78;">✅</span>
+            <?php else: ?>
+                <span style="color: #f59e0b;">⚠️</span>
+            <?php endif; ?>
+        </p>
+    <?php endif; ?>
+</div>
 
 <div class="dashboard-grid">
     <div class="stat-card">
