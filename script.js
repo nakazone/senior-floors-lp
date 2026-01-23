@@ -349,12 +349,15 @@
                     }
                 }
             } catch (error) {
+                // Clear timeout on error
+                if (typeof timeoutId !== 'undefined' && timeoutId) clearTimeout(timeoutId);
+                
                 console.error('Form submission error:', error);
                 
                 // Better error messages for common issues
                 let errorMsg = error.message;
                 
-                if (error.name === 'AbortError' || error.message.includes('timeout')) {
+                if (error.name === 'AbortError' || error.message.includes('timeout') || error.message.includes('aborted')) {
                     errorMsg = 'Request timed out. Please check your connection and try again.';
                 } else if (error.message.includes('Failed to fetch') || error.message === 'Failed to fetch') {
                     errorMsg = 'Failed to connect to server. Please check your internet connection or call us at (720) 751-9813.';
@@ -599,12 +602,15 @@
                     }
                 }
             } catch (error) {
+                // Clear timeout on error
+                if (typeof timeoutId !== 'undefined' && timeoutId) clearTimeout(timeoutId);
+                
                 console.error('Form submission error:', error);
                 
                 // Better error messages for common issues
                 let errorMsg = error.message;
                 
-                if (error.name === 'AbortError' || error.message.includes('timeout')) {
+                if (error.name === 'AbortError' || error.message.includes('timeout') || error.message.includes('aborted')) {
                     errorMsg = 'Request timed out. Please check your connection and try again.';
                 } else if (error.message.includes('Failed to fetch') || error.message === 'Failed to fetch') {
                     errorMsg = 'Failed to connect to server. Please check your internet connection or call us at (720) 751-9813.';
