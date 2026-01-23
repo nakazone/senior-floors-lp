@@ -23,14 +23,21 @@ jobs:
           # Keep config/database.php and admin-config.php (they may be needed)
           # Keep PHPMailer if it exists
       
-      - name: Deploy via SSH
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.HOSTINGER_SSH_HOST }}
-          username: ${{ secrets.HOSTINGER_SSH_USER }}
-          key: ${{ secrets.HOSTINGER_SSH_KEY }}
-          port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
-          source: "."
-          target: "/home/${{ secrets.HOSTINGER_SSH_USER }}/domains/${{ secrets.HOSTINGER_DOMAIN }}/public_html"
-          overwrite: true
-          strip_components: 0
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.HOSTINGER_SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+      
+      - name: Deploy via SCP
+        run: |
+          scp -r -P ${{ secrets.HOSTINGER_SSH_PORT || 22 }} \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            ./* ${{ secrets.HOSTINGER_SSH_USER }}@${{ secrets.HOSTINGER_SSH_HOST }}:/home/${{ secrets.HOSTINGER_SSH_USER }}/domains/${{ secrets.HOSTINGER_DOMAIN }}/public_html/
+      
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/id_rsa
