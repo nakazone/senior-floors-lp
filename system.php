@@ -335,9 +335,18 @@ if (!file_exists($module_file)) {
         .sidebar-nav a.active {
             background: linear-gradient(135deg, #1a2036 0%, #252b47 100%);
             color: white;
+            font-weight: 600;
         }
         .sidebar-nav a.active:hover {
-            opacity: 0.9;
+            background: linear-gradient(135deg, #252b47 0%, #2a3150 100%);
+        }
+        /* Gold accent for highlights (matching LP) */
+        .accent-gold {
+            color: #d6b598;
+        }
+        .accent-gold-bg {
+            background-color: #d6b598;
+            color: white;
         }
         .main-content {
             flex: 1;
