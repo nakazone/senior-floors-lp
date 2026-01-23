@@ -651,24 +651,34 @@
         };
 
         // Add multiple event listeners for better mobile support
-        contactForm.addEventListener('submit', handleContactFormSubmit);
+        contactForm.addEventListener('submit', handleContactFormSubmit, { passive: false });
         
-        // Also handle button click directly (for mobile compatibility)
+        // Also handle button events directly (for mobile compatibility)
         if (submitBtn) {
+            // Prevent default form submission on button click
             submitBtn.addEventListener('click', function(e) {
-                // Only trigger if form hasn't been submitted yet
-                if (!contactForm.checkValidity()) {
-                    contactForm.reportValidity();
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Contact form button clicked');
+                if (!submitBtn.disabled) {
+                    handleContactFormSubmit(e);
                 }
-            });
+            }, { passive: false });
             
-            // Touch event for better mobile support
+            // Touch events for better mobile support
+            submitBtn.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                console.log('Contact form button touchstart');
+            }, { passive: false });
+            
             submitBtn.addEventListener('touchend', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
+                console.log('Contact form button touchend');
                 if (!submitBtn.disabled) {
-                    contactForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                    handleContactFormSubmit(e);
                 }
-            });
+            }, { passive: false });
         }
     }
 
