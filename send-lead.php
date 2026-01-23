@@ -595,6 +595,8 @@ echo json_encode([
     'email_sent' => $mail_sent,
     'system_sent' => $system_sent,
     'database_saved' => $db_saved,
+    'csv_saved' => $csv_saved,
+    'telegram_sent' => $telegram_sent,
     'lead_id' => $lead_id,
     'timestamp' => date('Y-m-d H:i:s')
 ]);
