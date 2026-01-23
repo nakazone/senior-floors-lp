@@ -1,0 +1,43 @@
+name: Deploy to Hostinger (SSH) - Fixed
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  deploy:
+    name: Deploy to Hostinger via SSH
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.HOSTINGER_SSH_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Remove files that shouldn't be deployed
+        run: |
+          rm -rf .git .github node_modules
+          rm -f .DS_Store *.log leads.csv
+          rm -f test-*.html test-*.php debug-*.html
+          # Keep config/database.php and admin-config.php (they may be needed)
+          # Keep PHPMailer if it exists
+      
+      - name: Deploy via SCP
+        run: |
+          scp -r -P ${{ secrets.HOSTINGER_SSH_PORT || 22 }} \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            ./* ${{ secrets.HOSTINGER_SSH_USER }}@${{ secrets.HOSTINGER_SSH_HOST }}:/home/${{ secrets.HOSTINGER_SSH_USER }}/domains/${{ secrets.HOSTINGER_DOMAIN }}/public_html/
+      
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/id_rsa
