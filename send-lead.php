@@ -135,6 +135,49 @@ if (file_exists($db_config_file)) {
 }
 
 // ============================================
+// SAVE TO CSV (backup/compatibilidade)
+// ============================================
+// Always save to CSV (backup/compatibilidade)
+// Save to public_html/leads.csv (same location CRM reads from)
+// send-lead.php is in public_html/lp, so go up one directory
+$log_dir = dirname(__DIR__); // Go up from lp/ to public_html/
+$log_file = $log_dir . '/leads.csv';
+$csv_saved = false;
+
+$csv_line = [
+    date('Y-m-d H:i:s'),
+    $form_name,
+    $name,
+    $phone,
+    $email,
+    $zipcode,
+    str_replace(["\r\n", "\n", "\r"], ' ', $message)
+];
+
+if (!file_exists($log_file)) {
+    $header = "Date,Form,Name,Phone,Email,ZipCode,Message\n";
+    $header_written = @file_put_contents($log_file, $header, LOCK_EX);
+    if ($header_written === false) {
+        error_log("Failed to create CSV file: $log_file");
+    }
+}
+
+$csv_data = '"' . implode('","', array_map(function($field) {
+    return str_replace('"', '""', $field);
+}, $csv_line)) . "\"\n";
+
+$csv_written = @file_put_contents($log_file, $csv_data, FILE_APPEND | LOCK_EX);
+if ($csv_written !== false) {
+    $csv_saved = true;
+} else {
+    error_log("Failed to write to CSV file: $log_file");
+}
+
+// Also save to text log
+$text_log = date('Y-m-d H:i:s') . " | Form: $form_name | Name: $name | Phone: $phone | Email: $email | Zip: $zipcode\n";
+@file_put_contents($log_dir . '/form-submissions.log', $text_log, FILE_APPEND | LOCK_EX);
+
+// ============================================
 // TELEGRAM NOTIFICATION (FASE 1 - MÓDULO 02)
 // ============================================
 // Enviar notificação via Telegram se o lead foi salvo com sucesso
@@ -167,35 +210,6 @@ if ($db_saved || $csv_saved) {
         @file_put_contents(dirname(__DIR__) . '/telegram-notifications.log', $log_entry, FILE_APPEND | LOCK_EX);
     }
 }
-
-// Always save to CSV (backup/compatibilidade)
-// Save to public_html/leads.csv (same location CRM reads from)
-// send-lead.php is in public_html/lp, so go up one directory
-$log_dir = dirname(__DIR__); // Go up from lp/ to public_html/
-$log_file = $log_dir . '/leads.csv';
-$csv_line = [
-    date('Y-m-d H:i:s'),
-    $form_name,
-    $name,
-    $phone,
-    $email,
-    $zipcode,
-    str_replace(["\r\n", "\n", "\r"], ' ', $message)
-];
-
-if (!file_exists($log_file)) {
-    $header = "Date,Form,Name,Phone,Email,ZipCode,Message\n";
-    @file_put_contents($log_file, $header, LOCK_EX);
-}
-
-$csv_data = '"' . implode('","', array_map(function($field) {
-    return str_replace('"', '""', $field);
-}, $csv_line)) . "\"\n";
-@file_put_contents($log_file, $csv_data, FILE_APPEND | LOCK_EX);
-
-// Also save to text log
-$text_log = date('Y-m-d H:i:s') . " | Form: $form_name | Name: $name | Phone: $phone | Email: $email | Zip: $zipcode\n";
-@file_put_contents($log_dir . '/form-submissions.log', $text_log, FILE_APPEND | LOCK_EX);
 
 // Prepare email content
 $subject = 'New Lead from Senior Floors Website - ' . ($form_name === 'hero-form' ? 'Hero Form' : 'Contact Form');
