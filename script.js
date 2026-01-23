@@ -184,9 +184,12 @@
 
         // Handle form submission - support both click and touch events
         const handleFormSubmit = async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             console.log('Hero form submitted - Device:', /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? 'Mobile' : 'Desktop');
+            console.log('Hero form submit event:', e ? e.type : 'manual');
 
             // Hide previous messages
             if (heroSuccessMessage) heroSuccessMessage.classList.remove('show');
@@ -382,24 +385,34 @@
         };
 
         // Add multiple event listeners for better mobile support
-        heroForm.addEventListener('submit', handleFormSubmit);
+        heroForm.addEventListener('submit', handleFormSubmit, { passive: false });
         
-        // Also handle button click directly (for mobile compatibility)
+        // Also handle button events directly (for mobile compatibility)
         if (submitBtn) {
+            // Prevent default form submission on button click
             submitBtn.addEventListener('click', function(e) {
-                // Only trigger if form hasn't been submitted yet
-                if (!heroForm.checkValidity()) {
-                    heroForm.reportValidity();
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Hero form button clicked');
+                if (!submitBtn.disabled) {
+                    handleFormSubmit(e);
                 }
-            });
+            }, { passive: false });
             
-            // Touch event for better mobile support
+            // Touch events for better mobile support
+            submitBtn.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                console.log('Hero form button touchstart');
+            }, { passive: false });
+            
             submitBtn.addEventListener('touchend', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
+                console.log('Hero form button touchend');
                 if (!submitBtn.disabled) {
-                    heroForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                    handleFormSubmit(e);
                 }
-            });
+            }, { passive: false });
         }
     }
 
@@ -437,9 +450,12 @@
 
         // Handle contact form submission - support both click and touch events
         const handleContactFormSubmit = async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             console.log('Contact form submitted - Device:', /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? 'Mobile' : 'Desktop');
+            console.log('Contact form submit event:', e ? e.type : 'manual');
 
             // Hide previous messages
             if (contactSuccessMessage) contactSuccessMessage.classList.remove('show');
