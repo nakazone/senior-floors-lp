@@ -182,9 +182,11 @@
             });
         });
 
-        heroForm.addEventListener('submit', async (e) => {
+        // Handle form submission - support both click and touch events
+        const handleFormSubmit = async (e) => {
             e.preventDefault();
-            console.log('Hero form submitted');
+            e.stopPropagation();
+            console.log('Hero form submitted - Device:', /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? 'Mobile' : 'Desktop');
 
             // Hide previous messages
             if (heroSuccessMessage) heroSuccessMessage.classList.remove('show');
@@ -199,7 +201,18 @@
                 }
             });
 
-            // Get form data
+            // Get form data - read directly from inputs for better mobile compatibility
+            const nameInput = document.getElementById('hero-name');
+            const emailInput = document.getElementById('hero-email');
+            const phoneInput = document.getElementById('hero-phone');
+            const zipcodeInput = document.getElementById('hero-zipcode');
+
+            const name = (nameInput ? nameInput.value : '').trim();
+            const email = (emailInput ? emailInput.value : '').trim();
+            const phone = (phoneInput ? phoneInput.value : '').trim();
+            const zipcode = (zipcodeInput ? zipcodeInput.value : '').trim();
+
+            // Create FormData
             const formData = new FormData(heroForm);
             formData.append('form-name', 'hero-form');
 
@@ -207,56 +220,85 @@
             let hasErrors = false;
 
             // Name validation
-            const name = (formData.get('name') || '').trim();
             if (!name || name.length < 2) {
-                document.getElementById('hero-name').classList.add('error');
-                document.getElementById('hero-nameError').classList.add('show');
+                if (nameInput) nameInput.classList.add('error');
+                const errorDiv = document.getElementById('hero-nameError');
+                if (errorDiv) errorDiv.classList.add('show');
                 hasErrors = true;
             }
 
             // Email validation
-            const email = (formData.get('email') || '').trim();
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!email || !emailRegex.test(email)) {
-                document.getElementById('hero-email').classList.add('error');
-                document.getElementById('hero-emailError').classList.add('show');
+                if (emailInput) emailInput.classList.add('error');
+                const errorDiv = document.getElementById('hero-emailError');
+                if (errorDiv) errorDiv.classList.add('show');
                 hasErrors = true;
             }
 
             // Phone validation
-            const phone = (formData.get('phone') || '').trim();
-            if (!phone) {
-                document.getElementById('hero-phone').classList.add('error');
-                document.getElementById('hero-phoneError').classList.add('show');
+            if (!phone || phone.replace(/\D/g, '').length < 10) {
+                if (phoneInput) phoneInput.classList.add('error');
+                const errorDiv = document.getElementById('hero-phoneError');
+                if (errorDiv) errorDiv.classList.add('show');
                 hasErrors = true;
             }
 
-            // Zipcode validation
-            const zipcode = (formData.get('zipcode') || '').trim();
-            const zipcodeRegex = /^\d{5}(-\d{4})?$/;
-            if (!zipcode || !zipcodeRegex.test(zipcode)) {
-                document.getElementById('hero-zipcode').classList.add('error');
-                document.getElementById('hero-zipcodeError').classList.add('show');
+            // Zipcode validation - more flexible for mobile
+            const zipcodeClean = zipcode.replace(/\D/g, ''); // Remove all non-digits
+            if (!zipcodeClean || zipcodeClean.length < 5 || zipcodeClean.length > 9) {
+                if (zipcodeInput) zipcodeInput.classList.add('error');
+                const errorDiv = document.getElementById('hero-zipcodeError');
+                if (errorDiv) errorDiv.classList.add('show');
                 hasErrors = true;
             }
 
             if (hasErrors) {
+                // Scroll to first error on mobile
+                if (/Mobile|Android|iPhone|iPad/.test(navigator.userAgent)) {
+                    const firstError = heroForm.querySelector('.error');
+                    if (firstError) {
+                        setTimeout(() => {
+                            firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            firstError.focus();
+                        }, 100);
+                    }
+                }
                 return;
             }
 
             // Disable submit button and show loading
             submitBtn.disabled = true;
+            submitBtn.style.pointerEvents = 'none';
             const originalButtonText = submitBtn.innerHTML;
             submitBtn.innerHTML = '<span class="loading"></span>Submitting...';
 
             try {
-                const response = await fetch('send-lead.php', {
+                // Use fetch with better mobile support
+                const fetchOptions = {
                     method: 'POST',
                     body: formData,
                     headers: {
                         'Accept': 'application/json'
                     }
-                });
+                };
+
+                // Add timeout for mobile networks (if supported)
+                let timeoutId;
+                if (typeof AbortController !== 'undefined') {
+                    const controller = new AbortController();
+                    timeoutId = setTimeout(() => controller.abort(), 30000);
+                    fetchOptions.signal = controller.signal;
+                }
+
+                const response = await fetch('send-lead.php', fetchOptions);
+                
+                // Clear timeout if request succeeded
+                if (timeoutId) clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
 
                 const text = await response.text();
                 let data;
@@ -264,6 +306,7 @@
                 try {
                     data = JSON.parse(text);
                 } catch (e) {
+                    console.error('JSON parse error:', e, 'Response:', text);
                     // If response is not JSON, check status
                     if (response.status === 404) {
                         throw new Error('Form handler not found (404). Please check if send-lead.php is uploaded correctly.');
@@ -279,8 +322,17 @@
                     if (heroSuccessMessage) heroSuccessMessage.classList.add('show');
                     heroForm.reset();
                     
-                    // Scroll to top to show success message
-                    heroForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // Scroll to show success message - better mobile handling
+                    if (/Mobile|Android|iPhone|iPad/.test(navigator.userAgent)) {
+                        // On mobile, scroll to success message after a delay to let keyboard close
+                        setTimeout(() => {
+                            if (heroSuccessMessage) {
+                                heroSuccessMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }, 300);
+                    } else {
+                        heroForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
                     
                     // Track conversion
                     if (typeof gtag !== 'undefined') {
@@ -302,8 +354,10 @@
                 // Better error messages for common issues
                 let errorMsg = error.message;
                 
-                if (error.message.includes('Failed to fetch') || error.message === 'Failed to fetch') {
-                    errorMsg = 'Failed to connect to server. Please try again or call us at (720) 751-9813.';
+                if (error.name === 'AbortError' || error.message.includes('timeout')) {
+                    errorMsg = 'Request timed out. Please check your connection and try again.';
+                } else if (error.message.includes('Failed to fetch') || error.message === 'Failed to fetch') {
+                    errorMsg = 'Failed to connect to server. Please check your internet connection or call us at (720) 751-9813.';
                 } else if (error.message.includes('404')) {
                     errorMsg = 'PHP handler not found. Make sure send-lead.php is in the same directory.';
                 } else if (error.message.includes('500')) {
@@ -319,9 +373,31 @@
             } finally {
                 // Re-enable submit button
                 submitBtn.disabled = false;
+                submitBtn.style.pointerEvents = 'auto';
                 submitBtn.innerHTML = originalButtonText;
             }
-        });
+        };
+
+        // Add multiple event listeners for better mobile support
+        heroForm.addEventListener('submit', handleFormSubmit);
+        
+        // Also handle button click directly (for mobile compatibility)
+        if (submitBtn) {
+            submitBtn.addEventListener('click', function(e) {
+                // Only trigger if form hasn't been submitted yet
+                if (!heroForm.checkValidity()) {
+                    heroForm.reportValidity();
+                }
+            });
+            
+            // Touch event for better mobile support
+            submitBtn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                if (!submitBtn.disabled) {
+                    heroForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                }
+            });
+        }
     }
 
     // ============================================
@@ -356,9 +432,11 @@
             });
         });
 
-        contactForm.addEventListener('submit', async (e) => {
+        // Handle contact form submission - support both click and touch events
+        const handleContactFormSubmit = async (e) => {
             e.preventDefault();
-            console.log('Contact form submitted');
+            e.stopPropagation();
+            console.log('Contact form submitted - Device:', /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? 'Mobile' : 'Desktop');
 
             // Hide previous messages
             if (contactSuccessMessage) contactSuccessMessage.classList.remove('show');
@@ -373,7 +451,18 @@
                 }
             });
 
-            // Get form data
+            // Get form data - read directly from inputs for better mobile compatibility
+            const nameInput = document.getElementById('name');
+            const emailInput = document.getElementById('email');
+            const phoneInput = document.getElementById('phone');
+            const zipcodeInput = document.getElementById('zipcode');
+
+            const name = (nameInput ? nameInput.value : '').trim();
+            const email = (emailInput ? emailInput.value : '').trim();
+            const phone = (phoneInput ? phoneInput.value : '').trim();
+            const zipcode = (zipcodeInput ? zipcodeInput.value : '').trim();
+
+            // Create FormData
             const formData = new FormData(contactForm);
             formData.append('form-name', 'contact-form');
 
@@ -381,56 +470,85 @@
             let hasErrors = false;
 
             // Name validation
-            const name = (formData.get('name') || '').trim();
             if (!name || name.length < 2) {
-                document.getElementById('name').classList.add('error');
-                document.getElementById('nameError').classList.add('show');
+                if (nameInput) nameInput.classList.add('error');
+                const errorDiv = document.getElementById('nameError');
+                if (errorDiv) errorDiv.classList.add('show');
                 hasErrors = true;
             }
 
             // Email validation
-            const email = (formData.get('email') || '').trim();
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!email || !emailRegex.test(email)) {
-                document.getElementById('email').classList.add('error');
-                document.getElementById('emailError').classList.add('show');
+                if (emailInput) emailInput.classList.add('error');
+                const errorDiv = document.getElementById('emailError');
+                if (errorDiv) errorDiv.classList.add('show');
                 hasErrors = true;
             }
 
             // Phone validation
-            const phone = (formData.get('phone') || '').trim();
-            if (!phone) {
-                document.getElementById('phone').classList.add('error');
-                document.getElementById('phoneError').classList.add('show');
+            if (!phone || phone.replace(/\D/g, '').length < 10) {
+                if (phoneInput) phoneInput.classList.add('error');
+                const errorDiv = document.getElementById('phoneError');
+                if (errorDiv) errorDiv.classList.add('show');
                 hasErrors = true;
             }
 
-            // Zipcode validation
-            const zipcode = (formData.get('zipcode') || '').trim();
-            const zipcodeRegex = /^\d{5}(-\d{4})?$/;
-            if (!zipcode || !zipcodeRegex.test(zipcode)) {
-                document.getElementById('zipcode').classList.add('error');
-                document.getElementById('zipcodeError').classList.add('show');
+            // Zipcode validation - more flexible for mobile
+            const zipcodeClean = zipcode.replace(/\D/g, ''); // Remove all non-digits
+            if (!zipcodeClean || zipcodeClean.length < 5 || zipcodeClean.length > 9) {
+                if (zipcodeInput) zipcodeInput.classList.add('error');
+                const errorDiv = document.getElementById('zipcodeError');
+                if (errorDiv) errorDiv.classList.add('show');
                 hasErrors = true;
             }
 
             if (hasErrors) {
+                // Scroll to first error on mobile
+                if (/Mobile|Android|iPhone|iPad/.test(navigator.userAgent)) {
+                    const firstError = contactForm.querySelector('.error');
+                    if (firstError) {
+                        setTimeout(() => {
+                            firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            firstError.focus();
+                        }, 100);
+                    }
+                }
                 return;
             }
 
             // Disable submit button and show loading
             submitBtn.disabled = true;
+            submitBtn.style.pointerEvents = 'none';
             const originalButtonText = submitBtn.innerHTML;
             submitBtn.innerHTML = '<span class="loading"></span>Submitting...';
 
             try {
-                const response = await fetch('send-lead.php', {
+                // Use fetch with better mobile support
+                const fetchOptions = {
                     method: 'POST',
                     body: formData,
                     headers: {
                         'Accept': 'application/json'
                     }
-                });
+                };
+
+                // Add timeout for mobile networks (if supported)
+                let timeoutId;
+                if (typeof AbortController !== 'undefined') {
+                    const controller = new AbortController();
+                    timeoutId = setTimeout(() => controller.abort(), 30000);
+                    fetchOptions.signal = controller.signal;
+                }
+
+                const response = await fetch('send-lead.php', fetchOptions);
+                
+                // Clear timeout if request succeeded
+                if (timeoutId) clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
 
                 const text = await response.text();
                 let data;
@@ -438,6 +556,7 @@
                 try {
                     data = JSON.parse(text);
                 } catch (e) {
+                    console.error('JSON parse error:', e, 'Response:', text);
                     // If response is not JSON, check status
                     if (response.status === 404) {
                         throw new Error('Form handler not found (404). Please check if send-lead.php is uploaded correctly.');
@@ -453,8 +572,17 @@
                     if (contactSuccessMessage) contactSuccessMessage.classList.add('show');
                     contactForm.reset();
                     
-                    // Scroll to top to show success message
-                    contactForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // Scroll to show success message - better mobile handling
+                    if (/Mobile|Android|iPhone|iPad/.test(navigator.userAgent)) {
+                        // On mobile, scroll to success message after a delay to let keyboard close
+                        setTimeout(() => {
+                            if (contactSuccessMessage) {
+                                contactSuccessMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }, 300);
+                    } else {
+                        contactForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
                     
                     // Track conversion
                     if (typeof gtag !== 'undefined') {
@@ -476,8 +604,10 @@
                 // Better error messages for common issues
                 let errorMsg = error.message;
                 
-                if (error.message.includes('Failed to fetch') || error.message === 'Failed to fetch') {
-                    errorMsg = 'Failed to connect to server. Please try again or call us at (720) 751-9813.';
+                if (error.name === 'AbortError' || error.message.includes('timeout')) {
+                    errorMsg = 'Request timed out. Please check your connection and try again.';
+                } else if (error.message.includes('Failed to fetch') || error.message === 'Failed to fetch') {
+                    errorMsg = 'Failed to connect to server. Please check your internet connection or call us at (720) 751-9813.';
                 } else if (error.message.includes('404')) {
                     errorMsg = 'PHP handler not found. Make sure send-lead.php is in the same directory.';
                 } else if (error.message.includes('500')) {
@@ -493,9 +623,31 @@
             } finally {
                 // Re-enable submit button
                 submitBtn.disabled = false;
+                submitBtn.style.pointerEvents = 'auto';
                 submitBtn.innerHTML = originalButtonText;
             }
-        });
+        };
+
+        // Add multiple event listeners for better mobile support
+        contactForm.addEventListener('submit', handleContactFormSubmit);
+        
+        // Also handle button click directly (for mobile compatibility)
+        if (submitBtn) {
+            submitBtn.addEventListener('click', function(e) {
+                // Only trigger if form hasn't been submitted yet
+                if (!contactForm.checkValidity()) {
+                    contactForm.reportValidity();
+                }
+            });
+            
+            // Touch event for better mobile support
+            submitBtn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                if (!submitBtn.disabled) {
+                    contactForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                }
+            });
+        }
     }
 
     // Form validation function
