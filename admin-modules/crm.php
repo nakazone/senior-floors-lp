@@ -53,8 +53,19 @@ if (isDatabaseConfigured()) {
 
 // Fallback to CSV if MySQL not available or failed
 if (empty($leads)) {
-    // Use DOCUMENT_ROOT to handle nested public_html structure
-    $CSV_FILE = ($_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__)) . '/leads.csv';
+    // Use same logic as send-lead.php to ensure same path
+    // CRM is in public_html/admin-modules/, so dirname(__DIR__) should be public_html/
+    $csv_dir = null;
+    
+    // Try DOCUMENT_ROOT first (most reliable)
+    if (isset($_SERVER['DOCUMENT_ROOT']) && !empty($_SERVER['DOCUMENT_ROOT'])) {
+        $csv_dir = $_SERVER['DOCUMENT_ROOT'];
+    } else {
+        // Fallback: use parent directory (should be public_html)
+        $csv_dir = dirname(__DIR__);
+    }
+    
+    $CSV_FILE = $csv_dir . '/leads.csv';
     
     if (file_exists($CSV_FILE)) {
         if (($handle = fopen($CSV_FILE, 'r')) !== FALSE) {

@@ -139,21 +139,39 @@ if (file_exists($db_config_file)) {
 // ============================================
 // Always save to CSV (backup/compatibilidade)
 // Save to public_html/leads.csv (same location CRM reads from)
-// IMPORTANT: Handle nested public_html structure (public_html/public_html/)
-// Use DOCUMENT_ROOT as it always points to the correct web root
-$log_dir = $_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__);
+// FIX: send-lead.php is in public_html/lp/, so dirname(__DIR__) should be public_html/
+// But if it goes too far up, use DOCUMENT_ROOT or find public_html manually
+$log_dir = null;
 
-// If DOCUMENT_ROOT is not set, try to find public_html
-if (!isset($_SERVER['DOCUMENT_ROOT'])) {
-    $current_dir = __DIR__;
-    // If we're in a nested public_html, go up until we find the web root
-    while ($current_dir !== '/' && $current_dir !== '') {
-        if (basename($current_dir) === 'public_html' && is_dir($current_dir)) {
-            $log_dir = $current_dir;
-            break;
+// Try DOCUMENT_ROOT first (most reliable)
+if (isset($_SERVER['DOCUMENT_ROOT']) && !empty($_SERVER['DOCUMENT_ROOT'])) {
+    $log_dir = $_SERVER['DOCUMENT_ROOT'];
+} else {
+    // Fallback: find public_html directory
+    $current_dir = __DIR__; // Should be: .../public_html/lp/
+    
+    // Go up one level to get public_html
+    $parent_dir = dirname($current_dir); // Should be: .../public_html/
+    
+    // Verify it's actually public_html
+    if (basename($parent_dir) === 'public_html' || strpos($parent_dir, 'public_html') !== false) {
+        $log_dir = $parent_dir;
+    } else {
+        // If dirname went too far, search for public_html
+        $search_dir = $current_dir;
+        while ($search_dir !== '/' && $search_dir !== '') {
+            if (basename($search_dir) === 'public_html' && is_dir($search_dir)) {
+                $log_dir = $search_dir;
+                break;
+            }
+            $search_dir = dirname($search_dir);
         }
-        $current_dir = dirname($current_dir);
     }
+}
+
+// Final fallback: use __DIR__ parent (should work if structure is correct)
+if (empty($log_dir)) {
+    $log_dir = dirname(__DIR__);
 }
 
 $log_file = $log_dir . '/leads.csv';
