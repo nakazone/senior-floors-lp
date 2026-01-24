@@ -359,8 +359,12 @@ if (isset($_GET['export'])) {
                 📊 Fonte de dados: <strong><?php echo htmlspecialchars($data_source); ?></strong>
                 <?php if ($data_source === 'MySQL Database'): ?>
                     <span style="color: #48bb78;">✅ Banco de dados ativo</span>
+                    | <a href="?module=crm&force_csv=1" style="color: #4299e1; text-decoration: none;">🔀 Usar CSV</a>
                 <?php else: ?>
-                    <span style="color: #f59e0b;">⚠️ Usando CSV (banco não configurado)</span>
+                    <span style="color: #f59e0b;">⚠️ Usando CSV</span>
+                    <?php if (isDatabaseConfigured()): ?>
+                        | <a href="?module=crm" style="color: #4299e1; text-decoration: none;">🔀 Usar Banco de Dados</a>
+                    <?php endif; ?>
                 <?php endif; ?>
             </p>
         <?php endif; ?>
