@@ -36,14 +36,22 @@ if (isDatabaseConfigured()) {
                 ORDER BY created_at DESC
             ");
             
-            $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $db_leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Format date to match CSV format
-            foreach ($leads as &$lead) {
-                $lead['Date'] = $lead['Date'];
+            // Only use database if it has leads
+            if (!empty($db_leads)) {
+                $leads = $db_leads;
+                
+                // Format date to match CSV format
+                foreach ($leads as &$lead) {
+                    $lead['Date'] = $lead['Date'];
+                }
+                
+                $data_source = 'MySQL Database';
+            } else {
+                // Database is configured but empty, fall through to CSV
+                error_log("CRM: Database configured but empty, using CSV fallback");
             }
-            
-            $data_source = 'MySQL Database';
         }
     } catch (PDOException $e) {
         error_log("CRM: Database error - " . $e->getMessage());
