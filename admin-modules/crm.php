@@ -12,8 +12,12 @@ $LEADS_PER_PAGE = 25;
 $leads = [];
 $data_source = '';
 
-// Try MySQL first
-if (isDatabaseConfigured()) {
+// Check if we should force CSV usage (via GET parameter or config)
+$force_csv = isset($_GET['force_csv']) && $_GET['force_csv'] === '1';
+$use_database = !$force_csv; // Only use database if not forcing CSV
+
+// Try MySQL first (unless CSV is forced)
+if ($use_database && isDatabaseConfigured()) {
     try {
         $pdo = getDBConnection();
         
