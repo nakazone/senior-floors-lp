@@ -139,13 +139,21 @@ if (file_exists($db_config_file)) {
 // ============================================
 // Always save to CSV (backup/compatibilidade)
 // Save to public_html/leads.csv (same location CRM reads from)
-// send-lead.php is in public_html/lp, so go up one directory to public_html
-// Fix: dirname(__DIR__) might go too far up, so check and use DOCUMENT_ROOT if needed
-$log_dir = dirname(__DIR__); // Should be public_html if send-lead.php is in public_html/lp/
+// IMPORTANT: Handle nested public_html structure (public_html/public_html/)
+// Use DOCUMENT_ROOT as it always points to the correct web root
+$log_dir = $_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__);
 
-// If dirname(__DIR__) doesn't contain 'public_html', use DOCUMENT_ROOT instead
-if (strpos($log_dir, 'public_html') === false && isset($_SERVER['DOCUMENT_ROOT'])) {
-    $log_dir = $_SERVER['DOCUMENT_ROOT'];
+// If DOCUMENT_ROOT is not set, try to find public_html
+if (!isset($_SERVER['DOCUMENT_ROOT'])) {
+    $current_dir = __DIR__;
+    // If we're in a nested public_html, go up until we find the web root
+    while ($current_dir !== '/' && $current_dir !== '') {
+        if (basename($current_dir) === 'public_html' && is_dir($current_dir)) {
+            $log_dir = $current_dir;
+            break;
+        }
+        $current_dir = dirname($current_dir);
+    }
 }
 
 $log_file = $log_dir . '/leads.csv';

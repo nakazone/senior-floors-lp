@@ -53,7 +53,8 @@ if (isDatabaseConfigured()) {
 
 // Fallback to CSV if MySQL not available or failed
 if (empty($leads)) {
-    $CSV_FILE = __DIR__ . '/../leads.csv';
+    // Use DOCUMENT_ROOT to handle nested public_html structure
+    $CSV_FILE = ($_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__)) . '/leads.csv';
     
     if (file_exists($CSV_FILE)) {
         if (($handle = fopen($CSV_FILE, 'r')) !== FALSE) {
