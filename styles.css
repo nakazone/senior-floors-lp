@@ -181,8 +181,10 @@ body {
 .header-cta {
     flex-shrink: 0;
     display: flex;
+    flex-direction: row;
     gap: var(--spacing-sm);
     align-items: center;
+    flex-wrap: nowrap;
 }
 
 .btn-call {
