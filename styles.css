@@ -1789,15 +1789,17 @@ section {
     box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
 }
 
-.hero-form .error-message {
+.hero-form .error-message,
+.contact-form .error-message {
     color: #dc3545;
     font-size: 0.875rem;
     margin-top: 0.25rem;
-    display: none;
+    display: none !important;
 }
 
-.hero-form .error-message.show {
-    display: block;
+.hero-form .error-message.show,
+.contact-form .error-message.show {
+    display: block !important;
 }
 
 /* Print styles */
