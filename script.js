@@ -5,6 +5,43 @@
 
 (function() {
     'use strict';
+    
+    // ============================================
+    // Force hide error messages on page load (Chrome compatibility)
+    // ============================================
+    function hideAllErrorMessages() {
+        // Hide all error messages
+        document.querySelectorAll('.error-message').forEach(function(errorMsg) {
+            errorMsg.classList.remove('show');
+            errorMsg.style.display = 'none';
+            errorMsg.style.visibility = 'hidden';
+            errorMsg.style.opacity = '0';
+        });
+        
+        // Hide specific error divs by ID
+        ['hero-nameError', 'hero-phoneError', 'hero-emailError', 'hero-zipcodeError', 
+         'nameError', 'phoneError', 'emailError', 'zipcodeError'].forEach(function(id) {
+            const errorDiv = document.getElementById(id);
+            if (errorDiv) {
+                errorDiv.classList.remove('show');
+                errorDiv.style.display = 'none';
+                errorDiv.style.visibility = 'hidden';
+                errorDiv.style.opacity = '0';
+            }
+        });
+    }
+    
+    // Run immediately on page load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', hideAllErrorMessages);
+    } else {
+        hideAllErrorMessages();
+    }
+    
+    // Also run after delays to catch Chrome's delayed rendering
+    setTimeout(hideAllErrorMessages, 100);
+    setTimeout(hideAllErrorMessages, 500);
+    setTimeout(hideAllErrorMessages, 1000);
 
     // ============================================
     // Mobile Menu Toggle
