@@ -160,14 +160,34 @@
     if (heroForm) {
         const submitBtn = heroForm.querySelector('button[type="submit"]');
         
-        // Hide messages initially
-        if (heroSuccessMessage) heroSuccessMessage.classList.remove('show');
-        if (heroErrorMessage) heroErrorMessage.classList.remove('show');
+        // Hide messages initially - Force hide on page load
+        if (heroSuccessMessage) {
+            heroSuccessMessage.classList.remove('show');
+            heroSuccessMessage.style.display = 'none';
+        }
+        if (heroErrorMessage) {
+            heroErrorMessage.classList.remove('show');
+            heroErrorMessage.style.display = 'none';
+        }
         
-        // Hide all error messages on page load
+        // Hide all error messages on page load - Force hide for Chrome compatibility
         const heroErrorMessages = heroForm.querySelectorAll('.error-message');
         heroErrorMessages.forEach(errorMsg => {
             errorMsg.classList.remove('show');
+            errorMsg.style.display = 'none';
+            errorMsg.style.visibility = 'hidden';
+            errorMsg.style.opacity = '0';
+        });
+        
+        // Also hide specific error divs by ID
+        ['hero-nameError', 'hero-phoneError', 'hero-emailError', 'hero-zipcodeError'].forEach(id => {
+            const errorDiv = document.getElementById(id);
+            if (errorDiv) {
+                errorDiv.classList.remove('show');
+                errorDiv.style.display = 'none';
+                errorDiv.style.visibility = 'hidden';
+                errorDiv.style.opacity = '0';
+            }
         });
         
         // Remove error styling on input
