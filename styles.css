@@ -180,11 +180,12 @@ body {
 /* Header CTA */
 .header-cta {
     flex-shrink: 0;
-    display: flex;
-    flex-direction: row;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
     gap: var(--spacing-sm);
     align-items: center;
-    flex-wrap: nowrap;
+    white-space: nowrap;
 }
 
 .btn-call {
@@ -1801,8 +1802,23 @@ section {
 }
 
 .hero-form .error-message.show,
-.contact-form .error-message.show {
+.contact-form .error-message.show,
+.form-group .error-message.show,
+#hero-nameError.show,
+#hero-phoneError.show,
+#hero-emailError.show,
+#hero-zipcodeError.show,
+#nameError.show,
+#phoneError.show,
+#emailError.show,
+#zipcodeError.show {
     display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+    left: auto !important;
 }
 
 /* Print styles */
