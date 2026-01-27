@@ -1793,12 +1793,34 @@ section {
     box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
 }
 
+/* Prevent Chrome from showing validation messages on page load */
+input:invalid:not(:focus):not(:placeholder-shown),
+textarea:invalid:not(:focus):not(:placeholder-shown),
+select:invalid:not(:focus):not(:placeholder-shown) {
+    border-color: var(--border-color) !important;
+    box-shadow: none !important;
+}
+
+/* Error messages - Hidden by default, only show with .show class */
 .hero-form .error-message,
-.contact-form .error-message {
+.contact-form .error-message,
+.form-group .error-message,
+#hero-nameError,
+#hero-phoneError,
+#hero-emailError,
+#hero-zipcodeError,
+#nameError,
+#phoneError,
+#emailError,
+#zipcodeError {
     color: #dc3545;
     font-size: 0.875rem;
     margin-top: 0.25rem;
     display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
 }
 
 .hero-form .error-message.show,
@@ -1817,8 +1839,6 @@ section {
     opacity: 1 !important;
     height: auto !important;
     overflow: visible !important;
-    position: static !important;
-    left: auto !important;
 }
 
 /* Print styles */
