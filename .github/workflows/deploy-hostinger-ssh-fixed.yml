@@ -15,12 +15,57 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       
+      - name: Validate Secrets
+        run: |
+          if [ -z "${{ secrets.HOSTINGER_SSH_HOST }}" ]; then
+            echo "❌ Error: HOSTINGER_SSH_HOST secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.HOSTINGER_SSH_USER }}" ]; then
+            echo "❌ Error: HOSTINGER_SSH_USER secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.HOSTINGER_SSH_KEY }}" ]; then
+            echo "❌ Error: HOSTINGER_SSH_KEY secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.HOSTINGER_DOMAIN }}" ]; then
+            echo "❌ Error: HOSTINGER_DOMAIN secret is not set"
+            exit 1
+          fi
+          echo "✅ All required secrets are configured"
+      
       - name: Setup SSH key
         run: |
+          # Create .ssh directory with proper permissions
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
+          # Write SSH key
           echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.HOSTINGER_SSH_HOST }} >> ~/.ssh/known_hosts
+          
+          # Add host to known_hosts
+          ssh-keyscan -H ${{ secrets.HOSTINGER_SSH_HOST }} -p ${{ secrets.HOSTINGER_SSH_PORT || 22 }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          
+          # Verify SSH key was created
+          if [ ! -f ~/.ssh/id_rsa ]; then
+            echo "❌ Error: Failed to create SSH key file"
+            exit 1
+          fi
+          echo "✅ SSH key setup completed"
+      
+      - name: Test SSH Connection
+        run: |
+          ssh -i ~/.ssh/id_rsa \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            -p ${{ secrets.HOSTINGER_SSH_PORT || 22 }} \
+            ${{ secrets.HOSTINGER_SSH_USER }}@${{ secrets.HOSTINGER_SSH_HOST }} \
+            "echo 'SSH connection successful'" || {
+              echo "❌ SSH connection test failed"
+              exit 1
+            }
       
       - name: Remove files that shouldn't be deployed
         run: |
@@ -32,7 +77,9 @@ jobs:
       
       - name: Deploy via SCP
         run: |
-          scp -r -P ${{ secrets.HOSTINGER_SSH_PORT || 22 }} \
+          scp -r \
+            -i ~/.ssh/id_rsa \
+            -P ${{ secrets.HOSTINGER_SSH_PORT || 22 }} \
             -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=~/.ssh/known_hosts \
             ./* ${{ secrets.HOSTINGER_SSH_USER }}@${{ secrets.HOSTINGER_SSH_HOST }}:/home/${{ secrets.HOSTINGER_SSH_USER }}/domains/${{ secrets.HOSTINGER_DOMAIN }}/public_html/
@@ -41,3 +88,4 @@ jobs:
         if: always()
         run: |
           rm -f ~/.ssh/id_rsa
+          rm -f ~/.ssh/known_hosts
