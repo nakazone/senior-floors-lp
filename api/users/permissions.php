@@ -94,7 +94,18 @@ try {
         
     } elseif ($action === 'set_all') {
         // Definir todas as permissões de uma vez
-        $permissions = isset($_POST['permissions']) ? $_POST['permissions'] : [];
+        $permissions_json = isset($_POST['permissions']) ? $_POST['permissions'] : '[]';
+        
+        // Se for string JSON, decodificar
+        if (is_string($permissions_json)) {
+            $permissions = json_decode($permissions_json, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                // Se não for JSON válido, tentar como array direto
+                $permissions = isset($_POST['permissions']) && is_array($_POST['permissions']) ? $_POST['permissions'] : [];
+            }
+        } else {
+            $permissions = is_array($permissions_json) ? $permissions_json : [];
+        }
         
         if (!is_array($permissions)) {
             http_response_code(400);
