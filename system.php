@@ -559,12 +559,14 @@ if (!file_exists($module_file)) {
             <nav>
                 <ul class="sidebar-nav">
                     <?php foreach ($modules as $module_key => $module): ?>
+                        <?php if (!isset($module['hidden']) || !$module['hidden']): ?>
                         <li>
                             <a href="?module=<?php echo $module_key; ?>" class="<?php echo $current_module === $module_key ? 'active' : ''; ?>">
                                 <span><?php echo $module['icon']; ?></span>
                                 <span><?php echo htmlspecialchars($module['name']); ?></span>
                             </a>
                         </li>
+                        <?php endif; ?>
                     <?php endforeach; ?>
                 </ul>
             </nav>
