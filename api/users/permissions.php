@@ -94,23 +94,33 @@ try {
         
     } elseif ($action === 'set_all') {
         // Definir todas as permissões de uma vez
-        $permissions_json = isset($_POST['permissions']) ? $_POST['permissions'] : '[]';
+        $permissions = [];
         
-        // Se for string JSON, decodificar
-        if (is_string($permissions_json)) {
-            $permissions = json_decode($permissions_json, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                // Se não for JSON válido, tentar como array direto
-                $permissions = isset($_POST['permissions']) && is_array($_POST['permissions']) ? $_POST['permissions'] : [];
-            }
+        // FormData envia arrays como permissions[0], permissions[1], etc.
+        if (isset($_POST['permissions']) && is_array($_POST['permissions'])) {
+            $permissions = $_POST['permissions'];
         } else {
-            $permissions = is_array($permissions_json) ? $permissions_json : [];
+            // Tentar pegar como array indexado
+            foreach ($_POST as $key => $value) {
+                if (preg_match('/^permissions\[(\d+)\]$/', $key, $matches)) {
+                    $permissions[] = $value;
+                }
+            }
+        }
+        
+        // Se ainda não tiver, tentar JSON
+        if (empty($permissions) && isset($_POST['permissions'])) {
+            $permissions_json = $_POST['permissions'];
+            if (is_string($permissions_json)) {
+                $decoded = json_decode($permissions_json, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $permissions = $decoded;
+                }
+            }
         }
         
         if (!is_array($permissions)) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Permissions must be an array']);
-            exit;
+            $permissions = [];
         }
         
         // Obter todas as permissões disponíveis

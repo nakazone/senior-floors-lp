@@ -244,7 +244,10 @@ function saveAllPermissions(userId) {
     const formData = new FormData();
     formData.append('user_id', userId);
     formData.append('action', 'set_all');
-    formData.append('permissions', JSON.stringify(permissions));
+    // Enviar como array (FormData suporta arrays)
+    permissions.forEach((perm, index) => {
+        formData.append(`permissions[${index}]`, perm);
+    });
     
     fetch('api/users/permissions.php', {
         method: 'POST',
