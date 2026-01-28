@@ -266,7 +266,22 @@ if (!file_exists($module_file)) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="description" content="Senior Floors CRM System - Manage leads, customers, projects, and coupons">
+    <meta name="theme-color" content="#1a2036">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Senior Floors CRM">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/logoSeniorFloors.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/logoSeniorFloors.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/logoSeniorFloors.png">
+    <link rel="icon" type="image/png" href="assets/logoSeniorFloors.png">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
     <title><?php echo htmlspecialchars($ADMIN_TITLE); ?> - <?php echo htmlspecialchars($modules[$current_module]['name']); ?></title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -297,6 +312,23 @@ if (!file_exists($module_file)) {
             display: flex;
             align-items: center;
             gap: 20px;
+        }
+        .logo-admin {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: white;
+        }
+        .logo-admin img {
+            height: 40px;
+            width: auto;
+            object-fit: contain;
+        }
+        .logo-admin h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
         }
         h1 { font-size: 20px; font-weight: 600; }
         .header-actions {
@@ -406,12 +438,49 @@ if (!file_exists($module_file)) {
             }
         }
     </style>
+    <script>
+        // Registrar Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('Service Worker registrado com sucesso:', registration.scope);
+                        
+                        // Verificar atualizações periodicamente
+                        setInterval(() => {
+                            registration.update();
+                        }, 60000); // A cada minuto
+                    })
+                    .catch((error) => {
+                        console.log('Falha ao registrar Service Worker:', error);
+                    });
+            });
+        }
+
+        // Detectar se está instalado como PWA
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Pode mostrar um botão para instalar
+            console.log('PWA pode ser instalado');
+        });
+
+        // Detectar quando PWA é instalado
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA instalado com sucesso');
+            deferredPrompt = null;
+        });
+    </script>
 </head>
 <body>
     <div class="admin-header">
         <div class="header-content">
             <div class="header-left">
-                <h1><?php echo htmlspecialchars($ADMIN_TITLE); ?></h1>
+                <a href="?module=dashboard" class="logo-admin">
+                    <img src="assets/logoSeniorFloors.png" alt="Senior Floors Logo">
+                    <h1><?php echo htmlspecialchars($ADMIN_TITLE); ?></h1>
+                </a>
             </div>
             <div class="header-actions">
                 <span style="margin-right: 15px; opacity: 0.9;"><?php echo htmlspecialchars($_SESSION['admin_name'] ?? 'Admin'); ?></span>
