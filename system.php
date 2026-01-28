@@ -285,6 +285,17 @@ $modules = [
         'icon' => '🎫',
         'file' => 'admin-modules/coupons.php'
     ],
+    'users' => [
+        'name' => 'Users',
+        'icon' => '👥',
+        'file' => 'admin-modules/users.php'
+    ],
+    'user-detail' => [
+        'name' => 'User Detail',
+        'icon' => '👤',
+        'file' => 'admin-modules/user-detail.php',
+        'hidden' => true
+    ],
     'settings' => [
         'name' => 'Settings',
         'icon' => '⚙️',
