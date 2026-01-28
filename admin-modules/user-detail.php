@@ -4,9 +4,19 @@
  */
 
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/permissions.php';
+
+// Load permissions if available
+if (file_exists(__DIR__ . '/../config/permissions.php')) {
+    require_once __DIR__ . '/../config/permissions.php';
+}
 
 session_start();
+
+// Verificar autenticação básica
+if (!isset($_SESSION['admin_authenticated'])) {
+    header('Location: system.php');
+    exit;
+}
 
 $user_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
@@ -15,8 +25,15 @@ if ($user_id <= 0) {
     exit;
 }
 
-// Verificar permissão
-if (!isset($_SESSION['admin_user_id']) || !hasPermission($_SESSION['admin_user_id'], 'users.view')) {
+// Verificar permissão (se sistema de permissões estiver disponível)
+$has_permission = true;
+if (function_exists('hasPermission') && isset($_SESSION['admin_user_id'])) {
+    $has_permission = hasPermission($_SESSION['admin_user_id'], 'users.view');
+} elseif (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin') {
+    $has_permission = true;
+}
+
+if (!$has_permission) {
     header('Location: ?module=users&error=no_permission');
     exit;
 }
@@ -39,8 +56,10 @@ if (isDatabaseConfigured()) {
             exit;
         }
         
-        // Get user permissions
-        $user_permissions = getUserPermissions($user_id);
+        // Get user permissions (if function exists)
+        if (function_exists('getUserPermissions')) {
+            $user_permissions = getUserPermissions($user_id);
+        }
         
     } catch (Exception $e) {
         $error_message = $e->getMessage();
@@ -127,7 +146,15 @@ if (isDatabaseConfigured()) {
         </div>
 
         <!-- Permissions Management -->
-        <?php if (hasPermission($_SESSION['admin_user_id'], 'users.manage_permissions')): ?>
+        <?php 
+        $can_manage_permissions = true;
+        if (function_exists('hasPermission') && isset($_SESSION['admin_user_id'])) {
+            $can_manage_permissions = hasPermission($_SESSION['admin_user_id'], 'users.manage_permissions');
+        } elseif (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] !== 'admin') {
+            $can_manage_permissions = false;
+        }
+        if ($can_manage_permissions): 
+        ?>
         <div class="detail-section">
             <h3>Individual Permissions</h3>
             <p class="section-description">

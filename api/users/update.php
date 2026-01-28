@@ -8,7 +8,11 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
 
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../config/permissions.php';
+
+// Load permissions if available
+if (file_exists(__DIR__ . '/../../config/permissions.php')) {
+    require_once __DIR__ . '/../../config/permissions.php';
+}
 
 session_start();
 
@@ -18,7 +22,24 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-if (!isset($_SESSION['admin_user_id']) || !hasPermission($_SESSION['admin_user_id'], 'users.edit')) {
+// Verificar autenticação básica
+if (!isset($_SESSION['admin_authenticated'])) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Not authenticated']);
+    exit;
+}
+
+// Verificar permissão (se sistema de permissões estiver disponível)
+$has_permission = true;
+if (function_exists('hasPermission') && isset($_SESSION['admin_user_id'])) {
+    $has_permission = hasPermission($_SESSION['admin_user_id'], 'users.edit');
+} elseif (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin') {
+    $has_permission = true;
+} else {
+    $has_permission = false;
+}
+
+if (!$has_permission) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Permission denied']);
     exit;

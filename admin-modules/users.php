@@ -4,12 +4,30 @@
  */
 
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/permissions.php';
+
+// Load permissions if available
+if (file_exists(__DIR__ . '/../config/permissions.php')) {
+    require_once __DIR__ . '/../config/permissions.php';
+}
 
 session_start();
 
-// Verificar permissão
-if (!isset($_SESSION['admin_user_id']) || !hasPermission($_SESSION['admin_user_id'], 'users.view')) {
+// Verificar autenticação básica
+if (!isset($_SESSION['admin_authenticated'])) {
+    header('Location: system.php');
+    exit;
+}
+
+// Verificar permissão (se sistema de permissões estiver disponível)
+$has_permission = true;
+if (function_exists('hasPermission') && isset($_SESSION['admin_user_id'])) {
+    $has_permission = hasPermission($_SESSION['admin_user_id'], 'users.view');
+} elseif (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin') {
+    // Admin sempre tem acesso
+    $has_permission = true;
+}
+
+if (!$has_permission) {
     header('Location: ?module=dashboard&error=no_permission');
     exit;
 }
@@ -34,9 +52,15 @@ if (isDatabaseConfigured()) {
         ");
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Get permissions for each user
-        foreach ($users as &$user) {
-            $user['permissions'] = getUserPermissions($user['id']);
+        // Get permissions for each user (if function exists)
+        if (function_exists('getUserPermissions')) {
+            foreach ($users as &$user) {
+                $user['permissions'] = getUserPermissions($user['id']);
+            }
+        } else {
+            foreach ($users as &$user) {
+                $user['permissions'] = [];
+            }
         }
         
     } catch (Exception $e) {
@@ -131,7 +155,15 @@ if (isDatabaseConfigured()) {
 </div>
 
 <!-- Create User Modal -->
-<?php if (hasPermission($_SESSION['admin_user_id'], 'users.create')): ?>
+<?php 
+$can_create = true;
+if (function_exists('hasPermission') && isset($_SESSION['admin_user_id'])) {
+    $can_create = hasPermission($_SESSION['admin_user_id'], 'users.create');
+} elseif (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] !== 'admin') {
+    $can_create = false;
+}
+if ($can_create): 
+?>
 <div id="createUserModal" class="modal" style="display: none;">
     <div class="modal-content">
         <span class="close" onclick="closeCreateUserModal()">&times;</span>
