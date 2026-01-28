@@ -11,6 +11,9 @@ session_start();
 // ============================================
 $ADMIN_TITLE = 'Senior Floors System';
 
+// Load permissions system
+require_once __DIR__ . '/config/permissions.php';
+
 // Load admin users configuration
 require_once __DIR__ . '/admin-config.php';
 
@@ -22,11 +25,51 @@ if (!isset($_SESSION['admin_authenticated'])) {
         $username = trim($_POST['username']);
         $password = $_POST['password'];
         
-        if (verifyAdminUser($username, $password)) {
+        // Try database authentication first
+        $authenticated = false;
+        $user_info = null;
+        
+        if (isDatabaseConfigured()) {
+            try {
+                $pdo = getDBConnection();
+                $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? AND is_active = 1");
+                $stmt->execute([$username]);
+                $db_user = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($db_user && !empty($db_user['password_hash'])) {
+                    if (password_verify($password, $db_user['password_hash'])) {
+                        $authenticated = true;
+                        $user_info = [
+                            'id' => $db_user['id'],
+                            'name' => $db_user['name'],
+                            'email' => $db_user['email'],
+                            'role' => $db_user['role']
+                        ];
+                        
+                        // Update last login
+                        $update_stmt = $pdo->prepare("UPDATE users SET last_login = NOW(), login_attempts = 0 WHERE id = ?");
+                        $update_stmt->execute([$db_user['id']]);
+                    }
+                }
+            } catch (Exception $e) {
+                error_log("Database authentication error: " . $e->getMessage());
+            }
+        }
+        
+        // Fallback to admin-config.php if database auth fails
+        if (!$authenticated && function_exists('verifyAdminUser')) {
+            if (verifyAdminUser($username, $password)) {
+                $authenticated = true;
+                $user_info = getAdminUser($username);
+            }
+        }
+        
+        if ($authenticated) {
             $_SESSION['admin_authenticated'] = true;
             $_SESSION['admin_username'] = $username;
-            $user_info = getAdminUser($username);
+            $_SESSION['admin_user_id'] = $user_info['id'] ?? null;
             $_SESSION['admin_name'] = $user_info['name'] ?? $username;
+            $_SESSION['admin_role'] = $user_info['role'] ?? 'admin';
             header('Location: system.php');
             exit;
         } else {
