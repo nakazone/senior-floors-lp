@@ -200,24 +200,51 @@ if (isset($_GET['api']) && $_GET['api'] === 'receive-lead' && $_SERVER['REQUEST_
 $modules = [
     'dashboard' => [
         'name' => 'Dashboard',
-        'icon' => '??',
+        'icon' => '📊',
         'file' => 'admin-modules/dashboard.php',
         'default' => true
     ],
     'crm' => [
         'name' => 'CRM - Leads',
-        'icon' => '??',
+        'icon' => '👥',
         'file' => 'admin-modules/crm.php'
     ],
     'lead-detail' => [
         'name' => 'Lead Detail',
-        'icon' => '??',
+        'icon' => '👤',
         'file' => 'admin-modules/lead-detail.php',
         'hidden' => true // Não aparece no menu, só acessível via URL
     ],
+    'customers' => [
+        'name' => 'Customers',
+        'icon' => '🏢',
+        'file' => 'admin-modules/customers.php'
+    ],
+    'customer-detail' => [
+        'name' => 'Customer Detail',
+        'icon' => '👤',
+        'file' => 'admin-modules/customer-detail.php',
+        'hidden' => true
+    ],
+    'projects' => [
+        'name' => 'Projects',
+        'icon' => '🏗️',
+        'file' => 'admin-modules/projects.php'
+    ],
+    'project-detail' => [
+        'name' => 'Project Detail',
+        'icon' => '📋',
+        'file' => 'admin-modules/project-detail.php',
+        'hidden' => true
+    ],
+    'coupons' => [
+        'name' => 'Coupons',
+        'icon' => '🎫',
+        'file' => 'admin-modules/coupons.php'
+    ],
     'settings' => [
         'name' => 'Settings',
-        'icon' => '??',
+        'icon' => '⚙️',
         'file' => 'admin-modules/settings.php'
     ]
 ];
