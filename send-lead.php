@@ -96,7 +96,12 @@ $db_error = null;
 $lead_id = null;
 
 // Check if database config exists and is configured
-$db_config_file = dirname(__DIR__) . '/config/database.php';
+$db_config_file = __DIR__ . '/config/database.php';
+if (!file_exists($db_config_file)) {
+    // Try alternative path
+    $db_config_file = dirname(__DIR__) . '/config/database.php';
+}
+
 if (file_exists($db_config_file)) {
     require_once $db_config_file;
     
@@ -105,33 +110,54 @@ if (file_exists($db_config_file)) {
             $pdo = getDBConnection();
             
             if ($pdo) {
-                $stmt = $pdo->prepare("
-                    INSERT INTO leads (name, email, phone, zipcode, message, source, form_type, status, priority, ip_address)
-                    VALUES (:name, :email, :phone, :zipcode, :message, :source, :form_type, 'new', 'medium', :ip_address)
-                ");
-                
-                $source = ($form_name === 'hero-form') ? 'LP-Hero' : 'LP-Contact';
-                $ip_address = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : null;
-                
-                $stmt->execute([
-                    ':name' => $name,
-                    ':email' => $email,
-                    ':phone' => $phone,
-                    ':zipcode' => $zipcode,
-                    ':message' => $message,
-                    ':source' => $source,
-                    ':form_type' => $form_name,
-                    ':ip_address' => $ip_address
-                ]);
-                
-                $db_saved = true;
-                $lead_id = $pdo->lastInsertId();
+                // Verificar se tabela existe
+                $check_table = $pdo->query("SHOW TABLES LIKE 'leads'");
+                if ($check_table->rowCount() > 0) {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO leads (name, email, phone, zipcode, message, source, form_type, status, priority, ip_address)
+                        VALUES (:name, :email, :phone, :zipcode, :message, :source, :form_type, 'new', 'medium', :ip_address)
+                    ");
+                    
+                    $source = ($form_name === 'hero-form') ? 'LP-Hero' : 'LP-Contact';
+                    $ip_address = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : null;
+                    
+                    $stmt->execute([
+                        ':name' => $name,
+                        ':email' => $email,
+                        ':phone' => $phone,
+                        ':zipcode' => $zipcode,
+                        ':message' => $message,
+                        ':source' => $source,
+                        ':form_type' => $form_name,
+                        ':ip_address' => $ip_address
+                    ]);
+                    
+                    $db_saved = true;
+                    $lead_id = $pdo->lastInsertId();
+                    
+                    // Log success
+                    $log_entry = date('Y-m-d H:i:s') . " | ✅ Lead saved to database | ID: $lead_id | Name: $name | Email: $email\n";
+                    @file_put_contents(__DIR__ . '/lead-db-save.log', $log_entry, FILE_APPEND | LOCK_EX);
+                } else {
+                    $db_error = "Table 'leads' does not exist";
+                    error_log("Database error: Table 'leads' does not exist. Execute schema SQL first.");
+                }
             }
         } catch (PDOException $e) {
             $db_error = $e->getMessage();
             error_log("Database error in send-lead.php: " . $db_error);
+            
+            // Log error
+            $log_entry = date('Y-m-d H:i:s') . " | ❌ Database error: " . $db_error . "\n";
+            @file_put_contents(__DIR__ . '/lead-db-save.log', $log_entry, FILE_APPEND | LOCK_EX);
         }
+    } else {
+        $db_error = "Database not configured";
+        error_log("Database not configured in send-lead.php");
     }
+} else {
+    $db_error = "Database config file not found";
+    error_log("Database config file not found: " . $db_config_file);
 }
 
 // ============================================
