@@ -1,113 +1,72 @@
 <?php
 /**
- * Dashboard Module - Overview statistics
+ * Dashboard Module - Visual overview (charts + KPIs)
  * Lê leads do MySQL (prioridade) ou CSV (fallback)
  */
 
 require_once __DIR__ . '/../config/database.php';
 
-// Read leads from MySQL (if configured) or CSV (fallback)
 $leads = [];
 $data_source = '';
 
-// Try MySQL first
 if (isDatabaseConfigured()) {
     try {
         $pdo = getDBConnection();
-        
         if ($pdo) {
             $stmt = $pdo->query("
-                SELECT 
-                    name as Name,
-                    email as Email,
-                    phone as Phone,
-                    zipcode as ZipCode,
-                    message as Message,
-                    form_type as Form,
-                    source,
-                    status,
-                    created_at as Date
-                FROM leads 
-                ORDER BY created_at DESC
+                SELECT name as Name, email as Email, phone as Phone, zipcode as ZipCode,
+                    message as Message, form_type as Form, source, status, created_at as Date
+                FROM leads ORDER BY created_at DESC
             ");
-            
             $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $data_source = 'MySQL Database';
         }
     } catch (PDOException $e) {
-        error_log("Dashboard: Database error - " . $e->getMessage());
-        // Fall through to CSV
+        error_log("Dashboard: " . $e->getMessage());
     }
 }
 
-// Fallback to CSV if MySQL not available or failed
 if (empty($leads)) {
     $CSV_FILE = __DIR__ . '/../leads.csv';
-    
-    if (file_exists($CSV_FILE)) {
-        if (($handle = fopen($CSV_FILE, 'r')) !== FALSE) {
-            $header = fgetcsv($handle);
-            while (($data = fgetcsv($handle)) !== FALSE) {
-                if (count($data) === count($header)) {
-                    $leads[] = array_combine($header, $data);
-                }
-            }
-            fclose($handle);
+    if (file_exists($CSV_FILE) && ($handle = fopen($CSV_FILE, 'r')) !== FALSE) {
+        $header = fgetcsv($handle);
+        while (($data = fgetcsv($handle)) !== FALSE) {
+            if (count($data) === count($header)) $leads[] = array_combine($header, $data);
         }
+        fclose($handle);
     }
-    
     $data_source = 'CSV File';
 }
 
-// Calculate statistics
 $total_leads = count($leads);
-$hero_form_count = count(array_filter($leads, fn($l) => ($l['Form'] ?? '') === 'hero-form'));
-$contact_form_count = count(array_filter($leads, fn($l) => ($l['Form'] ?? '') === 'contact-form'));
-$today_count = count(array_filter($leads, function($l) {
-    return strpos($l['Date'] ?? '', date('Y-m-d')) === 0;
-}));
-$week_count = count(array_filter($leads, function($l) {
-    $lead_date = strtotime($l['Date'] ?? '');
-    return $lead_date >= strtotime('-7 days');
-}));
-$month_count = count(array_filter($leads, function($l) {
-    $lead_date = strtotime($l['Date'] ?? '');
-    return $lead_date >= strtotime('-30 days');
-}));
+$today_count = count(array_filter($leads, fn($l) => strpos($l['Date'] ?? '', date('Y-m-d')) === 0));
+$week_count = count(array_filter($leads, fn($l) => (strtotime($l['Date'] ?? '') >= strtotime('-7 days'))));
+$month_count = count(array_filter($leads, fn($l) => (strtotime($l['Date'] ?? '') >= strtotime('-30 days'))));
 
-// FASE 3 - MÓDULO 06: Métricas de conversão por status
-$status_counts = [
-    'new' => 0,
-    'contacted' => 0,
-    'qualified' => 0,
-    'proposal' => 0,
-    'closed_won' => 0,
-    'closed_lost' => 0
-];
-
+$status_counts = ['new' => 0, 'contacted' => 0, 'qualified' => 0, 'proposal' => 0, 'closed_won' => 0, 'closed_lost' => 0];
 foreach ($leads as $lead) {
-    $status = $lead['status'] ?? 'new';
-    if (isset($status_counts[$status])) {
-        $status_counts[$status]++;
-    }
+    $s = $lead['status'] ?? 'new';
+    if (isset($status_counts[$s])) $status_counts[$s]++;
 }
 
-// Métricas de origem dos leads
 $source_counts = [];
 foreach ($leads as $lead) {
-    $source = $lead['source'] ?? 'Unknown';
-    $source_counts[$source] = ($source_counts[$source] ?? 0) + 1;
+    $src = $lead['source'] ?? 'Unknown';
+    $source_counts[$src] = ($source_counts[$src] ?? 0) + 1;
 }
 arsort($source_counts);
 
-// Get recent leads (last 5)
-if ($data_source === 'MySQL Database') {
-    $recent_leads = array_slice($leads, 0, 5);
-} else {
-    $recent_leads = array_slice(array_reverse($leads), 0, 5);
+// Leads por dia (últimos 30 dias) para gráfico
+$leads_by_day = [];
+for ($i = 29; $i >= 0; $i--) {
+    $d = date('Y-m-d', strtotime("-$i days"));
+    $leads_by_day[$d] = 0;
+}
+foreach ($leads as $lead) {
+    $d = substr($lead['Date'] ?? '', 0, 10);
+    if (isset($leads_by_day[$d])) $leads_by_day[$d]++;
 }
 
-// Ticket médio e performance por vendedor (MySQL)
 $ticket_medio = null;
 $receita_realizada = null;
 $performance_vendedor = [];
@@ -132,284 +91,231 @@ if ($data_source === 'MySQL Database' && isDatabaseConfigured()) {
         }
     } catch (Exception $e) {}
 }
+
+$status_labels = ['new' => 'Novo', 'contacted' => 'Contatado', 'qualified' => 'Qualificado', 'proposal' => 'Proposta', 'closed_won' => 'Ganho', 'closed_lost' => 'Perdido'];
+$status_colors = ['#6366f1', '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#ef4444'];
+$chart_status_labels = json_encode(array_values($status_labels));
+$chart_status_data = json_encode(array_values($status_counts));
+$chart_status_colors = json_encode($status_colors);
+
+$chart_source_labels = json_encode(array_slice(array_keys($source_counts), 0, 8));
+$chart_source_data = json_encode(array_slice(array_values($source_counts), 0, 8));
+$chart_source_colors = json_encode(['#1a2036', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#64748b']);
+
+$chart_days_labels = json_encode(array_map(function($d) { return date('d/m', strtotime($d)); }, array_keys($leads_by_day)));
+$chart_days_data = json_encode(array_values($leads_by_day));
 ?>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
-    }
-    .stat-card {
-        background: linear-gradient(135deg, #1a2036 0%, #252b47 100%);
-        color: white;
-        padding: 25px;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .stat-card.alt {
-        background: linear-gradient(135deg, #252b47 0%, #2a3150 100%);
-    }
-    .stat-label {
-        font-size: 14px;
-        opacity: 0.9;
-        margin-bottom: 8px;
-    }
-    .stat-value {
-        font-size: 36px;
-        font-weight: 700;
-    }
-    .section-title {
-        font-size: 20px;
-        font-weight: 600;
-        margin-bottom: 20px;
-        color: #333;
-    }
-    .recent-leads {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 20px;
-    }
-    .lead-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px;
-        background: white;
-        border-radius: 6px;
-        margin-bottom: 10px;
-    }
-    .lead-info h4 {
-        margin-bottom: 5px;
-        color: #333;
-    }
-    .lead-info p {
-        font-size: 12px;
-        color: #666;
-    }
-    .lead-actions {
-        display: flex;
-        gap: 10px;
-    }
-    .btn-sm {
-        padding: 6px 12px;
-        font-size: 12px;
-        border-radius: 4px;
-        text-decoration: none;
-        border: none;
-        cursor: pointer;
-    }
-    .btn-primary-sm {
-        background: #1a2036;
-        color: white;
-    }
-    .btn-primary-sm:hover {
-        background: #252b47;
-    }
-    .empty-state {
-        text-align: center;
-        padding: 40px;
-        color: #999;
-    }
+.dash-clean { padding: 0; }
+.dash-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+@media (max-width: 900px) { .dash-kpis { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .dash-kpis { grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px; } }
+.dash-kpi {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid #f1f5f9;
+}
+.dash-kpi-value { font-size: 28px; font-weight: 700; color: #1a2036; line-height: 1.2; }
+.dash-kpi-label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 4px; }
+.dash-charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+@media (max-width: 900px) { .dash-charts { grid-template-columns: 1fr; } }
+.dash-chart-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid #f1f5f9;
+}
+.dash-chart-title { font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 16px; }
+.dash-chart-wrap { position: relative; height: 220px; }
+.dash-chart-full { grid-column: 1 / -1; }
+.dash-chart-full .dash-chart-wrap { height: 200px; }
+.dash-cta {
+    text-align: center;
+    margin-top: 24px;
+}
+.dash-cta a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #1a2036 0%, #252b47 100%);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+}
+.dash-cta a:hover { opacity: 0.95; }
+.dash-revenue { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+@media (max-width: 600px) { .dash-revenue { grid-template-columns: 1fr; } }
+.dash-revenue .dash-kpi { background: linear-gradient(135deg, #1a2036 0%, #252b47 100%); color: #fff; border: none; }
+.dash-revenue .dash-kpi-value { color: #fff; }
+.dash-revenue .dash-kpi-label { color: rgba(255,255,255,0.8); }
 </style>
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-    <h1 style="margin: 0;">Dashboard Overview</h1>
-    <?php if (!empty($data_source)): ?>
-        <p style="margin: 0; font-size: 12px; color: #718096;">
-            📊 Fonte: <strong><?php echo htmlspecialchars($data_source); ?></strong>
-            <?php if ($data_source === 'MySQL Database'): ?>
-                <span style="color: #48bb78;">✅</span>
-            <?php else: ?>
-                <span style="color: #f59e0b;">⚠️</span>
-            <?php endif; ?>
-        </p>
-    <?php endif; ?>
-</div>
-
-<div class="dashboard-grid">
-    <div class="stat-card">
-        <div class="stat-label">Total Leads</div>
-        <div class="stat-value"><?php echo number_format($total_leads); ?></div>
-    </div>
-    <div class="stat-card alt">
-        <div class="stat-label">Today</div>
-        <div class="stat-value"><?php echo number_format($today_count); ?></div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Last 7 Days</div>
-        <div class="stat-value"><?php echo number_format($week_count); ?></div>
-    </div>
-    <div class="stat-card alt">
-        <div class="stat-label">Last 30 Days</div>
-        <div class="stat-value"><?php echo number_format($month_count); ?></div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Hero Form</div>
-        <div class="stat-value"><?php echo number_format($hero_form_count); ?></div>
-    </div>
-    <div class="stat-card alt">
-        <div class="stat-label">Contact Form</div>
-        <div class="stat-value"><?php echo number_format($contact_form_count); ?></div>
-    </div>
-    <?php if ($ticket_medio !== null): ?>
-    <div class="stat-card">
-        <div class="stat-label">Ticket médio</div>
-        <div class="stat-value">$<?php echo number_format($ticket_medio, 0); ?></div>
-    </div>
-    <div class="stat-card alt">
-        <div class="stat-label">Receita realizada</div>
-        <div class="stat-value">$<?php echo number_format($receita_realizada, 0); ?></div>
-    </div>
-    <?php endif; ?>
-</div>
-
-<?php if (!empty($performance_vendedor)): ?>
-<div class="metrics-section" style="margin-bottom: 30px;">
-    <h2 style="color: #1a2036; margin-bottom: 16px;">Performance por vendedor</h2>
-    <div class="metrics-grid">
-        <div class="metric-card">
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead><tr><th style="text-align: left; padding: 8px;">Vendedor</th><th style="text-align: right; padding: 8px;">Leads</th><th style="text-align: right; padding: 8px;">Fechados</th></tr></thead>
-                <tbody>
-                    <?php foreach ($performance_vendedor as $v): ?>
-                    <tr><td style="padding: 8px;"><?php echo htmlspecialchars($v['name']); ?></td><td style="text-align: right; padding: 8px;"><?php echo (int)$v['total_leads']; ?></td><td style="text-align: right; padding: 8px;"><?php echo (int)$v['closed_won']; ?></td></tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+<div class="dash-clean">
+    <div class="dash-kpis">
+        <div class="dash-kpi">
+            <div class="dash-kpi-value"><?php echo number_format($total_leads); ?></div>
+            <div class="dash-kpi-label">Total leads</div>
+        </div>
+        <div class="dash-kpi">
+            <div class="dash-kpi-value"><?php echo number_format($today_count); ?></div>
+            <div class="dash-kpi-label">Hoje</div>
+        </div>
+        <div class="dash-kpi">
+            <div class="dash-kpi-value"><?php echo number_format($week_count); ?></div>
+            <div class="dash-kpi-label">Últimos 7 dias</div>
+        </div>
+        <div class="dash-kpi">
+            <div class="dash-kpi-value"><?php echo number_format($month_count); ?></div>
+            <div class="dash-kpi-label">Últimos 30 dias</div>
         </div>
     </div>
-</div>
-<?php endif; ?>
 
-<!-- FASE 3 - MÓDULO 06: Métricas de Conversão -->
-<div class="metrics-section">
-    <h2 style="color: #1a2036; margin-bottom: 20px;">Métricas de Conversão</h2>
-    
-    <div class="metrics-grid">
-        <!-- Conversão por Status -->
-        <div class="metric-card">
-            <h3>Leads por Status</h3>
-            <?php 
-            $status_labels = [
-                'new' => 'Novo',
-                'contacted' => 'Contatado',
-                'qualified' => 'Qualificado',
-                'proposal' => 'Proposta',
-                'closed_won' => 'Fechado - Ganho',
-                'closed_lost' => 'Fechado - Perdido'
-            ];
-            foreach ($status_counts as $status => $count): 
-                $percentage = $total_leads > 0 ? round(($count / $total_leads) * 100, 1) : 0;
-            ?>
-                <div class="metric-item">
-                    <span class="metric-label"><?php echo $status_labels[$status] ?? $status; ?></span>
-                    <span class="metric-value">
-                        <?php echo number_format($count); ?>
-                        <span class="metric-percentage">(<?php echo $percentage; ?>%)</span>
-                    </span>
-                </div>
-            <?php endforeach; ?>
-        </div>
-        
-        <!-- Origem dos Leads -->
-        <div class="metric-card">
-            <h3>Origem dos Leads</h3>
-            <?php 
-            $top_sources = array_slice($source_counts, 0, 10, true);
-            foreach ($top_sources as $source => $count): 
-                $percentage = $total_leads > 0 ? round(($count / $total_leads) * 100, 1) : 0;
-            ?>
-                <div class="metric-item">
-                    <span class="metric-label"><?php echo htmlspecialchars($source); ?></span>
-                    <span class="metric-value">
-                        <?php echo number_format($count); ?>
-                        <span class="metric-percentage">(<?php echo $percentage; ?>%)</span>
-                    </span>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</div>
-
-<div class="section-title">Recent Leads</div>
-<div class="recent-leads">
-    <?php if (empty($recent_leads)): ?>
-        <div class="empty-state">
-            <p>No leads yet. Leads will appear here once forms are submitted.</p>
-        </div>
-    <?php else: ?>
-        <?php foreach ($recent_leads as $lead): ?>
-            <div class="lead-item">
-                <div class="lead-info">
-                    <h4><?php echo htmlspecialchars($lead['Name'] ?? 'N/A'); ?></h4>
-                    <p>
-                        <?php echo htmlspecialchars($lead['Email'] ?? ''); ?> � 
-                        <?php echo htmlspecialchars($lead['Phone'] ?? ''); ?> � 
-                        <?php echo htmlspecialchars($lead['Date'] ?? ''); ?>
-                    </p>
-                </div>
-                <div class="lead-actions">
-                    <a href="tel:<?php echo htmlspecialchars($lead['Phone'] ?? ''); ?>" class="btn-sm btn-primary-sm">Call</a>
-                    <a href="mailto:<?php echo htmlspecialchars($lead['Email'] ?? ''); ?>" class="btn-sm btn-primary-sm">Email</a>
-                    <a href="?module=crm" class="btn-sm btn-primary-sm">View All</a>
-                </div>
+    <div class="dash-charts">
+        <div class="dash-chart-card">
+            <div class="dash-chart-title">Status dos leads</div>
+            <div class="dash-chart-wrap">
+                <canvas id="chartStatus"></canvas>
             </div>
-        <?php endforeach; ?>
-    <?php endif; ?>
-</div>
-
-<!-- FASE 3 - MÓDULO 06: Métricas de Conversão -->
-<div class="metrics-section" style="margin-top: 40px;">
-    <h2 style="color: #1a2036; margin-bottom: 20px; font-size: 24px;">Métricas de Conversão</h2>
-    
-    <div class="metrics-grid">
-        <!-- Conversão por Status -->
-        <div class="metric-card">
-            <h3>Leads por Status</h3>
-            <?php 
-            $status_labels = [
-                'new' => 'Novo',
-                'contacted' => 'Contatado',
-                'qualified' => 'Qualificado',
-                'proposal' => 'Proposta',
-                'closed_won' => 'Fechado - Ganho',
-                'closed_lost' => 'Fechado - Perdido'
-            ];
-            foreach ($status_counts as $status => $count): 
-                $percentage = $total_leads > 0 ? round(($count / $total_leads) * 100, 1) : 0;
-            ?>
-                <div class="metric-item">
-                    <span class="metric-label"><?php echo $status_labels[$status] ?? $status; ?></span>
-                    <span class="metric-value">
-                        <?php echo number_format($count); ?>
-                        <span class="metric-percentage">(<?php echo $percentage; ?>%)</span>
-                    </span>
-                </div>
-            <?php endforeach; ?>
         </div>
-        
-        <!-- Origem dos Leads -->
-        <div class="metric-card">
-            <h3>Origem dos Leads</h3>
-            <?php 
-            $top_sources = array_slice($source_counts, 0, 10, true);
-            if (empty($top_sources)): 
-            ?>
-                <p style="color: #718096; font-style: italic;">Nenhum lead ainda.</p>
-            <?php else: ?>
-                <?php foreach ($top_sources as $source => $count): 
-                    $percentage = $total_leads > 0 ? round(($count / $total_leads) * 100, 1) : 0;
-                ?>
-                    <div class="metric-item">
-                        <span class="metric-label"><?php echo htmlspecialchars($source); ?></span>
-                        <span class="metric-value">
-                            <?php echo number_format($count); ?>
-                            <span class="metric-percentage">(<?php echo $percentage; ?>%)</span>
-                        </span>
-                    </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
+        <div class="dash-chart-card">
+            <div class="dash-chart-title">Origem</div>
+            <div class="dash-chart-wrap">
+                <canvas id="chartSource"></canvas>
+            </div>
         </div>
     </div>
+
+    <div class="dash-chart-card dash-chart-full">
+        <div class="dash-chart-title">Leads nos últimos 30 dias</div>
+        <div class="dash-chart-wrap">
+            <canvas id="chartDays"></canvas>
+        </div>
+    </div>
+
+    <?php if ($ticket_medio !== null && $receita_realizada !== null): ?>
+    <div class="dash-revenue">
+        <div class="dash-kpi">
+            <div class="dash-kpi-value">$<?php echo number_format($ticket_medio, 0); ?></div>
+            <div class="dash-kpi-label">Ticket médio</div>
+        </div>
+        <div class="dash-kpi">
+            <div class="dash-kpi-value">$<?php echo number_format($receita_realizada, 0); ?></div>
+            <div class="dash-kpi-label">Receita realizada</div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if (!empty($performance_vendedor)): ?>
+    <div class="dash-chart-card" style="margin-bottom: 24px;">
+        <div class="dash-chart-title">Performance por vendedor</div>
+        <div class="dash-chart-wrap" style="height: 180px;">
+            <canvas id="chartVendedor"></canvas>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <div class="dash-cta">
+        <a href="?module=crm">Ver todos os leads →</a>
+    </div>
 </div>
+
+<script>
+(function() {
+    const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
+    const gridColor = '#e2e8f0';
+    Chart.defaults.color = '#64748b';
+    Chart.defaults.font.family = fontFamily;
+    Chart.defaults.font.size = 11;
+
+    new Chart(document.getElementById('chartStatus'), {
+        type: 'doughnut',
+        data: {
+            labels: <?php echo $chart_status_labels; ?>,
+            datasets: [{ data: <?php echo $chart_status_data; ?>, backgroundColor: <?php echo $chart_status_colors; ?>, borderWidth: 0 }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: { legend: { position: 'right' } }
+        }
+    });
+
+    new Chart(document.getElementById('chartSource'), {
+        type: 'doughnut',
+        data: {
+            labels: <?php echo $chart_source_labels; ?>,
+            datasets: [{ data: <?php echo $chart_source_data; ?>, backgroundColor: <?php echo $chart_source_colors; ?>, borderWidth: 0 }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: { legend: { position: 'right' } }
+        }
+    });
+
+    new Chart(document.getElementById('chartDays'), {
+        type: 'line',
+        data: {
+            labels: <?php echo $chart_days_labels; ?>,
+            datasets: [{
+                data: <?php echo $chart_days_data; ?>,
+                borderColor: '#1a2036',
+                backgroundColor: 'rgba(26, 32, 54, 0.08)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, grid: { color: gridColor } },
+                x: { grid: { display: false } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    <?php if (!empty($performance_vendedor)): ?>
+    new Chart(document.getElementById('chartVendedor'), {
+        type: 'bar',
+        data: {
+            labels: <?php echo json_encode(array_column($performance_vendedor, 'name')); ?>,
+            datasets: [
+                { label: 'Leads', data: <?php echo json_encode(array_column($performance_vendedor, 'total_leads')); ?>, backgroundColor: '#6366f1' },
+                { label: 'Fechados', data: <?php echo json_encode(array_column($performance_vendedor, 'closed_won')); ?>, backgroundColor: '#10b981' }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+                x: { beginAtZero: true, grid: { color: gridColor } },
+                y: { grid: { display: false } }
+            },
+            plugins: { legend: { position: 'top' } }
+        }
+    });
+    <?php endif; ?>
+})();
+</script>
