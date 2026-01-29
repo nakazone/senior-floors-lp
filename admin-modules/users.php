@@ -18,13 +18,16 @@ if (!isset($_SESSION['admin_authenticated'])) {
     exit;
 }
 
-// Verificar permissão (se sistema de permissões estiver disponível)
+// Verificar permissão para ver o módulo (admin ou users.view)
 $has_permission = true;
-if (function_exists('hasPermission') && isset($_SESSION['admin_user_id'])) {
-    $has_permission = hasPermission($_SESSION['admin_user_id'], 'users.view');
-} elseif (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin') {
-    // Admin sempre tem acesso
+$role = trim((string)($_SESSION['admin_role'] ?? ''));
+$admin_user_id = $_SESSION['admin_user_id'] ?? null;
+if ($role === 'admin' || $admin_user_id === null) {
     $has_permission = true;
+} elseif (function_exists('hasPermission') && $admin_user_id) {
+    $has_permission = hasPermission($admin_user_id, 'users.view');
+} else {
+    $has_permission = false;
 }
 
 if (!$has_permission) {
@@ -68,10 +71,16 @@ if (isDatabaseConfigured()) {
     }
 }
 ?>
+<?php
+$can_create_user = ($role === 'admin' || $admin_user_id === null);
+if (!$can_create_user && function_exists('hasPermission') && $admin_user_id) {
+    $can_create_user = hasPermission($admin_user_id, 'users.create');
+}
+?>
 <div class="module-header">
     <h2>Users Management</h2>
     <div class="module-actions">
-        <?php if (hasPermission($_SESSION['admin_user_id'], 'users.create')): ?>
+        <?php if ($can_create_user): ?>
             <button class="btn btn-primary" onclick="showCreateUserModal()">+ New User</button>
         <?php endif; ?>
     </div>
@@ -156,13 +165,7 @@ if (isDatabaseConfigured()) {
 
 <!-- Create User Modal -->
 <?php 
-$can_create = true;
-if (function_exists('hasPermission') && isset($_SESSION['admin_user_id'])) {
-    $can_create = hasPermission($_SESSION['admin_user_id'], 'users.create');
-} elseif (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] !== 'admin') {
-    $can_create = false;
-}
-if ($can_create): 
+if ($can_create_user): 
 ?>
 <div id="createUserModal" class="modal" style="display: none;">
     <div class="modal-content">

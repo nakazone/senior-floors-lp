@@ -31,14 +31,14 @@ if (!isset($_SESSION['admin_authenticated'])) {
     exit;
 }
 
-// Verificar permissão (se sistema de permissões estiver disponível)
-$has_permission = true;
-if (function_exists('hasPermission') && isset($_SESSION['admin_user_id'])) {
-    $has_permission = hasPermission($_SESSION['admin_user_id'], 'users.create');
-} elseif (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin') {
+// Verificar permissão: admin (role ou login por arquivo) ou users.create
+$has_permission = false;
+$role = trim((string)($_SESSION['admin_role'] ?? ''));
+$admin_user_id = $_SESSION['admin_user_id'] ?? null;
+if ($role === 'admin' || $admin_user_id === null) {
     $has_permission = true;
-} else {
-    $has_permission = false;
+} elseif (function_exists('hasPermission') && $admin_user_id) {
+    $has_permission = hasPermission($admin_user_id, 'users.create');
 }
 
 if (!$has_permission) {
