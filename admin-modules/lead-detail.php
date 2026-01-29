@@ -38,15 +38,16 @@ if (isDatabaseConfigured()) {
             $lead = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($lead) {
-                // Buscar observações
-                $stmt = $pdo->prepare("
-                    SELECT id, note, created_by, created_at
-                    FROM lead_notes
-                    WHERE lead_id = :lead_id
-                    ORDER BY created_at DESC
-                ");
-                $stmt->execute([':lead_id' => $lead_id]);
-                $notes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                // Buscar observações (se a tabela existir)
+                try {
+                    if ($pdo->query("SHOW TABLES LIKE 'lead_notes'")->rowCount() > 0) {
+                        $stmt = $pdo->prepare("SELECT id, note, created_by, created_at FROM lead_notes WHERE lead_id = :lead_id ORDER BY created_at DESC");
+                        $stmt->execute([':lead_id' => $lead_id]);
+                        $notes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    }
+                } catch (Exception $e) {
+                    error_log("Lead detail load notes: " . $e->getMessage());
+                }
                 
                 // Buscar tags (coluna pode ser tag ou tag_name conforme o schema)
                 $tag_col = 'tag_name';
@@ -87,11 +88,13 @@ if (isDatabaseConfigured()) {
                 $activities = [];
                 try {
                     if ($pdo->query("SHOW TABLES LIKE 'activities'")->rowCount() > 0) {
-                        $stmt = $pdo->prepare("SELECT id, activity_type, subject, description, activity_date, user_id, created_at FROM activities WHERE lead_id = ? ORDER BY activity_date DESC, created_at DESC LIMIT 100");
+                        $stmt = $pdo->prepare("SELECT id, activity_type, subject, description, activity_date, user_id, created_at FROM activities WHERE lead_id = ? ORDER BY COALESCE(activity_date, created_at) DESC, created_at DESC LIMIT 100");
                         $stmt->execute([$lead_id]);
                         $activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     }
-                } catch (Exception $e) {}
+                } catch (Exception $e) {
+                    error_log("Lead detail load activities: " . $e->getMessage());
+                }
             } else {
                 $error = "Lead não encontrado";
             }
@@ -136,23 +139,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
     
-    if ($_POST['action'] === 'add_note') {
-        $api_url = '../api/leads/notes.php';
-        $post_data = [
-            'lead_id' => $lead_id,
-            'note' => $_POST['note'],
-            'created_by' => $_SESSION['admin_name'] ?? 'admin'
-        ];
-        
-        $ch = curl_init($api_url);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post_data));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        
-        $response = curl_exec($ch);
-        curl_close($ch);
-        
+    if ($_POST['action'] === 'add_note' && !empty(trim($_POST['note'] ?? ''))) {
+        $note_text = trim($_POST['note']);
+        $created_by = $_SESSION['admin_name'] ?? 'admin';
+        if (isDatabaseConfigured()) {
+            try {
+                $pdo_note = getDBConnection();
+                if ($pdo_note && $pdo_note->query("SHOW TABLES LIKE 'lead_notes'")->rowCount() > 0) {
+                    $stmt = $pdo_note->prepare("INSERT INTO lead_notes (lead_id, note, created_by) VALUES (?, ?, ?)");
+                    $stmt->execute([$lead_id, $note_text, $created_by]);
+                }
+            } catch (Exception $e) {
+                error_log("Lead detail add_note: " . $e->getMessage());
+            }
+        }
         header('Location: ?module=lead-detail&id=' . $lead_id);
         exit;
     }
@@ -177,21 +177,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
     
     if ($_POST['action'] === 'add_activity' && isset($_POST['activity_type'])) {
-        $api_url = '../api/activities/create.php';
-        $post_data = [
-            'lead_id' => $lead_id,
-            'activity_type' => $_POST['activity_type'],
-            'subject' => isset($_POST['activity_subject']) ? trim($_POST['activity_subject']) : '',
-            'description' => isset($_POST['activity_description']) ? trim($_POST['activity_description']) : '',
-            'user_id' => $_SESSION['admin_user_id'] ?? null
-        ];
-        $ch = curl_init($api_url);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post_data));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_exec($ch);
-        curl_close($ch);
+        $activity_type = trim($_POST['activity_type']);
+        $subject = isset($_POST['activity_subject']) ? trim($_POST['activity_subject']) : null;
+        $description = isset($_POST['activity_description']) ? trim($_POST['activity_description']) : null;
+        $valid_types = ['email_sent', 'whatsapp_message', 'phone_call', 'meeting_scheduled', 'site_visit', 'proposal_sent', 'note', 'status_change', 'assignment', 'other'];
+        $type_labels_short = ['phone_call' => 'Ligação', 'email_sent' => 'E-mail', 'whatsapp_message' => 'WhatsApp', 'meeting_scheduled' => 'Reunião', 'note' => 'Observação', 'other' => 'Contato'];
+        $saved = false;
+        if (in_array($activity_type, $valid_types) && isDatabaseConfigured()) {
+            try {
+                $pdo_act = getDBConnection();
+                if ($pdo_act && $pdo_act->query("SHOW TABLES LIKE 'activities'")->rowCount() > 0) {
+                    $stmt = $pdo_act->prepare("
+                        INSERT INTO activities (lead_id, activity_type, subject, description, activity_date, user_id, related_to)
+                        VALUES (?, ?, ?, ?, NOW(), ?, 'lead')
+                    ");
+                    $stmt->execute([$lead_id, $activity_type, $subject ?: null, $description ?: null, $_SESSION['admin_user_id'] ?? null]);
+                    $saved = true;
+                }
+                if (!$saved && $pdo_act && $pdo_act->query("SHOW TABLES LIKE 'lead_notes'")->rowCount() > 0) {
+                    $label = $type_labels_short[$activity_type] ?? 'Contato';
+                    $note_text = "[$label]" . ($subject ? " $subject" : '') . ($description ? " — $description" : '');
+                    $created_by = $_SESSION['admin_name'] ?? 'admin';
+                    $stmt = $pdo_act->prepare("INSERT INTO lead_notes (lead_id, note, created_by) VALUES (?, ?, ?)");
+                    $stmt->execute([$lead_id, $note_text, $created_by]);
+                    $saved = true;
+                }
+            } catch (Exception $e) {
+                error_log("Lead detail add_activity: " . $e->getMessage());
+            }
+        }
         header('Location: ?module=lead-detail&id=' . $lead_id);
         exit;
     }
@@ -639,6 +653,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         </div>
     </div>
     
+    <!-- Adicionar observação (em destaque) -->
+    <div class="info-card" style="margin-bottom: 24px;">
+        <h2>Adicionar observação</h2>
+        <p style="color: #64748b; margin-bottom: 16px; font-size: 14px;">Registre uma observação interna sobre este lead. Ela aparecerá no histórico abaixo.</p>
+        <form method="POST" action="?module=lead-detail&id=<?php echo (int)$lead_id; ?>">
+            <input type="hidden" name="action" value="add_note">
+            <div class="form-group">
+                <textarea name="note" class="textarea" placeholder="Digite sua observação..." required style="min-height: 100px;"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar observação</button>
+        </form>
+        <?php if (!empty($notes)): ?>
+        <p style="margin-top: 16px; color: #475569; font-size: 13px;"><?php echo count($notes); ?> observação(ões) no histórico.</p>
+        <?php endif; ?>
+    </div>
+    
     <!-- Tags -->
     <div class="info-card notes-section">
         <h2>Tags</h2>
@@ -693,15 +723,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         
         <?php
         $has_activities_table = false;
+        $has_lead_notes_table = false;
         try {
             if (isDatabaseConfigured()) {
                 $pdo_hist = getDBConnection();
-                $has_activities_table = $pdo_hist && $pdo_hist->query("SHOW TABLES LIKE 'activities'")->rowCount() > 0;
+                if ($pdo_hist) {
+                    $has_activities_table = $pdo_hist->query("SHOW TABLES LIKE 'activities'")->rowCount() > 0;
+                    $has_lead_notes_table = $pdo_hist->query("SHOW TABLES LIKE 'lead_notes'")->rowCount() > 0;
+                }
             }
         } catch (Exception $e) {}
+        $can_log_contact = $has_activities_table || $has_lead_notes_table;
         ?>
         
-        <?php if ($has_activities_table): ?>
+        <?php if ($can_log_contact): ?>
         <form method="POST" action="?module=lead-detail&id=<?php echo $lead_id; ?>" style="margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
             <input type="hidden" name="action" value="add_activity">
             <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 16px;">Registrar contato</h3>
@@ -726,10 +761,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             </div>
             <button type="submit" class="btn btn-primary">Registrar contato</button>
         </form>
+        <?php else: ?>
+        <p style="margin-bottom: 20px; padding: 12px; background: #fef3c7; border-radius: 8px; color: #92400e; font-size: 14px;">
+            Para registrar contatos é preciso ter a tabela <code>lead_notes</code> ou <code>activities</code>. Execute no phpMyAdmin o arquivo <strong>database/schema-v3-completo.sql</strong> (ou <strong>database/migration-lead-owner-and-activities.sql</strong>) para criar as tabelas. Depois atualize esta página.
+        </p>
         <?php endif; ?>
         
         <h3 style="margin-bottom: 12px; font-size: 16px;">Adicionar observação interna</h3>
-        <form method="POST" style="margin-bottom: 24px;">
+        <form method="POST" action="?module=lead-detail&id=<?php echo (int)$lead_id; ?>" style="margin-bottom: 24px;">
             <input type="hidden" name="action" value="add_note">
             <div class="form-group">
                 <textarea name="note" class="textarea" placeholder="Digite uma observação sobre este lead..." required></textarea>

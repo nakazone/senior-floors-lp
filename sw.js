@@ -1,10 +1,10 @@
 // Service Worker para Senior Floors CRM
 // Permite instalação como PWA; NÃO cacheia system.php para evitar tela em branco ao clicar em CRM
 
-const CACHE_NAME = 'senior-floors-crm-v2';
+const CACHE_NAME = 'senior-floors-crm-v4';
 const urlsToCache = [
-  '/assets/logoSeniorFloors.png',
-  '/manifest.json',
+  '/assets/logoSeniorFloors.png?v=4',
+  '/manifest.json?v=4',
   '/styles.css'
 ];
 
