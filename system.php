@@ -444,6 +444,7 @@ if (!file_exists($module_file)) {
         h1 { font-size: 20px; font-weight: 600; }
         .header-actions {
             display: flex;
+            align-items: center;
             gap: 10px;
         }
         .btn {
@@ -681,7 +682,7 @@ if (!file_exists($module_file)) {
         <div class="header-content">
             <div class="header-left">
                 <a href="?module=dashboard" class="logo-admin">
-                    <img src="assets/logoSeniorFloors.png" alt="Senior Floors Logo">
+                    <img src="assets/logoSeniorFloors.png?v=5" alt="Senior Floors Logo">
                     <h1><?php echo htmlspecialchars($ADMIN_TITLE); ?></h1>
                 </a>
             </div>
