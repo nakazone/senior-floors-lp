@@ -46,7 +46,7 @@ if (isDatabaseConfigured()) {
                 
                 // Buscar tags
                 $stmt = $pdo->prepare("
-                    SELECT id, tag, created_at
+                    SELECT id, tag_name, created_at
                     FROM lead_tags
                     WHERE lead_id = :lead_id
                     ORDER BY created_at DESC
@@ -114,7 +114,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $response = curl_exec($ch);
         curl_close($ch);
         
-        // Recarregar página após adicionar observação
+        header('Location: ?module=lead-detail&id=' . $lead_id);
+        exit;
+    }
+
+    if ($_POST['action'] === 'update_qualification') {
+        $api_url = '../api/leads/update.php';
+        $post_data = [
+            'lead_id' => $lead_id,
+            'budget_estimated' => isset($_POST['budget_estimated']) ? $_POST['budget_estimated'] : '',
+            'urgency' => isset($_POST['urgency']) ? $_POST['urgency'] : '',
+            'is_decision_maker' => isset($_POST['is_decision_maker']) ? $_POST['is_decision_maker'] : '',
+            'payment_type' => isset($_POST['payment_type']) ? $_POST['payment_type'] : '',
+            'has_competition' => isset($_POST['has_competition']) ? $_POST['has_competition'] : ''
+        ];
+        $ch = curl_init($api_url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post_data));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_exec($ch);
+        curl_close($ch);
         header('Location: ?module=lead-detail&id=' . $lead_id);
         exit;
     }
@@ -346,6 +366,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 <div class="info-value"><?php echo htmlspecialchars($lead['source'] ?? 'N/A'); ?></div>
             </div>
             
+            <?php if (!empty($lead['address'])): ?>
+            <div class="info-row">
+                <div class="info-label">Endereço:</div>
+                <div class="info-value"><?php echo htmlspecialchars($lead['address']); ?></div>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($lead['property_type'])): ?>
+            <div class="info-row">
+                <div class="info-label">Tipo imóvel:</div>
+                <div class="info-value"><?php echo $lead['property_type'] === 'casa' ? 'Casa' : ($lead['property_type'] === 'apartamento' ? 'Apartamento' : 'Comercial'); ?></div>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($lead['service_type'])): ?>
+            <div class="info-row">
+                <div class="info-label">Tipo serviço:</div>
+                <div class="info-value"><?php echo htmlspecialchars($lead['service_type']); ?></div>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($lead['main_interest'])): ?>
+            <div class="info-row">
+                <div class="info-label">Interesse principal:</div>
+                <div class="info-value"><?php echo htmlspecialchars($lead['main_interest']); ?></div>
+            </div>
+            <?php endif; ?>
+            <?php if (isset($lead['lead_score']) && $lead['lead_score'] > 0): ?>
+            <div class="info-row">
+                <div class="info-label">Score:</div>
+                <div class="info-value"><strong><?php echo (int)$lead['lead_score']; ?></strong> / 100</div>
+            </div>
+            <?php endif; ?>
             <div class="info-row">
                 <div class="info-label">Formulário:</div>
                 <div class="info-value"><?php echo htmlspecialchars($lead['form_type'] ?? 'N/A'); ?></div>
@@ -367,6 +417,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             </div>
         </div>
         
+        <!-- Qualificação (pré-venda) -->
+        <div class="info-card">
+            <h2>Qualificação</h2>
+            <form method="POST" action="?module=lead-detail&id=<?php echo $lead_id; ?>" style="margin-bottom: 16px;">
+                <input type="hidden" name="action" value="update_qualification">
+                <div class="form-group">
+                    <label>Orçamento estimado ($)</label>
+                    <input type="text" name="budget_estimated" value="<?php echo htmlspecialchars($lead['budget_estimated'] ?? ''); ?>" placeholder="Ex: 5000">
+                </div>
+                <div class="form-group">
+                    <label>Urgência</label>
+                    <select name="urgency">
+                        <option value="">—</option>
+                        <option value="imediato" <?php echo ($lead['urgency'] ?? '') === 'imediato' ? 'selected' : ''; ?>>Imediato</option>
+                        <option value="30_dias" <?php echo ($lead['urgency'] ?? '') === '30_dias' ? 'selected' : ''; ?>>30 dias</option>
+                        <option value="60_mais" <?php echo ($lead['urgency'] ?? '') === '60_mais' ? 'selected' : ''; ?>>60+ dias</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Decisor?</label>
+                    <select name="is_decision_maker">
+                        <option value="">—</option>
+                        <option value="1" <?php echo isset($lead['is_decision_maker']) && $lead['is_decision_maker'] ? 'selected' : ''; ?>>Sim</option>
+                        <option value="0" <?php echo isset($lead['is_decision_maker']) && $lead['is_decision_maker'] === '0' ? 'selected' : ''; ?>>Não</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tipo pagamento</label>
+                    <select name="payment_type">
+                        <option value="">—</option>
+                        <option value="cash" <?php echo ($lead['payment_type'] ?? '') === 'cash' ? 'selected' : ''; ?>>À vista (Cash)</option>
+                        <option value="financing" <?php echo ($lead['payment_type'] ?? '') === 'financing' ? 'selected' : ''; ?>>Financiamento</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Concorrência?</label>
+                    <select name="has_competition">
+                        <option value="">—</option>
+                        <option value="1" <?php echo isset($lead['has_competition']) && $lead['has_competition'] ? 'selected' : ''; ?>>Sim</option>
+                        <option value="0" <?php echo isset($lead['has_competition']) && $lead['has_competition'] === '0' ? 'selected' : ''; ?>>Não</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Salvar qualificação (atualiza score e tags)</button>
+            </form>
+        </div>
+
         <!-- Status e Ações -->
         <div class="info-card">
             <h2>Status e Ações</h2>
@@ -446,10 +542,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
                     <?php foreach ($tags as $tag_item): ?>
                         <span style="background: #1a2036; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; display: inline-flex; align-items: center; gap: 8px;">
-                            <?php echo htmlspecialchars(getTagLabel($tag_item['tag'])); ?>
+                            <?php echo htmlspecialchars(getTagLabel($tag_item['tag_name'] ?? $tag_item['tag'] ?? '')); ?>
                             <form method="POST" style="display: inline; margin: 0;">
                                 <input type="hidden" name="action" value="remove_tag">
-                                <input type="hidden" name="tag" value="<?php echo htmlspecialchars($tag_item['tag']); ?>">
+                                <input type="hidden" name="tag" value="<?php echo htmlspecialchars($tag_item['tag_name'] ?? $tag_item['tag'] ?? ''); ?>">
                                 <button type="submit" style="background: rgba(255,255,255,0.2); border: none; color: white; cursor: pointer; padding: 2px 6px; border-radius: 10px; font-size: 10px;">×</button>
                             </form>
                         </span>
@@ -466,7 +562,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             <option value="">Selecione uma tag...</option>
                             <?php 
                             $available_tags = getAvailableTags();
-                            $current_tags = array_column($tags, 'tag');
+                            $current_tags = array_column($tags, 'tag_name');
                             foreach ($available_tags as $tag_key => $tag_label): 
                                 if (!in_array($tag_key, $current_tags)):
                             ?>

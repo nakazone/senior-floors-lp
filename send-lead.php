@@ -40,6 +40,11 @@ $phone = isset($_POST['phone']) ? trim($_POST['phone']) : '';
 $email = isset($_POST['email']) ? trim($_POST['email']) : '';
 $zipcode = isset($_POST['zipcode']) ? trim($_POST['zipcode']) : '';
 $message = isset($_POST['message']) ? trim($_POST['message']) : '';
+$address = isset($_POST['address']) ? trim($_POST['address']) : null;
+$property_type = isset($_POST['property_type']) ? trim($_POST['property_type']) : null;
+$service_type = isset($_POST['service_type']) ? trim($_POST['service_type']) : null;
+$main_interest = isset($_POST['main_interest']) ? trim($_POST['main_interest']) : null;
+$source_override = isset($_POST['source']) ? trim($_POST['source']) : null;
 
 // Validation
 $errors = [];
@@ -113,31 +118,65 @@ if (file_exists($db_config_file)) {
                 // Verificar se tabela existe
                 $check_table = $pdo->query("SHOW TABLES LIKE 'leads'");
                 if ($check_table->rowCount() > 0) {
-                    $stmt = $pdo->prepare("
-                        INSERT INTO leads (name, email, phone, zipcode, message, source, form_type, status, priority, ip_address)
-                        VALUES (:name, :email, :phone, :zipcode, :message, :source, :form_type, 'new', 'medium', :ip_address)
-                    ");
-                    
-                    $source = ($form_name === 'hero-form') ? 'LP-Hero' : 'LP-Contact';
+                    $source = $source_override ?: (($form_name === 'hero-form') ? 'LP-Hero' : 'LP-Contact');
                     $ip_address = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : null;
-                    
-                    $stmt->execute([
-                        ':name' => $name,
-                        ':email' => $email,
-                        ':phone' => $phone,
-                        ':zipcode' => $zipcode,
-                        ':message' => $message,
-                        ':source' => $source,
-                        ':form_type' => $form_name,
-                        ':ip_address' => $ip_address
-                    ]);
-                    
-                    $db_saved = true;
-                    $lead_id = $pdo->lastInsertId();
-                    
-                    // Log success
-                    $log_entry = date('Y-m-d H:i:s') . " | ✅ Lead saved to database | ID: $lead_id | Name: $name | Email: $email\n";
-                    @file_put_contents(__DIR__ . '/lead-db-save.log', $log_entry, FILE_APPEND | LOCK_EX);
+
+                    // Duplicados e distribuição (quando config/lead-logic e colunas existem)
+                    $owner_id = null;
+                    $is_dup = false;
+                    $existing_lead_id = null;
+                    if (file_exists(__DIR__ . '/config/lead-logic.php')) {
+                        require_once __DIR__ . '/config/lead-logic.php';
+                        $dup = checkDuplicateLead($pdo, $email, preg_replace('/\D/', '', $phone), null);
+                        if ($dup['is_duplicate']) {
+                            $is_dup = true;
+                            $existing_lead_id = $dup['existing_id'];
+                            $db_saved = true;
+                            $lead_id = $existing_lead_id;
+                        } else {
+                            $owner_id = getNextOwnerRoundRobin($pdo);
+                        }
+                    }
+
+                    if (!$is_dup) {
+                        $cols = "name, email, phone, zipcode, message, source, form_type, status, priority, ip_address";
+                        $placeholders = ":name, :email, :phone, :zipcode, :message, :source, :form_type, 'new', 'medium', :ip_address";
+                        $params = [
+                            ':name' => $name, ':email' => $email, ':phone' => $phone, ':zipcode' => $zipcode,
+                            ':message' => $message, ':source' => $source, ':form_type' => $form_name, ':ip_address' => $ip_address
+                        ];
+                        if ($owner_id !== null) { $cols .= ", owner_id"; $placeholders .= ", :owner_id"; $params[':owner_id'] = $owner_id; }
+                        $has_stage = false;
+                        try { $chk = $pdo->query("SELECT 1 FROM pipeline_stages LIMIT 1"); $has_stage = $chk && $chk->rowCount() > 0; } catch (Exception $e) {}
+                        if ($has_stage) { $cols .= ", pipeline_stage_id"; $placeholders .= ", 1"; }
+                        if ($address !== null && $address !== '') { $cols .= ", address"; $placeholders .= ", :address"; $params[':address'] = htmlspecialchars($address, ENT_QUOTES, 'UTF-8'); }
+                        if ($property_type !== null && in_array($property_type, ['casa','apartamento','comercial'])) { $cols .= ", property_type"; $placeholders .= ", :property_type"; $params[':property_type'] = $property_type; }
+                        if ($service_type !== null && $service_type !== '') { $cols .= ", service_type"; $placeholders .= ", :service_type"; $params[':service_type'] = htmlspecialchars($service_type, ENT_QUOTES, 'UTF-8'); }
+                        if ($main_interest !== null && $main_interest !== '') { $cols .= ", main_interest"; $placeholders .= ", :main_interest"; $params[':main_interest'] = htmlspecialchars($main_interest, ENT_QUOTES, 'UTF-8'); }
+
+                        try {
+                            $stmt = $pdo->prepare("INSERT INTO leads ($cols) VALUES ($placeholders)");
+                            $stmt->execute($params);
+                            $db_saved = true;
+                            $lead_id = $pdo->lastInsertId();
+                            if ($lead_id && $owner_id !== null && function_exists('createLeadEntryTask')) {
+                                try {
+                                    $has_tasks = $pdo->query("SHOW TABLES LIKE 'tasks'")->rowCount() > 0;
+                                    if ($has_tasks) createLeadEntryTask($pdo, $lead_id, $owner_id);
+                                } catch (Exception $e) {}
+                                }
+                        } catch (PDOException $e) {
+                            $db_error = $e->getMessage();
+                            error_log("Database error in send-lead.php: " . $db_error);
+                            $log_entry = date('Y-m-d H:i:s') . " | ❌ Database error: " . $db_error . "\n";
+                            @file_put_contents(__DIR__ . '/lead-db-save.log', $log_entry, FILE_APPEND | LOCK_EX);
+                        }
+                    }
+
+                    if ($db_saved && $lead_id) {
+                        $log_entry = date('Y-m-d H:i:s') . " | ✅ Lead saved to database | ID: $lead_id | Name: $name | Email: $email\n";
+                        @file_put_contents(__DIR__ . '/lead-db-save.log', $log_entry, FILE_APPEND | LOCK_EX);
+                    }
                 } else {
                     $db_error = "Table 'leads' does not exist";
                     error_log("Database error: Table 'leads' does not exist. Execute schema SQL first.");

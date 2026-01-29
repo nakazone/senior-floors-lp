@@ -59,7 +59,7 @@ try {
     
     // Buscar tags
     $stmt = $pdo->prepare("
-        SELECT id, tag, created_at
+        SELECT id, tag_name, created_at
         FROM lead_tags
         WHERE lead_id = :lead_id
         ORDER BY created_at DESC

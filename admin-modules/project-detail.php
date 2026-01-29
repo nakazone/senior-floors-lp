@@ -17,6 +17,9 @@ $customer = null;
 $activities = [];
 $notes = [];
 $tags = [];
+$documents = [];
+$issues = [];
+$checklist = [];
 
 if (isDatabaseConfigured()) {
     try {
@@ -58,6 +61,25 @@ if (isDatabaseConfigured()) {
         $tags_stmt = $pdo->prepare("SELECT tag_name FROM project_tags WHERE project_id = ?");
         $tags_stmt->execute([$project_id]);
         $tags = array_column($tags_stmt->fetchAll(PDO::FETCH_ASSOC), 'tag_name');
+
+        // Pós-venda: documentos, problemas, checklist
+        try {
+            if ($pdo->query("SHOW TABLES LIKE 'project_documents'")->rowCount() > 0) {
+                $st = $pdo->prepare("SELECT * FROM project_documents WHERE project_id = ? ORDER BY created_at DESC");
+                $st->execute([$project_id]);
+                $documents = $st->fetchAll(PDO::FETCH_ASSOC);
+            }
+            if ($pdo->query("SHOW TABLES LIKE 'project_issues'")->rowCount() > 0) {
+                $st = $pdo->prepare("SELECT * FROM project_issues WHERE project_id = ? ORDER BY created_at DESC");
+                $st->execute([$project_id]);
+                $issues = $st->fetchAll(PDO::FETCH_ASSOC);
+            }
+            if ($pdo->query("SHOW TABLES LIKE 'delivery_checklists'")->rowCount() > 0) {
+                $st = $pdo->prepare("SELECT * FROM delivery_checklists WHERE project_id = ? ORDER BY id");
+                $st->execute([$project_id]);
+                $checklist = $st->fetchAll(PDO::FETCH_ASSOC);
+            }
+        } catch (Exception $e) {}
         
     } catch (Exception $e) {
         $error_message = $e->getMessage();
@@ -225,6 +247,43 @@ if (isDatabaseConfigured()) {
             <div class="add-note-section">
                 <textarea id="newNote" rows="3" placeholder="Add a note..."></textarea>
                 <button onclick="addProjectNote(<?php echo $project_id; ?>)" class="btn btn-primary">Add Note</button>
+            </div>
+        </div>
+
+        <!-- Pós-venda: Documentos, Problemas, Checklist -->
+        <div class="detail-section">
+            <h3>Pós-venda</h3>
+            <div class="detail-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div>
+                    <h4 style="margin-bottom: 8px;">Documentos</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        <?php foreach ($documents as $d): ?>
+                            <li><a href="<?php echo htmlspecialchars($d['file_path']); ?>" target="_blank"><?php echo htmlspecialchars(basename($d['file_path'])); ?></a> (<?php echo htmlspecialchars($d['doc_type'] ?? 'doc'); ?>)</li>
+                        <?php endforeach; ?>
+                        <?php if (empty($documents)): ?><li class="text-muted">Nenhum documento</li><?php endif; ?>
+                    </ul>
+                    <p style="font-size: 12px; color: #64748b;">Adicione via API: api/projects/documents.php (project_id, file_path, doc_type)</p>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 8px;">Problemas / Registros</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        <?php foreach ($issues as $i): ?>
+                            <li><span class="badge <?php echo $i['status']; ?>"><?php echo $i['status']; ?></span> <?php echo htmlspecialchars(mb_substr($i['description'], 0, 60)); ?><?php echo mb_strlen($i['description']) > 60 ? '…' : ''; ?></li>
+                        <?php endforeach; ?>
+                        <?php if (empty($issues)): ?><li class="text-muted">Nenhum problema registrado</li><?php endif; ?>
+                    </ul>
+                    <p style="font-size: 12px; color: #64748b;">Adicione via API: api/projects/issues.php</p>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 8px;">Checklist de entrega</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        <?php foreach ($checklist as $c): ?>
+                            <li><?php echo $c['completed'] ? '✓' : '○'; ?> <?php echo htmlspecialchars($c['item_name']); ?></li>
+                        <?php endforeach; ?>
+                        <?php if (empty($checklist)): ?><li class="text-muted">Nenhum item</li><?php endif; ?>
+                    </ul>
+                    <p style="font-size: 12px; color: #64748b;">Adicione via API: api/projects/checklist.php</p>
+                </div>
             </div>
         </div>
 

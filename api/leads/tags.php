@@ -81,7 +81,7 @@ try {
         // Adicionar tag (ignorar se já existir devido ao UNIQUE constraint)
         try {
             $stmt = $pdo->prepare("
-                INSERT INTO lead_tags (lead_id, tag)
+                INSERT INTO lead_tags (lead_id, tag_name)
                 VALUES (:lead_id, :tag)
             ");
             $stmt->execute([
@@ -122,7 +122,7 @@ try {
         // Remover tag
         $stmt = $pdo->prepare("
             DELETE FROM lead_tags
-            WHERE lead_id = :lead_id AND tag = :tag
+            WHERE lead_id = :lead_id AND tag_name = :tag
         ");
         $stmt->execute([
             ':lead_id' => $lead_id,

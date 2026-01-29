@@ -252,6 +252,33 @@ $modules = [
         'icon' => '👥',
         'file' => 'admin-modules/crm.php'
     ],
+    'pipeline' => [
+        'name' => 'Pipeline (Kanban)',
+        'icon' => '📋',
+        'file' => 'admin-modules/pipeline.php'
+    ],
+    'visits' => [
+        'name' => 'Visitas e Medições',
+        'icon' => '📅',
+        'file' => 'admin-modules/visits.php'
+    ],
+    'visit-detail' => [
+        'name' => 'Detalhe Visita',
+        'icon' => '📋',
+        'file' => 'admin-modules/visit-detail.php',
+        'hidden' => true
+    ],
+    'quotes' => [
+        'name' => 'Orçamentos',
+        'icon' => '💰',
+        'file' => 'admin-modules/quotes.php'
+    ],
+    'quote-detail' => [
+        'name' => 'Detalhe Orçamento',
+        'icon' => '📋',
+        'file' => 'admin-modules/quote-detail.php',
+        'hidden' => true
+    ],
     'lead-detail' => [
         'name' => 'Lead Detail',
         'icon' => '👤',

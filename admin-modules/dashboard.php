@@ -102,9 +102,35 @@ arsort($source_counts);
 
 // Get recent leads (last 5)
 if ($data_source === 'MySQL Database') {
-    $recent_leads = array_slice($leads, 0, 5); // MySQL já vem ordenado DESC
+    $recent_leads = array_slice($leads, 0, 5);
 } else {
-    $recent_leads = array_slice(array_reverse($leads), 0, 5); // CSV precisa reverter
+    $recent_leads = array_slice(array_reverse($leads), 0, 5);
+}
+
+// Ticket médio e performance por vendedor (MySQL)
+$ticket_medio = null;
+$receita_realizada = null;
+$performance_vendedor = [];
+if ($data_source === 'MySQL Database' && isDatabaseConfigured()) {
+    try {
+        $pdo = getDBConnection();
+        if ($pdo && $pdo->query("SHOW TABLES LIKE 'contracts'")->rowCount() > 0) {
+            $r = $pdo->query("SELECT COUNT(*) as n, COALESCE(SUM(closed_amount), 0) as total FROM contracts");
+            $row = $r->fetch(PDO::FETCH_ASSOC);
+            $receita_realizada = (float)($row['total'] ?? 0);
+            $n_contracts = (int)($row['n'] ?? 0);
+            $ticket_medio = $n_contracts > 0 ? $receita_realizada / $n_contracts : 0;
+        }
+        if ($pdo && $pdo->query("SHOW TABLES LIKE 'users'")->rowCount() > 0 && $pdo->query("SHOW COLUMNS FROM leads LIKE 'owner_id'")->rowCount() > 0) {
+            $stmt = $pdo->query("
+                SELECT u.id, u.name,
+                    (SELECT COUNT(*) FROM leads l WHERE l.owner_id = u.id) as total_leads,
+                    (SELECT COUNT(*) FROM leads l WHERE l.owner_id = u.id AND l.status = 'closed_won') as closed_won
+                FROM users u WHERE u.is_active = 1 AND u.role IN ('admin','sales_rep','project_manager')
+            ");
+            if ($stmt) $performance_vendedor = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+    } catch (Exception $e) {}
 }
 ?>
 <style>
@@ -226,7 +252,35 @@ if ($data_source === 'MySQL Database') {
         <div class="stat-label">Contact Form</div>
         <div class="stat-value"><?php echo number_format($contact_form_count); ?></div>
     </div>
+    <?php if ($ticket_medio !== null): ?>
+    <div class="stat-card">
+        <div class="stat-label">Ticket médio</div>
+        <div class="stat-value">$<?php echo number_format($ticket_medio, 0); ?></div>
+    </div>
+    <div class="stat-card alt">
+        <div class="stat-label">Receita realizada</div>
+        <div class="stat-value">$<?php echo number_format($receita_realizada, 0); ?></div>
+    </div>
+    <?php endif; ?>
 </div>
+
+<?php if (!empty($performance_vendedor)): ?>
+<div class="metrics-section" style="margin-bottom: 30px;">
+    <h2 style="color: #1a2036; margin-bottom: 16px;">Performance por vendedor</h2>
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead><tr><th style="text-align: left; padding: 8px;">Vendedor</th><th style="text-align: right; padding: 8px;">Leads</th><th style="text-align: right; padding: 8px;">Fechados</th></tr></thead>
+                <tbody>
+                    <?php foreach ($performance_vendedor as $v): ?>
+                    <tr><td style="padding: 8px;"><?php echo htmlspecialchars($v['name']); ?></td><td style="text-align: right; padding: 8px;"><?php echo (int)$v['total_leads']; ?></td><td style="text-align: right; padding: 8px;"><?php echo (int)$v['closed_won']; ?></td></tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- FASE 3 - MÓDULO 06: Métricas de Conversão -->
 <div class="metrics-section">
