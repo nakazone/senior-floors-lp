@@ -168,6 +168,11 @@ $chart_days_data = json_encode(array_values($leads_by_day));
 </style>
 
 <div class="dash-clean">
+    <?php if (!empty($_GET['error']) && $_GET['error'] === 'no_permission'): ?>
+    <div style="background: #fef3c7; color: #92400e; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;">
+        Você não tem permissão para acessar essa página. Entre em contato com o administrador.
+    </div>
+    <?php endif; ?>
     <div class="dash-kpis">
         <div class="dash-kpi">
             <div class="dash-kpi-value"><?php echo number_format($total_leads); ?></div>

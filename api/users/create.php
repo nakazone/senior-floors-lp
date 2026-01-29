@@ -120,7 +120,22 @@ try {
         $is_active
     ]);
     
-    $user_id = $pdo->lastInsertId();
+    $user_id = (int) $pdo->lastInsertId();
+    
+    // Atribuir permissões se enviadas
+    $permissions = [];
+    foreach ($_POST as $key => $value) {
+        if (preg_match('/^permissions\[(\d+)\]$/', $key, $m)) {
+            $permissions[] = trim($value);
+        }
+    }
+    $permissions = array_unique(array_filter($permissions));
+    if (!empty($permissions) && function_exists('grantPermission')) {
+        $granted_by = isset($_SESSION['admin_user_id']) ? (int) $_SESSION['admin_user_id'] : null;
+        foreach ($permissions as $perm_key) {
+            grantPermission($user_id, $perm_key, $granted_by);
+        }
+    }
     
     http_response_code(200);
     echo json_encode([

@@ -224,6 +224,8 @@ function closeCreateUserModal() {
 function createUser(e) {
     e.preventDefault();
     const formData = new FormData(e.target);
+    const permCheckboxes = e.target.querySelectorAll('input[name="create_permission[]"]:checked');
+    permCheckboxes.forEach((cb, i) => { formData.append('permissions[' + i + ']', cb.value); });
     
     fetch('api/users/create.php', {
         method: 'POST',
@@ -305,4 +307,12 @@ window.onclick = function(event) {
     background: #6c757d;
     color: white;
 }
+
+.create-permissions-section { margin-top: 16px; }
+.form-hint { font-size: 12px; color: #64748b; margin-bottom: 10px; }
+.create-permissions-list { max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; background: #f8fafc; }
+.create-perm-group { margin-bottom: 12px; }
+.create-perm-group strong { display: block; margin-bottom: 6px; color: #1a2036; font-size: 12px; text-transform: uppercase; }
+.create-perm-item { display: block; padding: 4px 0; font-size: 13px; cursor: pointer; }
+.create-perm-item input { margin-right: 8px; }
 </style>

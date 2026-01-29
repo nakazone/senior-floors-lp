@@ -257,90 +257,119 @@ $modules = [
         'name' => 'Dashboard',
         'icon' => '📊',
         'file' => 'admin-modules/dashboard.php',
-        'default' => true
+        'default' => true,
+        'permission' => 'dashboard.view'
     ],
     'crm' => [
         'name' => 'CRM - Leads',
         'icon' => '👥',
-        'file' => 'admin-modules/crm.php'
+        'file' => 'admin-modules/crm.php',
+        'permission' => 'leads.view'
     ],
     'pipeline' => [
         'name' => 'Pipeline (Kanban)',
         'icon' => '📋',
-        'file' => 'admin-modules/pipeline.php'
+        'file' => 'admin-modules/pipeline.php',
+        'permission' => 'pipeline.view'
     ],
     'visits' => [
         'name' => 'Visitas e Medições',
         'icon' => '📅',
-        'file' => 'admin-modules/visits.php'
+        'file' => 'admin-modules/visits.php',
+        'permission' => 'visits.view'
     ],
     'visit-detail' => [
         'name' => 'Detalhe Visita',
         'icon' => '📋',
         'file' => 'admin-modules/visit-detail.php',
-        'hidden' => true
+        'hidden' => true,
+        'permission' => 'visits.view'
     ],
     'quotes' => [
         'name' => 'Orçamentos',
         'icon' => '💰',
-        'file' => 'admin-modules/quotes.php'
+        'file' => 'admin-modules/quotes.php',
+        'permission' => 'quotes.view'
     ],
     'quote-detail' => [
         'name' => 'Detalhe Orçamento',
         'icon' => '📋',
         'file' => 'admin-modules/quote-detail.php',
-        'hidden' => true
+        'hidden' => true,
+        'permission' => 'quotes.view'
     ],
     'lead-detail' => [
         'name' => 'Lead Detail',
         'icon' => '👤',
         'file' => 'admin-modules/lead-detail.php',
-        'hidden' => true // Não aparece no menu, só acessível via URL
+        'hidden' => true,
+        'permission' => 'leads.view'
     ],
     'customers' => [
         'name' => 'Customers',
         'icon' => '🏢',
-        'file' => 'admin-modules/customers.php'
+        'file' => 'admin-modules/customers.php',
+        'permission' => 'customers.view'
     ],
     'customer-detail' => [
         'name' => 'Customer Detail',
         'icon' => '👤',
         'file' => 'admin-modules/customer-detail.php',
-        'hidden' => true
+        'hidden' => true,
+        'permission' => 'customers.view'
     ],
     'projects' => [
         'name' => 'Projects',
         'icon' => '🏗️',
-        'file' => 'admin-modules/projects.php'
+        'file' => 'admin-modules/projects.php',
+        'permission' => 'projects.view'
     ],
     'project-detail' => [
         'name' => 'Project Detail',
         'icon' => '📋',
         'file' => 'admin-modules/project-detail.php',
-        'hidden' => true
+        'hidden' => true,
+        'permission' => 'projects.view'
     ],
     'coupons' => [
         'name' => 'Coupons',
         'icon' => '🎫',
-        'file' => 'admin-modules/coupons.php'
+        'file' => 'admin-modules/coupons.php',
+        'permission' => 'coupons.view'
     ],
     'users' => [
         'name' => 'Users',
         'icon' => '👥',
-        'file' => 'admin-modules/users.php'
+        'file' => 'admin-modules/users.php',
+        'permission' => 'users.view'
     ],
     'user-detail' => [
         'name' => 'User Detail',
         'icon' => '👤',
         'file' => 'admin-modules/user-detail.php',
-        'hidden' => true
+        'hidden' => true,
+        'permission' => 'users.view'
     ],
     'settings' => [
         'name' => 'Settings',
         'icon' => '⚙️',
-        'file' => 'admin-modules/settings.php'
+        'file' => 'admin-modules/settings.php',
+        'permission' => 'settings.view'
     ]
 ];
+
+// Verifica se o usuário pode acessar um módulo (admin tem acesso a tudo; dashboard sempre visível)
+function module_can_access($module_key, $modules, $session) {
+    if (!isset($modules[$module_key])) return false;
+    $module = $modules[$module_key];
+    if ($module_key === 'dashboard') return true; // Todos os usuários logados veem o dashboard
+    if (!isset($module['permission'])) return true;
+    $role = $session['admin_role'] ?? '';
+    if ($role === 'admin') return true;
+    $user_id = $session['admin_user_id'] ?? null;
+    if ($user_id === null) return false;
+    return currentUserHasPermission($module['permission']);
+}
 
 // Get current module
 $current_module = isset($_GET['module']) ? $_GET['module'] : 'dashboard';
@@ -698,7 +727,7 @@ if (!file_exists($module_file)) {
             <nav>
                 <ul class="sidebar-nav">
                     <?php foreach ($modules as $module_key => $module): ?>
-                        <?php if (!isset($module['hidden']) || !$module['hidden']): ?>
+                        <?php if ((!isset($module['hidden']) || !$module['hidden']) && module_can_access($module_key, $modules, $_SESSION)): ?>
                         <li>
                             <a href="?module=<?php echo $module_key; ?>" class="<?php echo $current_module === $module_key ? 'active' : ''; ?>">
                                 <span><?php echo $module['icon']; ?></span>
@@ -714,6 +743,11 @@ if (!file_exists($module_file)) {
         <main class="main-content">
             <div class="module-content">
                 <?php
+                // Bloquear acesso se usuário não tem permissão para este módulo
+                if (!module_can_access($current_module, $modules, $_SESSION)) {
+                    header('Location: ?module=dashboard&error=no_permission');
+                    exit;
+                }
                 // Include the current module
                 if (file_exists($module_file)) {
                     include $module_file;
