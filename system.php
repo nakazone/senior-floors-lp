@@ -89,18 +89,22 @@ if (!isset($_SESSION['admin_authenticated'])) {
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
         <title><?php echo htmlspecialchars($ADMIN_TITLE); ?> - Login</title>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
+            html { -webkit-tap-highlight-color: transparent; }
             body {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 background: linear-gradient(135deg, #1a2036 0%, #252b47 100%);
+                min-height: 100dvh;
                 min-height: 100vh;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 padding: 20px;
+                padding-top: max(20px, env(safe-area-inset-top));
+                padding-bottom: max(20px, env(safe-area-inset-bottom));
             }
             .login-container {
                 background: white;
@@ -114,11 +118,12 @@ if (!isset($_SESSION['admin_authenticated'])) {
             p { color: #666; margin-bottom: 30px; }
             input {
                 width: 100%;
-                padding: 12px;
+                padding: 14px 12px;
                 border: 2px solid #e0e0e0;
                 border-radius: 8px;
                 font-size: 16px;
                 margin-bottom: 15px;
+                min-height: 48px;
             }
             input:focus {
                 outline: none;
@@ -126,7 +131,8 @@ if (!isset($_SESSION['admin_authenticated'])) {
             }
             button {
                 width: 100%;
-                padding: 12px;
+                padding: 14px 12px;
+                min-height: 48px;
                 background: linear-gradient(135deg, #1a2036 0%, #252b47 100%);
                 color: white;
                 border: none;
@@ -353,45 +359,52 @@ if (!file_exists($module_file)) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="description" content="Senior Floors CRM System - Manage leads, customers, projects, and coupons">
     <meta name="theme-color" content="#1a2036">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Senior Floors CRM">
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/logoSeniorFloors.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="assets/logoSeniorFloors.png">
-    <link rel="icon" type="image/png" href="assets/logoSeniorFloors.png">
+    <!-- Favicon (cache-bust ?v=4 para ícone PWA no iPhone) -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/logoSeniorFloors.png?v=4">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/logoSeniorFloors.png?v=4">
+    <link rel="icon" type="image/png" href="assets/logoSeniorFloors.png?v=4">
     
-    <!-- Apple Touch Icons (iOS) -->
-    <link rel="apple-touch-icon" sizes="57x57" href="assets/logoSeniorFloors.png">
-    <link rel="apple-touch-icon" sizes="60x60" href="assets/logoSeniorFloors.png">
-    <link rel="apple-touch-icon" sizes="72x72" href="assets/logoSeniorFloors.png">
-    <link rel="apple-touch-icon" sizes="76x76" href="assets/logoSeniorFloors.png">
-    <link rel="apple-touch-icon" sizes="114x114" href="assets/logoSeniorFloors.png">
-    <link rel="apple-touch-icon" sizes="120x120" href="assets/logoSeniorFloors.png">
-    <link rel="apple-touch-icon" sizes="144x144" href="assets/logoSeniorFloors.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="assets/logoSeniorFloors.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/logoSeniorFloors.png">
-    <link rel="apple-touch-icon" href="assets/logoSeniorFloors.png">
+    <!-- Apple Touch Icons (iOS / Chrome no iPhone) -->
+    <link rel="apple-touch-icon" sizes="57x57" href="assets/logoSeniorFloors.png?v=4">
+    <link rel="apple-touch-icon" sizes="60x60" href="assets/logoSeniorFloors.png?v=4">
+    <link rel="apple-touch-icon" sizes="72x72" href="assets/logoSeniorFloors.png?v=4">
+    <link rel="apple-touch-icon" sizes="76x76" href="assets/logoSeniorFloors.png?v=4">
+    <link rel="apple-touch-icon" sizes="114x114" href="assets/logoSeniorFloors.png?v=4">
+    <link rel="apple-touch-icon" sizes="120x120" href="assets/logoSeniorFloors.png?v=4">
+    <link rel="apple-touch-icon" sizes="144x144" href="assets/logoSeniorFloors.png?v=4">
+    <link rel="apple-touch-icon" sizes="152x152" href="assets/logoSeniorFloors.png?v=4">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/logoSeniorFloors.png?v=4">
+    <link rel="apple-touch-icon" href="assets/logoSeniorFloors.png?v=4">
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json?v=4">
     
     <title><?php echo htmlspecialchars($ADMIN_TITLE); ?> - <?php echo htmlspecialchars($modules[$current_module]['name']); ?></title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-text-size-adjust: 100%;
+        }
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #f7f8fc;
             color: #1a2036;
+            min-height: 100dvh;
+            min-height: 100vh;
         }
         .admin-header {
             background: linear-gradient(135deg, #1a2036 0%, #252b47 100%);
             color: white;
             padding: 15px 20px;
+            padding-top: max(15px, env(safe-area-inset-top));
             box-shadow: 0 2px 10px rgba(26, 32, 54, 0.2);
             position: sticky;
             top: 0;
@@ -515,24 +528,116 @@ if (!file_exists($module_file)) {
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             padding: 30px;
         }
+        /* ========== Mobile: app-like shell ========== */
         @media (max-width: 768px) {
+            html, body {
+                overscroll-behavior: none;
+                -webkit-overflow-scrolling: touch;
+            }
+            body {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+            .admin-header {
+                padding: 10px 12px;
+                padding-top: max(10px, env(safe-area-inset-top));
+            }
+            .header-content {
+                gap: 8px;
+            }
+            .logo-admin img {
+                height: 32px;
+            }
+            .logo-admin h1 {
+                font-size: 16px;
+            }
+            .header-actions span {
+                font-size: 13px;
+                margin-right: 8px !important;
+            }
+            .btn {
+                padding: 8px 12px;
+                font-size: 13px;
+                min-height: 44px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
             .admin-container {
                 flex-direction: column;
+                padding: 12px;
+                padding-bottom: calc(72px + env(safe-area-inset-bottom));
             }
             .sidebar {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
                 width: 100%;
-                position: static;
+                height: auto;
+                margin: 0;
+                padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+                border-radius: 16px 16px 0 0;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+                top: auto;
+                z-index: 90;
+                background: #fff;
+                -webkit-overflow-scrolling: touch;
             }
             .sidebar-nav {
                 display: flex;
                 overflow-x: auto;
-                gap: 10px;
+                gap: 4px;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+                padding: 0 4px;
+            }
+            .sidebar-nav::-webkit-scrollbar {
+                display: none;
             }
             .sidebar-nav li {
                 margin-bottom: 0;
+                flex-shrink: 0;
             }
             .sidebar-nav a {
                 white-space: nowrap;
+                flex-direction: column;
+                gap: 4px;
+                padding: 8px 12px;
+                min-height: 44px;
+                min-width: 56px;
+                font-size: 11px;
+                text-align: center;
+                border-radius: 10px;
+            }
+            .sidebar-nav a span:first-child {
+                font-size: 20px;
+                line-height: 1;
+            }
+            .sidebar-nav a:hover {
+                background: #f0f2f8;
+            }
+            .sidebar-nav a.active {
+                background: linear-gradient(135deg, #1a2036 0%, #252b47 100%);
+                color: white;
+            }
+            .module-content {
+                padding: 16px;
+                border-radius: 12px;
+                margin-bottom: 0;
+            }
+            .module-content table {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+        /* Touch targets mínimos em mobile */
+        @media (max-width: 768px) {
+            .module-content a,
+            .module-content button:not(.btn) {
+                min-height: 44px;
+                display: inline-flex;
+                align-items: center;
             }
         }
     </style>
