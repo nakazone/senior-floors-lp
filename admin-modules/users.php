@@ -226,11 +226,15 @@ function closeCreateUserModal() {
 
 function createUser(e) {
     e.preventDefault();
-    const formData = new FormData(e.target);
-    const permCheckboxes = e.target.querySelectorAll('input[name="create_permission[]"]:checked');
+    const form = e.target;
+    const formData = new FormData(form);
+    const permCheckboxes = form.querySelectorAll('input[name="create_permission[]"]:checked');
     permCheckboxes.forEach((cb, i) => { formData.append('permissions[' + i + ']', cb.value); });
-    
-    fetch('api/users/create.php', {
+    // Base path para API (funciona em subpasta ex: /lp/system.php -> /lp/api/...)
+    const path = document.location.pathname || '/';
+    const base = path.replace(/\/?system\.php.*$/i, '') || '/';
+    const apiUrl = (base.endsWith('/') ? base : base + '/') + 'api/users/create.php';
+    fetch(apiUrl, {
         method: 'POST',
         body: formData
     })

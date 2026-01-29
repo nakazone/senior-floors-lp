@@ -33,9 +33,9 @@ if (!isset($_SESSION['admin_authenticated'])) {
 
 // Verificar permissão: admin (role ou login por arquivo) ou users.create
 $has_permission = false;
-$role = trim((string)($_SESSION['admin_role'] ?? ''));
+$admin_role = trim((string)($_SESSION['admin_role'] ?? ''));
 $admin_user_id = $_SESSION['admin_user_id'] ?? null;
-if ($role === 'admin' || $admin_user_id === null) {
+if ($admin_role === 'admin' || $admin_user_id === null) {
     $has_permission = true;
 } elseif (function_exists('hasPermission') && $admin_user_id) {
     $has_permission = hasPermission($admin_user_id, 'users.create');
@@ -53,13 +53,14 @@ if (!isDatabaseConfigured()) {
     exit;
 }
 
-// Get data
-$name = isset($_POST['name']) ? trim($_POST['name']) : '';
-$email = isset($_POST['email']) ? trim($_POST['email']) : '';
-$phone = isset($_POST['phone']) ? trim($_POST['phone']) : null;
-$role = isset($_POST['role']) ? trim($_POST['role']) : 'sales_rep';
-$password = isset($_POST['password']) ? $_POST['password'] : '';
+// Dados do novo usuário APENAS do formulário (nunca da sessão)
+$name = isset($_POST['name']) ? trim((string)$_POST['name']) : '';
+$email = isset($_POST['email']) ? trim((string)$_POST['email']) : '';
+$phone = isset($_POST['phone']) ? trim((string)$_POST['phone']) : null;
+$new_user_role = isset($_POST['role']) ? trim((string)$_POST['role']) : 'sales_rep';
+$password = isset($_POST['password']) ? (string)$_POST['password'] : '';
 $is_active = isset($_POST['is_active']) ? (int)$_POST['is_active'] : 1;
+if ($phone === '') $phone = null;
 
 // Validation
 $errors = [];
@@ -71,7 +72,7 @@ if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
 }
 
 $valid_roles = ['admin', 'sales_rep', 'project_manager', 'support'];
-if (!in_array($role, $valid_roles)) {
+if (!in_array($new_user_role, $valid_roles)) {
     $errors[] = 'Invalid role';
 }
 
@@ -105,7 +106,7 @@ try {
     $email = filter_var($email, FILTER_SANITIZE_EMAIL);
     $phone = $phone ? htmlspecialchars($phone, ENT_QUOTES, 'UTF-8') : null;
     
-    // Insert user
+    // Insert user (sempre com dados do formulário)
     $stmt = $pdo->prepare("
         INSERT INTO users (name, email, phone, role, password_hash, is_active)
         VALUES (?, ?, ?, ?, ?, ?)
@@ -115,7 +116,7 @@ try {
         $name,
         $email,
         $phone,
-        $role,
+        $new_user_role,
         $password_hash,
         $is_active
     ]);
