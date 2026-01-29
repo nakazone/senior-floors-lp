@@ -55,6 +55,12 @@ try {
     if ($lead_id) {
         $table_name = 'leads';
         $record_id = $lead_id;
+        $has_owner = $pdo->query("SHOW COLUMNS FROM leads LIKE 'owner_id'")->rowCount() > 0;
+        if (!$has_owner) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Coluna owner_id não existe na tabela leads. Execute database/migration-lead-owner-and-activities.sql']);
+            exit;
+        }
         $stmt = $pdo->prepare("SELECT owner_id FROM leads WHERE id = ?");
         $stmt->execute([$lead_id]);
         $record = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -94,45 +100,34 @@ try {
     $update_stmt = $pdo->prepare("UPDATE $table_name SET owner_id = ? WHERE id = ?");
     $update_stmt->execute([$to_user_id, $record_id]);
     
-    // Log assignment history
-    $history_stmt = $pdo->prepare("
-        INSERT INTO assignment_history (
-            lead_id, customer_id, project_id,
-            from_user_id, to_user_id, reason, assigned_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-    ");
+    // Log assignment history (se a tabela existir)
+    try {
+        if ($pdo->query("SHOW TABLES LIKE 'assignment_history'")->rowCount() > 0) {
+            $history_stmt = $pdo->prepare("
+                INSERT INTO assignment_history (lead_id, customer_id, project_id, from_user_id, to_user_id, reason, assigned_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ");
+            $history_stmt->execute([$lead_id ?: null, $customer_id ?: null, $project_id ?: null, $current_owner, $to_user_id, $reason, $assigned_by]);
+        }
+    } catch (Exception $e) { /* ignore */ }
     
-    $history_stmt->execute([
-        $lead_id,
-        $customer_id,
-        $project_id,
-        $current_owner,
-        $to_user_id,
-        $reason,
-        $assigned_by
-    ]);
-    
-    // Log activity
-    $activity_type = 'assignment';
-    $subject = 'Assignment Changed';
-    $description = "Assigned to user ID: $to_user_id" . ($reason ? " - Reason: $reason" : '');
-    $related_to = $lead_id ? 'lead' : ($customer_id ? 'customer' : 'project');
-    
-    $activity_stmt = $pdo->prepare("
-        INSERT INTO activities (
-            lead_id, customer_id, project_id, activity_type, subject, description, related_to
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-    ");
-    
-    $activity_stmt->execute([
-        $lead_id,
-        $customer_id,
-        $project_id,
-        $activity_type,
-        $subject,
-        $description,
-        $related_to
-    ]);
+    // Log activity (se a tabela existir)
+    try {
+        if ($pdo->query("SHOW TABLES LIKE 'activities'")->rowCount() > 0) {
+            $related_to = $lead_id ? 'lead' : ($customer_id ? 'customer' : 'project');
+            $activity_stmt = $pdo->prepare("
+                INSERT INTO activities (lead_id, customer_id, project_id, activity_type, subject, description, related_to)
+                VALUES (?, ?, ?, ?, 'assignment', ?, ?)
+            ");
+            $activity_stmt->execute([
+                $lead_id ?: null,
+                $customer_id ?: null,
+                $project_id ?: null,
+                "Encaminhado para usuário ID: $to_user_id" . ($reason ? " - $reason" : ''),
+                $related_to
+            ]);
+        }
+    } catch (Exception $e) { /* ignore */ }
     
     http_response_code(200);
     echo json_encode([

@@ -351,7 +351,9 @@
                     fetchOptions.signal = controller.signal;
                 }
 
-                const response = await fetch('send-lead.php', fetchOptions);
+                // URL do handler: sempre na raiz do domínio para garantir que encontre send-lead.php
+                const formActionUrl = window.location.origin + '/send-lead.php';
+                const response = await fetch(formActionUrl, fetchOptions);
                 
                 // Clear timeout if request succeeded
                 if (timeoutId) clearTimeout(timeoutId);
@@ -617,7 +619,9 @@
                     fetchOptions.signal = controller.signal;
                 }
 
-                const response = await fetch('send-lead.php', fetchOptions);
+                // URL do handler: sempre na raiz do domínio
+                const formActionUrlContact = window.location.origin + '/send-lead.php';
+                const response = await fetch(formActionUrlContact, fetchOptions);
                 
                 // Clear timeout if request succeeded
                 if (timeoutId) clearTimeout(timeoutId);

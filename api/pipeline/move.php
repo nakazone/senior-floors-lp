@@ -36,7 +36,11 @@ try {
     $pdo = getDBConnection();
     if (!$pdo) throw new Exception('No connection');
 
-    $stmt = $pdo->prepare("UPDATE leads SET pipeline_stage_id = :stage_id, last_activity_at = NOW() WHERE id = :id");
+    $has_activity = $pdo->query("SHOW COLUMNS FROM leads LIKE 'last_activity_at'")->rowCount() > 0;
+    $sql = $has_activity
+        ? "UPDATE leads SET pipeline_stage_id = :stage_id, last_activity_at = NOW() WHERE id = :id"
+        : "UPDATE leads SET pipeline_stage_id = :stage_id WHERE id = :id";
+    $stmt = $pdo->prepare($sql);
     $stmt->execute([':stage_id' => $stage_id, ':id' => $lead_id]);
 
     if ($stmt->rowCount() > 0) {

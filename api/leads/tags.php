@@ -68,6 +68,13 @@ try {
         throw new Exception('Failed to connect to database');
     }
     
+    // Coluna de tag em lead_tags pode ser tag ou tag_name conforme o schema
+    $tag_col = 'tag_name';
+    try {
+        $chk = $pdo->query("SHOW COLUMNS FROM lead_tags LIKE 'tag_name'");
+        if (!$chk || $chk->rowCount() === 0) $tag_col = 'tag';
+    } catch (Exception $e) { $tag_col = 'tag'; }
+    
     // Verificar se o lead existe
     $stmt = $pdo->prepare("SELECT id FROM leads WHERE id = :id");
     $stmt->execute([':id' => $lead_id]);
@@ -81,7 +88,7 @@ try {
         // Adicionar tag (ignorar se já existir devido ao UNIQUE constraint)
         try {
             $stmt = $pdo->prepare("
-                INSERT INTO lead_tags (lead_id, tag_name)
+                INSERT INTO lead_tags (lead_id, $tag_col)
                 VALUES (:lead_id, :tag)
             ");
             $stmt->execute([
@@ -122,7 +129,7 @@ try {
         // Remover tag
         $stmt = $pdo->prepare("
             DELETE FROM lead_tags
-            WHERE lead_id = :lead_id AND tag_name = :tag
+            WHERE lead_id = :lead_id AND $tag_col = :tag
         ");
         $stmt->execute([
             ':lead_id' => $lead_id,

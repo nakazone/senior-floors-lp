@@ -13,6 +13,7 @@ define('DB_HOST', 'localhost');
 define('DB_NAME', 'SEU_USUARIO_senior_floors_db'); // ⚠️ Nome COMPLETO do banco (com prefixo)
 define('DB_USER', 'SEU_USUARIO_senior_floors_user'); // ⚠️ Nome COMPLETO do usuário (com prefixo)
 define('DB_PASS', 'SUA_SENHA_AQUI'); // ⚠️ Senha que você criou
+define('DB_CHARSET', 'utf8mb4');
 
 // Exemplo real (substitua pelos seus valores):
 // define('DB_NAME', 'u123456789_senior_floors_db');
@@ -50,7 +51,8 @@ function getDBConnection() {
  * @return bool
  */
 function isDatabaseConfigured() {
-    return !empty(DB_USER) && DB_USER !== 'seu_usuario' && 
-           !empty(DB_PASS) && DB_PASS !== 'sua_senha' &&
-           !empty(DB_NAME) && DB_NAME !== 'senior_floors_db';
+    $user_ok = !empty(DB_USER) && DB_USER !== 'seu_usuario' && stripos(DB_USER, 'SEU_USUARIO') === false;
+    $pass_ok = !empty(DB_PASS) && DB_PASS !== 'sua_senha' && DB_PASS !== 'SUA_SENHA_AQUI' && stripos(DB_PASS, 'SUA_SENHA') === false;
+    $name_ok = !empty(DB_NAME) && DB_NAME !== 'senior_floors_db' && stripos(DB_NAME, 'SEU_USUARIO') === false;
+    return $user_ok && $pass_ok && $name_ok;
 }

@@ -26,6 +26,13 @@ $offset = ($page - 1) * $per_page;
 
 try {
     $pdo = getDBConnection();
+    if (!$pdo) throw new Exception('No connection');
+    
+    if ($pdo->query("SHOW TABLES LIKE 'activities'")->rowCount() === 0) {
+        http_response_code(200);
+        echo json_encode(['success' => true, 'activities' => [], 'pagination' => ['page' => 1, 'per_page' => $per_page, 'total' => 0, 'total_pages' => 0]]);
+        exit;
+    }
     
     // Build query
     $where = [];

@@ -33,7 +33,26 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// Get form data
+// Caminho do log: mesmo que diagnostico-banco.php (raiz do site). Fallback: pasta do script.
+$LEAD_LOG_DIR = (isset($_SERVER['DOCUMENT_ROOT']) && $_SERVER['DOCUMENT_ROOT'] !== '')
+    ? rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') : __DIR__;
+$LEAD_LOG_FILE = $LEAD_LOG_DIR . '/lead-db-save.log';
+$LEAD_LOG_FALLBACK = __DIR__ . '/lead-db-save.log';
+
+function writeLeadLog($msg, $logFile, $fallback = null) {
+    $line = date('Y-m-d H:i:s') . ' | ' . $msg . "\n";
+    $ok = @file_put_contents($logFile, $line, FILE_APPEND | LOCK_EX);
+    if ($ok === false && $fallback !== null && $fallback !== $logFile) {
+        @file_put_contents($fallback, $line, FILE_APPEND | LOCK_EX);
+    }
+}
+
+// Log imediato: confirma que a requisição chegou ao send-lead.php (antes de qualquer validação)
+$post_keys = array_keys($_POST);
+$post_preview = 'POST keys: ' . (empty($_POST) ? '(vazio)' : implode(', ', $post_keys));
+writeLeadLog('send-lead.php chamado | ' . $post_preview . ' | Content-Type: ' . (isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE'] : '-'), $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
+
+// Get form data (LP envia por POST multipart/form-data; fallback para JSON)
 $form_name = isset($_POST['form-name']) ? trim($_POST['form-name']) : 'contact-form';
 $name = isset($_POST['name']) ? trim($_POST['name']) : '';
 $phone = isset($_POST['phone']) ? trim($_POST['phone']) : '';
@@ -45,6 +64,23 @@ $property_type = isset($_POST['property_type']) ? trim($_POST['property_type']) 
 $service_type = isset($_POST['service_type']) ? trim($_POST['service_type']) : null;
 $main_interest = isset($_POST['main_interest']) ? trim($_POST['main_interest']) : null;
 $source_override = isset($_POST['source']) ? trim($_POST['source']) : null;
+
+if (empty($name) && empty($email) && ($raw = file_get_contents('php://input'))) {
+    $json = @json_decode($raw, true);
+    if (is_array($json)) {
+        $form_name = isset($json['form-name']) ? trim($json['form-name']) : $form_name;
+        $name = isset($json['name']) ? trim($json['name']) : '';
+        $phone = isset($json['phone']) ? trim($json['phone']) : $phone;
+        $email = isset($json['email']) ? trim($json['email']) : '';
+        $zipcode = isset($json['zipcode']) ? trim($json['zipcode']) : $zipcode;
+        $message = isset($json['message']) ? trim($json['message']) : $message;
+        $address = isset($json['address']) ? trim($json['address']) : $address;
+        $property_type = isset($json['property_type']) ? trim($json['property_type']) : $property_type;
+        $service_type = isset($json['service_type']) ? trim($json['service_type']) : $service_type;
+        $main_interest = isset($json['main_interest']) ? trim($json['main_interest']) : $main_interest;
+        $source_override = isset($json['source']) ? trim($json['source']) : $source_override;
+    }
+}
 
 // Validation
 $errors = [];
@@ -62,17 +98,21 @@ if (empty($zipcode) || !preg_match('/^\d{5}(-\d{4})?$/', $zipcode)) {
 }
 
 if (!empty($errors)) {
+    writeLeadLog('Validacao falhou: ' . implode('; ', $errors), $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => implode(', ', $errors)]);
     exit;
 }
 
 // Sanitize inputs
-$name = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
-$phone = htmlspecialchars($phone, ENT_QUOTES, 'UTF-8');
-$email = filter_var($email, FILTER_SANITIZE_EMAIL);
-$zipcode = htmlspecialchars($zipcode, ENT_QUOTES, 'UTF-8');
-$message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+$name = htmlspecialchars($name ?? '', ENT_QUOTES, 'UTF-8');
+$phone = htmlspecialchars($phone ?? '', ENT_QUOTES, 'UTF-8');
+$email = filter_var($email ?? '', FILTER_SANITIZE_EMAIL);
+$zipcode = htmlspecialchars($zipcode ?? '', ENT_QUOTES, 'UTF-8');
+$message = htmlspecialchars($message ?? '', ENT_QUOTES, 'UTF-8');
+
+// Log que a LP enviou dados (validação passou)
+writeLeadLog("LP recebido | form=$form_name | name=" . substr($name, 0, 30) . " | email=" . substr($email, 0, 40) . " | ip=" . (isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''), $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
 
 // ============================================
 // SMTP CONFIGURATION
@@ -95,108 +135,140 @@ define('SYSTEM_API_URL', ''); // Set your full URL here if needed
 // ============================================
 // SAVE TO DATABASE (FASE 1 - MÓDULO 01)
 // ============================================
-// Try to save to MySQL database first (if configured)
 $db_saved = false;
 $db_error = null;
 $lead_id = null;
 
-// Check if database config exists and is configured
-$db_config_file = __DIR__ . '/config/database.php';
-if (!file_exists($db_config_file)) {
-    // Try alternative path
-    $db_config_file = dirname(__DIR__) . '/config/database.php';
+// Encontrar config/database.php (send-lead pode estar na raiz ou em /lp/)
+$possible_configs = [
+    __DIR__ . '/config/database.php',
+    dirname(__DIR__) . '/config/database.php',
+];
+if (!empty($_SERVER['DOCUMENT_ROOT'])) {
+    $possible_configs[] = $_SERVER['DOCUMENT_ROOT'] . '/config/database.php';
+}
+$db_config_file = null;
+foreach ($possible_configs as $path) {
+    if (file_exists($path)) {
+        $db_config_file = $path;
+        break;
+    }
 }
 
-if (file_exists($db_config_file)) {
+if ($db_config_file === null) {
+    $db_error = "Arquivo config/database.php não encontrado. Crie a partir de config/database.php.example com as credenciais MySQL do Hostinger.";
+    error_log("send-lead: " . $db_error);
+    writeLeadLog("❌ " . $db_error . " | Paths tentados: " . implode(', ', $possible_configs), $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
+} else {
     require_once $db_config_file;
-    
-    if (isDatabaseConfigured()) {
+
+    if (!isDatabaseConfigured()) {
+        $db_error = "Banco não configurado: edite config/database.php com DB_HOST, DB_NAME, DB_USER e DB_PASS reais (não use placeholders).";
+        error_log("send-lead: " . $db_error);
+        writeLeadLog("❌ " . $db_error, $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
+    } else {
         try {
             $pdo = getDBConnection();
-            
-            if ($pdo) {
-                // Verificar se tabela existe
+            if (!$pdo) {
+                $db_error = "Falha ao conectar ao MySQL. Verifique host, usuário e senha em config/database.php.";
+                writeLeadLog("❌ " . $db_error, $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
+            } else {
                 $check_table = $pdo->query("SHOW TABLES LIKE 'leads'");
-                if ($check_table->rowCount() > 0) {
+                if ($check_table->rowCount() === 0) {
+                    $db_error = "Tabela 'leads' não existe. Execute no MySQL: database/schema-v3-completo.sql";
+                    writeLeadLog("❌ " . $db_error, $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
+                } else {
                     $source = $source_override ?: (($form_name === 'hero-form') ? 'LP-Hero' : 'LP-Contact');
                     $ip_address = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : null;
 
-                    // Duplicados e distribuição (quando config/lead-logic e colunas existem)
                     $owner_id = null;
                     $is_dup = false;
                     $existing_lead_id = null;
-                    if (file_exists(__DIR__ . '/config/lead-logic.php')) {
-                        require_once __DIR__ . '/config/lead-logic.php';
-                        $dup = checkDuplicateLead($pdo, $email, preg_replace('/\D/', '', $phone), null);
-                        if ($dup['is_duplicate']) {
-                            $is_dup = true;
-                            $existing_lead_id = $dup['existing_id'];
-                            $db_saved = true;
-                            $lead_id = $existing_lead_id;
-                        } else {
-                            $owner_id = getNextOwnerRoundRobin($pdo);
+                    if (file_exists(dirname($db_config_file) . '/lead-logic.php')) {
+                        try {
+                            require_once dirname($db_config_file) . '/lead-logic.php';
+                            $dup = checkDuplicateLead($pdo, $email, preg_replace('/\D/', '', $phone), null);
+                            if ($dup['is_duplicate']) {
+                                $is_dup = true;
+                                $existing_lead_id = $dup['existing_id'];
+                                $db_saved = true;
+                                $lead_id = $existing_lead_id;
+                            } else {
+                                $owner_id = getNextOwnerRoundRobin($pdo);
+                            }
+                        } catch (Throwable $e) {
+                            writeLeadLog("⚠️ lead-logic: " . $e->getMessage(), $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
                         }
                     }
 
                     if (!$is_dup) {
-                        $cols = "name, email, phone, zipcode, message, source, form_type, status, priority, ip_address";
-                        $placeholders = ":name, :email, :phone, :zipcode, :message, :source, :form_type, 'new', 'medium', :ip_address";
-                        $params = [
+                        $params_base = [
                             ':name' => $name, ':email' => $email, ':phone' => $phone, ':zipcode' => $zipcode,
                             ':message' => $message, ':source' => $source, ':form_type' => $form_name, ':ip_address' => $ip_address
                         ];
-                        if ($owner_id !== null) { $cols .= ", owner_id"; $placeholders .= ", :owner_id"; $params[':owner_id'] = $owner_id; }
-                        $has_stage = false;
-                        try { $chk = $pdo->query("SELECT 1 FROM pipeline_stages LIMIT 1"); $has_stage = $chk && $chk->rowCount() > 0; } catch (Exception $e) {}
-                        if ($has_stage) { $cols .= ", pipeline_stage_id"; $placeholders .= ", 1"; }
-                        if ($address !== null && $address !== '') { $cols .= ", address"; $placeholders .= ", :address"; $params[':address'] = htmlspecialchars($address, ENT_QUOTES, 'UTF-8'); }
-                        if ($property_type !== null && in_array($property_type, ['casa','apartamento','comercial'])) { $cols .= ", property_type"; $placeholders .= ", :property_type"; $params[':property_type'] = $property_type; }
-                        if ($service_type !== null && $service_type !== '') { $cols .= ", service_type"; $placeholders .= ", :service_type"; $params[':service_type'] = htmlspecialchars($service_type, ENT_QUOTES, 'UTF-8'); }
-                        if ($main_interest !== null && $main_interest !== '') { $cols .= ", main_interest"; $placeholders .= ", :main_interest"; $params[':main_interest'] = htmlspecialchars($main_interest, ENT_QUOTES, 'UTF-8'); }
+                        $inserted = false;
 
+                        $cols_full = "name, email, phone, zipcode, message, source, form_type, status, priority, ip_address";
+                        $place_full = ":name, :email, :phone, :zipcode, :message, :source, :form_type, 'new', 'medium', :ip_address";
+                        $params = $params_base;
+                        if ($owner_id !== null) {
+                            try {
+                                $pdo->query("SELECT owner_id FROM leads LIMIT 1");
+                                $cols_full .= ", owner_id";
+                                $place_full .= ", :owner_id";
+                                $params[':owner_id'] = $owner_id;
+                            } catch (Throwable $e) {}
+                        }
                         try {
-                            $stmt = $pdo->prepare("INSERT INTO leads ($cols) VALUES ($placeholders)");
+                            $pdo->query("SELECT pipeline_stage_id FROM leads LIMIT 1");
+                            $cols_full .= ", pipeline_stage_id";
+                            $place_full .= ", 1";
+                        } catch (Throwable $e) {}
+                        try {
+                            $stmt = $pdo->prepare("INSERT INTO leads ($cols_full) VALUES ($place_full)");
                             $stmt->execute($params);
+                            $lead_id = (int) $pdo->lastInsertId();
                             $db_saved = true;
-                            $lead_id = $pdo->lastInsertId();
-                            if ($lead_id && $owner_id !== null && function_exists('createLeadEntryTask')) {
-                                try {
+                            $inserted = true;
+                        } catch (PDOException $e) {
+                            writeLeadLog("❌ INSERT (com extras): " . $e->getMessage(), $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
+                        }
+
+                        if (!$inserted) {
+                            $cols_min = "name, email, phone, zipcode, message, source, form_type, status, priority, ip_address";
+                            $place_min = ":name, :email, :phone, :zipcode, :message, :source, :form_type, 'new', 'medium', :ip_address";
+                            try {
+                                $stmt = $pdo->prepare("INSERT INTO leads ($cols_min) VALUES ($place_min)");
+                                $stmt->execute($params_base);
+                                $lead_id = (int) $pdo->lastInsertId();
+                                $db_saved = true;
+                                writeLeadLog("✅ Lead salvo (INSERT mínimo) | ID: $lead_id", $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
+                            } catch (PDOException $e) {
+                                $db_error = $e->getMessage();
+                                writeLeadLog("❌ INSERT mínimo: " . $db_error, $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
+                            }
+                        }
+
+                        if ($db_saved && $lead_id && file_exists(dirname($db_config_file) . '/lead-logic.php')) {
+                            try {
+                                if (function_exists('createLeadEntryTask')) {
                                     $has_tasks = $pdo->query("SHOW TABLES LIKE 'tasks'")->rowCount() > 0;
                                     if ($has_tasks) createLeadEntryTask($pdo, $lead_id, $owner_id);
-                                } catch (Exception $e) {}
                                 }
-                        } catch (PDOException $e) {
-                            $db_error = $e->getMessage();
-                            error_log("Database error in send-lead.php: " . $db_error);
-                            $log_entry = date('Y-m-d H:i:s') . " | ❌ Database error: " . $db_error . "\n";
-                            @file_put_contents(__DIR__ . '/lead-db-save.log', $log_entry, FILE_APPEND | LOCK_EX);
+                            } catch (Throwable $e) {}
                         }
                     }
 
                     if ($db_saved && $lead_id) {
-                        $log_entry = date('Y-m-d H:i:s') . " | ✅ Lead saved to database | ID: $lead_id | Name: $name | Email: $email\n";
-                        @file_put_contents(__DIR__ . '/lead-db-save.log', $log_entry, FILE_APPEND | LOCK_EX);
+                        writeLeadLog("✅ Lead saved to database | ID: $lead_id | Name: $name | Email: $email", $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
                     }
-                } else {
-                    $db_error = "Table 'leads' does not exist";
-                    error_log("Database error: Table 'leads' does not exist. Execute schema SQL first.");
                 }
             }
         } catch (PDOException $e) {
             $db_error = $e->getMessage();
-            error_log("Database error in send-lead.php: " . $db_error);
-            
-            // Log error
-            $log_entry = date('Y-m-d H:i:s') . " | ❌ Database error: " . $db_error . "\n";
-            @file_put_contents(__DIR__ . '/lead-db-save.log', $log_entry, FILE_APPEND | LOCK_EX);
+            writeLeadLog("❌ PDO: " . $db_error, $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
         }
-    } else {
-        $db_error = "Database not configured";
-        error_log("Database not configured in send-lead.php");
     }
-} else {
-    $db_error = "Database config file not found";
-    error_log("Database config file not found: " . $db_config_file);
 }
 
 // ============================================

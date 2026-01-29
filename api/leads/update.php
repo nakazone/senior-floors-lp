@@ -32,6 +32,7 @@ $urgency = isset($_POST['urgency']) ? trim($_POST['urgency']) : null;
 $is_decision_maker = isset($_POST['is_decision_maker']) ? (int)$_POST['is_decision_maker'] : null;
 $payment_type = isset($_POST['payment_type']) ? trim($_POST['payment_type']) : null;
 $has_competition = isset($_POST['has_competition']) ? (int)$_POST['has_competition'] : null;
+$owner_id = isset($_POST['owner_id']) ? (int)$_POST['owner_id'] : null;
 
 // Validação
 if ($lead_id <= 0) {
@@ -82,6 +83,14 @@ try {
     if ($is_decision_maker !== null) { $updates[] = 'is_decision_maker = :is_decision_maker'; $params[':is_decision_maker'] = (int)$is_decision_maker; }
     if ($payment_type !== null && $payment_type !== '') { $updates[] = 'payment_type = :payment_type'; $params[':payment_type'] = $payment_type; }
     if ($has_competition !== null) { $updates[] = 'has_competition = :has_competition'; $params[':has_competition'] = (int)$has_competition; }
+    if ($owner_id !== null) {
+        try {
+            if ($pdo->query("SHOW COLUMNS FROM leads LIKE 'owner_id'")->rowCount() > 0) {
+                $updates[] = 'owner_id = :owner_id';
+                $params[':owner_id'] = $owner_id > 0 ? $owner_id : null;
+            }
+        } catch (Exception $e) { /* ignore */ }
+    }
 
     if (empty($updates)) {
         http_response_code(400);

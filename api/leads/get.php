@@ -57,9 +57,15 @@ try {
     $stmt->execute([':lead_id' => $lead_id]);
     $notes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Buscar tags
+    // Buscar tags (coluna pode ser tag ou tag_name conforme o schema)
+    $tag_col = 'tag_name';
+    try {
+        $chk = $pdo->query("SHOW COLUMNS FROM lead_tags LIKE 'tag_name'");
+        if (!$chk || $chk->rowCount() === 0) $tag_col = 'tag';
+    } catch (Exception $e) { $tag_col = 'tag'; }
+    $tag_select = $tag_col === 'tag_name' ? 'id, tag_name, created_at' : 'id, tag AS tag_name, created_at';
     $stmt = $pdo->prepare("
-        SELECT id, tag_name, created_at
+        SELECT $tag_select
         FROM lead_tags
         WHERE lead_id = :lead_id
         ORDER BY created_at DESC

@@ -56,6 +56,13 @@ elseif ($project_id) $related_to = 'project';
 
 try {
     $pdo = getDBConnection();
+    if (!$pdo) throw new Exception('No connection');
+    
+    if ($pdo->query("SHOW TABLES LIKE 'activities'")->rowCount() === 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Tabela activities não existe. Execute database/migration-lead-owner-and-activities.sql']);
+        exit;
+    }
     
     // Sanitize
     $subject = $subject ? htmlspecialchars($subject, ENT_QUOTES, 'UTF-8') : null;

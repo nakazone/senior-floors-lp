@@ -6,16 +6,22 @@
 
 session_start();
 
+// Raiz do projeto (funciona com system.php na raiz ou em subpasta como /lp/)
+$SYSTEM_ROOT = __DIR__;
+if (!is_file(__DIR__ . '/config/permissions.php') && is_file(dirname(__DIR__) . '/config/permissions.php')) {
+    $SYSTEM_ROOT = dirname(__DIR__);
+}
+
 // ============================================
 // CONFIGURATION
 // ============================================
 $ADMIN_TITLE = 'Senior Floors System';
 
 // Load permissions system
-require_once __DIR__ . '/config/permissions.php';
+require_once $SYSTEM_ROOT . '/config/permissions.php';
 
 // Load admin users configuration
-require_once __DIR__ . '/admin-config.php';
+require_once $SYSTEM_ROOT . '/admin-config.php';
 
 // ============================================
 // AUTHENTICATION
@@ -336,11 +342,11 @@ if (!isset($modules[$current_module])) {
     $current_module = 'dashboard';
 }
 
-// Check if module file exists
-$module_file = __DIR__ . '/' . $modules[$current_module]['file'];
+// Check if module file exists (usar $SYSTEM_ROOT para quando system.php está em subpasta)
+$module_file = $SYSTEM_ROOT . '/' . $modules[$current_module]['file'];
 if (!file_exists($module_file)) {
     $current_module = 'dashboard';
-    $module_file = __DIR__ . '/' . $modules[$current_module]['file'];
+    $module_file = $SYSTEM_ROOT . '/' . $modules[$current_module]['file'];
 }
 ?>
 <!DOCTYPE html>

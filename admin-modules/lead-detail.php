@@ -21,6 +21,10 @@ if ($lead_id <= 0) {
 $lead = null;
 $notes = [];
 $tags = [];
+$users = [];
+$owner_name = null;
+$has_owner_col = false;
+$activities = [];
 $error = null;
 
 if (isDatabaseConfigured()) {
@@ -44,15 +48,50 @@ if (isDatabaseConfigured()) {
                 $stmt->execute([':lead_id' => $lead_id]);
                 $notes = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 
-                // Buscar tags
+                // Buscar tags (coluna pode ser tag ou tag_name conforme o schema)
+                $tag_col = 'tag_name';
+                try {
+                    $chk = $pdo->query("SHOW COLUMNS FROM lead_tags LIKE 'tag_name'");
+                    if (!$chk || $chk->rowCount() === 0) $tag_col = 'tag';
+                } catch (Exception $e) { $tag_col = 'tag'; }
+                $tag_select = $tag_col === 'tag_name' ? 'id, tag_name, created_at' : 'id, tag AS tag_name, created_at';
                 $stmt = $pdo->prepare("
-                    SELECT id, tag_name, created_at
+                    SELECT $tag_select
                     FROM lead_tags
                     WHERE lead_id = :lead_id
                     ORDER BY created_at DESC
                 ");
                 $stmt->execute([':lead_id' => $lead_id]);
                 $tags = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                // Usuários (para responsável e encaminhamento)
+                $users = [];
+                $owner_name = null;
+                $has_owner_col = false;
+                try {
+                    if ($pdo->query("SHOW TABLES LIKE 'users'")->rowCount() > 0) {
+                        $users = $pdo->query("SELECT id, name, email, role FROM users WHERE is_active = 1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+                    }
+                    if ($pdo->query("SHOW COLUMNS FROM leads LIKE 'owner_id'")->rowCount() > 0) {
+                        $has_owner_col = true;
+                        if (!empty($lead['owner_id'])) {
+                            $own = $pdo->prepare("SELECT name FROM users WHERE id = ?");
+                            $own->execute([$lead['owner_id']]);
+                            $row = $own->fetch(PDO::FETCH_ASSOC);
+                            $owner_name = $row ? $row['name'] : null;
+                        }
+                    }
+                } catch (Exception $e) {}
+                
+                // Atividades/histórico de contatos (se tabela existir)
+                $activities = [];
+                try {
+                    if ($pdo->query("SHOW TABLES LIKE 'activities'")->rowCount() > 0) {
+                        $stmt = $pdo->prepare("SELECT id, activity_type, subject, description, activity_date, user_id, created_at FROM activities WHERE lead_id = ? ORDER BY activity_date DESC, created_at DESC LIMIT 100");
+                        $stmt->execute([$lead_id]);
+                        $activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    }
+                } catch (Exception $e) {}
             } else {
                 $error = "Lead não encontrado";
             }
@@ -118,6 +157,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
 
+    if ($_POST['action'] === 'assign_owner' && isset($_POST['owner_id'])) {
+        $api_url = '../api/assignment/assign.php';
+        $post_data = [
+            'lead_id' => $lead_id,
+            'to_user_id' => (int)$_POST['owner_id'],
+            'reason' => isset($_POST['assign_reason']) ? trim($_POST['assign_reason']) : '',
+            'assigned_by' => $_SESSION['admin_user_id'] ?? null
+        ];
+        $ch = curl_init($api_url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post_data));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        $response = curl_exec($ch);
+        curl_close($ch);
+        header('Location: ?module=lead-detail&id=' . $lead_id);
+        exit;
+    }
+    
+    if ($_POST['action'] === 'add_activity' && isset($_POST['activity_type'])) {
+        $api_url = '../api/activities/create.php';
+        $post_data = [
+            'lead_id' => $lead_id,
+            'activity_type' => $_POST['activity_type'],
+            'subject' => isset($_POST['activity_subject']) ? trim($_POST['activity_subject']) : '',
+            'description' => isset($_POST['activity_description']) ? trim($_POST['activity_description']) : '',
+            'user_id' => $_SESSION['admin_user_id'] ?? null
+        ];
+        $ch = curl_init($api_url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post_data));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_exec($ch);
+        curl_close($ch);
+        header('Location: ?module=lead-detail&id=' . $lead_id);
+        exit;
+    }
+    
     if ($_POST['action'] === 'update_qualification') {
         $api_url = '../api/leads/update.php';
         $post_data = [
@@ -528,6 +606,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     </span>
                 </div>
             </div>
+            
+            <?php if ($has_owner_col && !empty($users)): ?>
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #e2e8f0;">
+            <h3 style="margin-bottom: 12px; font-size: 16px;">Responsável pelo lead</h3>
+            <p style="color: #64748b; margin-bottom: 12px;">Quem faz o contato com o lead. Admin pode encaminhar para outro usuário.</p>
+            <form method="POST" action="?module=lead-detail&id=<?php echo $lead_id; ?>">
+                <input type="hidden" name="action" value="assign_owner">
+                <div class="form-group">
+                    <label>Atribuir / encaminhar para:</label>
+                    <select name="owner_id" class="form-group select" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px;">
+                        <option value="">— Nenhum / Não atribuído —</option>
+                        <?php foreach ($users as $u): ?>
+                        <option value="<?php echo (int)$u['id']; ?>" <?php echo (isset($lead['owner_id']) && (int)$lead['owner_id'] === (int)$u['id']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($u['name']); ?> (<?php echo htmlspecialchars($u['email']); ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Motivo (opcional):</label>
+                    <input type="text" name="assign_reason" placeholder="Ex: Encaminhamento por região" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px;">
+                </div>
+                <button type="submit" class="btn btn-primary">Salvar responsável</button>
+            </form>
+            <?php if ($owner_name): ?>
+            <p style="margin-top: 12px; color: #475569; font-size: 14px;">Atual: <strong><?php echo htmlspecialchars($owner_name); ?></strong></p>
+            <?php endif; ?>
+            <?php elseif ($has_owner_col && empty($users)): ?>
+            <p style="color: #64748b; font-size: 13px;">Cadastre usuários em <strong>Users</strong> para atribuir responsável pelo lead.</p>
+            <?php endif; ?>
         </div>
     </div>
     
@@ -579,29 +687,99 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         </div>
     </div>
     
-    <!-- Observações -->
+    <!-- Histórico de conversas e contatos (observações + atividades) -->
     <div class="info-card notes-section">
-        <h2>Observações Internas</h2>
+        <h2>Histórico de conversas e contatos</h2>
         
-        <form method="POST" style="margin-bottom: 30px;">
+        <?php
+        $has_activities_table = false;
+        try {
+            if (isDatabaseConfigured()) {
+                $pdo_hist = getDBConnection();
+                $has_activities_table = $pdo_hist && $pdo_hist->query("SHOW TABLES LIKE 'activities'")->rowCount() > 0;
+            }
+        } catch (Exception $e) {}
+        ?>
+        
+        <?php if ($has_activities_table): ?>
+        <form method="POST" action="?module=lead-detail&id=<?php echo $lead_id; ?>" style="margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <input type="hidden" name="action" value="add_activity">
+            <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 16px;">Registrar contato</h3>
+            <div class="form-group">
+                <label>Tipo de contato:</label>
+                <select name="activity_type" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px;">
+                    <option value="phone_call">Ligação</option>
+                    <option value="email_sent">E-mail enviado</option>
+                    <option value="whatsapp_message">WhatsApp</option>
+                    <option value="meeting_scheduled">Reunião agendada / realizada</option>
+                    <option value="note">Observação / anotação</option>
+                    <option value="other">Outro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Assunto / resumo (opcional):</label>
+                <input type="text" name="activity_subject" placeholder="Ex: Retorno da ligação" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px;">
+            </div>
+            <div class="form-group">
+                <label>Detalhes:</label>
+                <textarea name="activity_description" class="textarea" placeholder="Descreva o que foi tratado no contato..." style="min-height: 80px;"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Registrar contato</button>
+        </form>
+        <?php endif; ?>
+        
+        <h3 style="margin-bottom: 12px; font-size: 16px;">Adicionar observação interna</h3>
+        <form method="POST" style="margin-bottom: 24px;">
             <input type="hidden" name="action" value="add_note">
             <div class="form-group">
-                <label>Adicionar Observação:</label>
                 <textarea name="note" class="textarea" placeholder="Digite uma observação sobre este lead..." required></textarea>
             </div>
             <button type="submit" class="btn btn-primary">Adicionar Observação</button>
         </form>
         
-        <?php if (empty($notes)): ?>
-            <p style="color: #718096; font-style: italic;">Nenhuma observação ainda.</p>
+        <?php
+        $type_labels = [
+            'phone_call' => 'Ligação',
+            'email_sent' => 'E-mail',
+            'whatsapp_message' => 'WhatsApp',
+            'meeting_scheduled' => 'Reunião',
+            'note' => 'Observação',
+            'assignment' => 'Encaminhamento',
+            'other' => 'Outro'
+        ];
+        $timeline = [];
+        foreach ($notes as $n) {
+            $timeline[] = ['type' => 'note', 'type_label' => 'Observação', 'date' => $n['created_at'], 'author' => $n['created_by'], 'text' => $n['note'], 'subject' => null];
+        }
+        foreach ($activities as $a) {
+            $timeline[] = [
+                'type' => $a['activity_type'],
+                'type_label' => $type_labels[$a['activity_type']] ?? $a['activity_type'],
+                'date' => $a['activity_date'] ?? $a['created_at'],
+                'author' => null,
+                'text' => trim(($a['subject'] ?? '') . "\n" . ($a['description'] ?? '')),
+                'subject' => $a['subject'] ?? null
+            ];
+        }
+        usort($timeline, function ($a, $b) { return strcmp($b['date'], $a['date']); });
+        ?>
+        
+        <h3 style="margin-bottom: 12px; font-size: 16px;">Linha do tempo</h3>
+        <?php if (empty($timeline)): ?>
+            <p style="color: #718096; font-style: italic;">Nenhum registro ainda. Adicione uma observação ou registre um contato acima.</p>
         <?php else: ?>
-            <?php foreach ($notes as $note): ?>
-                <div class="note-item">
+            <?php foreach ($timeline as $item): ?>
+                <div class="note-item" style="<?php echo ($item['type'] ?? '') === 'assignment' ? 'border-left-color: #6366f1;' : ''; ?>">
                     <div class="note-header">
-                        <span class="note-author"><?php echo htmlspecialchars($note['created_by']); ?></span>
-                        <span class="note-date"><?php echo date('d/m/Y H:i', strtotime($note['created_at'])); ?></span>
+                        <span class="note-author">
+                            <?php if (!empty($item['type_label'])): ?>
+                                <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; background: #e2e8f0; color: #475569; font-size: 11px; font-weight: 600; margin-right: 8px;"><?php echo htmlspecialchars($item['type_label']); ?></span>
+                            <?php endif; ?>
+                            <?php echo htmlspecialchars($item['author'] ?? 'Sistema'); ?>
+                        </span>
+                        <span class="note-date"><?php echo date('d/m/Y H:i', strtotime($item['date'])); ?></span>
                     </div>
-                    <div class="note-text"><?php echo nl2br(htmlspecialchars($note['note'])); ?></div>
+                    <div class="note-text"><?php echo nl2br(htmlspecialchars(trim($item['text']))); ?></div>
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>

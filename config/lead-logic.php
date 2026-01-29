@@ -51,7 +51,18 @@ function getNextOwnerRoundRobin($pdo) {
     if (empty($user_ids)) {
         return null;
     }
-    // Último atribuído (tabela lead_distribution_state ou último lead.owner_id)
+    // Só usa round-robin por owner_id se a coluna existir na tabela leads
+    $has_owner_col = false;
+    try {
+        $check = $pdo->query("SHOW COLUMNS FROM leads LIKE 'owner_id'");
+        $has_owner_col = $check && $check->rowCount() > 0;
+    } catch (Throwable $e) {
+        // ignora
+    }
+    if (!$has_owner_col) {
+        return (int) $user_ids[0];
+    }
+    // Último atribuído (último lead.owner_id)
     $stmt = $pdo->query("
         SELECT owner_id FROM leads 
         WHERE owner_id IS NOT NULL 
@@ -113,8 +124,13 @@ function applyAutoTags($pdo, $lead_id, $lead) {
     if (isset($lead['urgency']) && $lead['urgency'] === 'imediato') {
         $tags[] = 'Urgent';
     }
+    $tag_col = 'tag_name';
+    try {
+        $chk = $pdo->query("SHOW COLUMNS FROM lead_tags LIKE 'tag_name'");
+        if (!$chk || $chk->rowCount() === 0) $tag_col = 'tag';
+    } catch (Throwable $e) { $tag_col = 'tag'; }
     foreach ($tags as $tag) {
-        $stmt = $pdo->prepare("INSERT IGNORE INTO lead_tags (lead_id, tag_name) VALUES (?, ?)");
+        $stmt = $pdo->prepare("INSERT IGNORE INTO lead_tags (lead_id, $tag_col) VALUES (?, ?)");
         $stmt->execute([$lead_id, $tag]);
     }
 }
