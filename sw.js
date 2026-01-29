@@ -3,7 +3,7 @@
 
 const CACHE_NAME = 'senior-floors-crm-v4';
 const urlsToCache = [
-  '/assets/logoSeniorFloors.png?v=4',
+  'https://www.senior-floors.com/logoSeniorFloors.png?v=6',
   '/manifest.json?v=4',
   '/styles.css'
 ];

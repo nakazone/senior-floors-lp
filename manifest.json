@@ -9,49 +9,49 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "assets/logoSeniorFloors.png?v=4",
+      "src": "https://www.senior-floors.com/logoSeniorFloors.png?v=6",
       "sizes": "72x72",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/logoSeniorFloors.png?v=4",
+      "src": "https://www.senior-floors.com/logoSeniorFloors.png?v=6",
       "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/logoSeniorFloors.png?v=4",
+      "src": "https://www.senior-floors.com/logoSeniorFloors.png?v=6",
       "sizes": "128x128",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/logoSeniorFloors.png?v=4",
+      "src": "https://www.senior-floors.com/logoSeniorFloors.png?v=6",
       "sizes": "144x144",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/logoSeniorFloors.png?v=4",
+      "src": "https://www.senior-floors.com/logoSeniorFloors.png?v=6",
       "sizes": "152x152",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/logoSeniorFloors.png?v=4",
+      "src": "https://www.senior-floors.com/logoSeniorFloors.png?v=6",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "assets/logoSeniorFloors.png?v=4",
+      "src": "https://www.senior-floors.com/logoSeniorFloors.png?v=6",
       "sizes": "384x384",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/logoSeniorFloors.png?v=4",
+      "src": "https://www.senior-floors.com/logoSeniorFloors.png?v=6",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -67,7 +67,7 @@
       "url": "/system.php?module=dashboard",
       "icons": [
         {
-          "src": "assets/logoSeniorFloors.png?v=4",
+          "src": "https://www.senior-floors.com/logoSeniorFloors.png?v=6",
           "sizes": "96x96"
         }
       ]
@@ -79,7 +79,7 @@
       "url": "/system.php?module=crm",
       "icons": [
         {
-          "src": "assets/logoSeniorFloors.png?v=4",
+          "src": "https://www.senior-floors.com/logoSeniorFloors.png?v=6",
           "sizes": "96x96"
         }
       ]
@@ -91,7 +91,7 @@
       "url": "/system.php?module=customers",
       "icons": [
         {
-          "src": "assets/logoSeniorFloors.png?v=4",
+          "src": "https://www.senior-floors.com/logoSeniorFloors.png?v=6",
           "sizes": "96x96"
         }
       ]
@@ -103,7 +103,7 @@
       "url": "/system.php?module=projects",
       "icons": [
         {
-          "src": "assets/logoSeniorFloors.png?v=4",
+          "src": "https://www.senior-floors.com/logoSeniorFloors.png?v=6",
           "sizes": "96x96"
         }
       ]

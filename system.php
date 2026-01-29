@@ -396,21 +396,21 @@ if (!file_exists($module_file)) {
     <meta name="apple-mobile-web-app-title" content="Senior Floors CRM">
     
     <!-- Favicon (cache-bust ?v=4 para ícone PWA no iPhone) -->
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/logoSeniorFloors.png?v=4">
-    <link rel="icon" type="image/png" sizes="16x16" href="assets/logoSeniorFloors.png?v=4">
-    <link rel="icon" type="image/png" href="assets/logoSeniorFloors.png?v=4">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://www.senior-floors.com/logoSeniorFloors.png?v=6">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://www.senior-floors.com/logoSeniorFloors.png?v=6">
+    <link rel="icon" type="image/png" href="https://www.senior-floors.com/logoSeniorFloors.png?v=6">
     
     <!-- Apple Touch Icons (iOS / Chrome no iPhone) -->
-    <link rel="apple-touch-icon" sizes="57x57" href="assets/logoSeniorFloors.png?v=4">
-    <link rel="apple-touch-icon" sizes="60x60" href="assets/logoSeniorFloors.png?v=4">
-    <link rel="apple-touch-icon" sizes="72x72" href="assets/logoSeniorFloors.png?v=4">
-    <link rel="apple-touch-icon" sizes="76x76" href="assets/logoSeniorFloors.png?v=4">
-    <link rel="apple-touch-icon" sizes="114x114" href="assets/logoSeniorFloors.png?v=4">
-    <link rel="apple-touch-icon" sizes="120x120" href="assets/logoSeniorFloors.png?v=4">
-    <link rel="apple-touch-icon" sizes="144x144" href="assets/logoSeniorFloors.png?v=4">
-    <link rel="apple-touch-icon" sizes="152x152" href="assets/logoSeniorFloors.png?v=4">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/logoSeniorFloors.png?v=4">
-    <link rel="apple-touch-icon" href="assets/logoSeniorFloors.png?v=4">
+    <link rel="apple-touch-icon" sizes="57x57" href="https://www.senior-floors.com/logoSeniorFloors.png?v=6">
+    <link rel="apple-touch-icon" sizes="60x60" href="https://www.senior-floors.com/logoSeniorFloors.png?v=6">
+    <link rel="apple-touch-icon" sizes="72x72" href="https://www.senior-floors.com/logoSeniorFloors.png?v=6">
+    <link rel="apple-touch-icon" sizes="76x76" href="https://www.senior-floors.com/logoSeniorFloors.png?v=6">
+    <link rel="apple-touch-icon" sizes="114x114" href="https://www.senior-floors.com/logoSeniorFloors.png?v=6">
+    <link rel="apple-touch-icon" sizes="120x120" href="https://www.senior-floors.com/logoSeniorFloors.png?v=6">
+    <link rel="apple-touch-icon" sizes="144x144" href="https://www.senior-floors.com/logoSeniorFloors.png?v=6">
+    <link rel="apple-touch-icon" sizes="152x152" href="https://www.senior-floors.com/logoSeniorFloors.png?v=6">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://www.senior-floors.com/logoSeniorFloors.png?v=6">
+    <link rel="apple-touch-icon" href="https://www.senior-floors.com/logoSeniorFloors.png?v=6">
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json?v=4">
@@ -711,7 +711,7 @@ if (!file_exists($module_file)) {
         <div class="header-content">
             <div class="header-left">
                 <a href="?module=dashboard" class="logo-admin">
-                    <img src="assets/logoSeniorFloors.png?v=5" alt="Senior Floors Logo">
+                    <img src="https://www.senior-floors.com/logoSeniorFloors.png?v=6" alt="Senior Floors Logo">
                     <h1><?php echo htmlspecialchars($ADMIN_TITLE); ?></h1>
                 </a>
             </div>
