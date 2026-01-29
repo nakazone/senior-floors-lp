@@ -364,10 +364,12 @@ function module_can_access($module_key, $modules, $session) {
     $module = $modules[$module_key];
     if ($module_key === 'dashboard') return true; // Todos os usuários logados veem o dashboard
     if (!isset($module['permission'])) return true;
-    $role = $session['admin_role'] ?? '';
-    if ($role === 'admin') return true;
+    $role = trim((string)($session['admin_role'] ?? ''));
+    // Admin (ou role vazio/legado) vê todos os módulos
+    if ($role === 'admin' || $role === '') return true;
     $user_id = $session['admin_user_id'] ?? null;
-    if ($user_id === null) return false;
+    // Login por arquivo (admin-config) não tem user_id; tratar como admin
+    if ($user_id === null) return true;
     return currentUserHasPermission($module['permission']);
 }
 
