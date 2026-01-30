@@ -43,6 +43,7 @@
     setTimeout(hideAllErrorMessages, 500);
     setTimeout(hideAllErrorMessages, 1000);
 
+    function init() {
     // ============================================
     // Mobile Menu Toggle
     // ============================================
@@ -1041,5 +1042,12 @@
     console.log('Senior Floors landing page initialized');
     console.log('Hero form found:', !!heroForm);
     console.log('Contact form found:', !!contactForm);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 
 })();
