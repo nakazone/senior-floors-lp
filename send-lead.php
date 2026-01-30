@@ -460,13 +460,15 @@ $email_body_text .= "IP Address: " . (isset($_SERVER['REMOTE_ADDR']) ? $_SERVER[
 // Send email using PHPMailer (if available)
 $mail_sent = false;
 $error_message = '';
+$email_error_reason = ''; // Safe hint for API response when email_sent is false
 
 if ($phpmailer_available) {
     try {
         $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
         
         // Check if App Password is configured
-        if (SMTP_PASS === 'YOUR_APP_PASSWORD_HERE' || empty(SMTP_PASS)) {
+        if (SMTP_PASS === 'YOUR_APP_PASSWORD_HERE' || empty(trim(SMTP_PASS))) {
+            $email_error_reason = 'smtp_not_configured';
             throw new \PHPMailer\PHPMailer\Exception('SMTP password not configured. Please set Google App Password in send-lead.php');
         }
     
@@ -561,7 +563,11 @@ if ($phpmailer_available) {
     
 } catch (\PHPMailer\PHPMailer\Exception $e) {
     $mail_sent = false;
-    $error_message = $mail->ErrorInfo;
+    $error_message = isset($mail) ? $mail->ErrorInfo : $e->getMessage();
+    if (empty($email_error_reason)) {
+        $email_error_reason = (strpos($error_message, 'password') !== false || strpos($error_message, 'Authentication') !== false)
+            ? 'smtp_auth_failed' : 'smtp_error';
+    }
     
     // Log error
     $error_log = date('Y-m-d H:i:s') . " | ❌ PHPMailer Error\n";
@@ -569,8 +575,10 @@ if ($phpmailer_available) {
     $error_log .= "   To: " . SMTP_TO_EMAIL . "\n";
     $error_log .= "   From: " . SMTP_FROM_EMAIL . "\n";
     @file_put_contents($log_dir . '/email-status.log', $error_log, FILE_APPEND | LOCK_EX);
+    writeLeadLog("❌ Email: " . $error_message, $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
     }
 } else {
+    $email_error_reason = 'phpmailer_not_installed';
     // PHPMailer not available - log this but don't fail
     $error_log = date('Y-m-d H:i:s') . " | ⚠️ PHPMailer not installed. Email not sent. Lead saved to CSV.\n";
     $error_log .= "   To install: Download PHPMailer from https://github.com/PHPMailer/PHPMailer\n";
@@ -757,9 +765,8 @@ if ($system_sent) {
     @file_put_contents($log_dir . '/system-integration.log', $system_log, FILE_APPEND | LOCK_EX);
 }
 
-// Always return success to user (lead is saved in CSV and/or DB)
-http_response_code(200);
-echo json_encode([
+// Build response (include email_error when email was not sent, for debugging)
+$response = [
     'success' => true,
     'message' => 'Thank you! We\'ll contact you within 24 hours.',
     'email_sent' => $mail_sent,
@@ -769,6 +776,21 @@ echo json_encode([
     'telegram_sent' => $telegram_sent,
     'lead_id' => $lead_id,
     'timestamp' => date('Y-m-d H:i:s')
-]);
+];
+if (!$mail_sent && $email_error_reason !== '') {
+    $response['email_error'] = $email_error_reason;
+    // Human-readable hints (safe to expose)
+    $hints = [
+        'smtp_not_configured' => 'Configure SMTP_PASS (Google App Password) in send-lead.php',
+        'smtp_auth_failed' => 'SMTP auth failed: check SMTP_USER/SMTP_PASS and App Password',
+        'smtp_error' => 'SMTP error: check email-status.log on server',
+        'phpmailer_not_installed' => 'Install PHPMailer in the PHPMailer/ folder (see PHPMailer_SETUP.md)'
+    ];
+    $response['email_error_hint'] = isset($hints[$email_error_reason]) ? $hints[$email_error_reason] : 'Check send-lead.php and email-status.log';
+}
+
+// Always return success to user (lead is saved in CSV and/or DB)
+http_response_code(200);
+echo json_encode($response);
 exit;
 ?>

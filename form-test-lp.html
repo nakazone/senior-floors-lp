@@ -125,6 +125,9 @@
                     if (data.success) {
                         html += '<div class="step"><span class="ok">success: true</span> — Lead aceito pelo servidor.</div>';
                         html += '<div class="step">email_sent: ' + (data.email_sent ? '<span class="ok">true</span>' : '<span class="fail">false</span>') + ' — ' + (data.email_sent ? 'E-mail enviado.' : 'E-mail não enviado (verifique PHPMailer/SMTP em send-lead.php).') + '</div>';
+                        if (!data.email_sent && data.email_error_hint) {
+                            html += '<div class="step"><strong>Motivo:</strong> <span class="warn">' + (data.email_error || '') + '</span> — ' + data.email_error_hint + '</div>';
+                        }
                         html += '<div class="step">database_saved: ' + (data.database_saved ? '<span class="ok">true</span>' : '<span class="warn">false</span>') + '</div>';
                         html += '<div class="step">csv_saved: ' + (data.csv_saved ? '<span class="ok">true</span>' : 'false') + '</div>';
                     } else {

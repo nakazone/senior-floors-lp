@@ -69,6 +69,29 @@ Para validação de etapas no Pipeline, logs de mudança de status e telas de qu
 
 ---
 
+## 5c. (Opcional) E-mail enviado — PHPMailer/SMTP
+
+Se o formulário retorna **email_sent: false**, o e-mail interno (para leads@senior-floors.com) não está sendo enviado. Para corrigir:
+
+1. **Instalar PHPMailer (se ainda não tiver)**  
+   - Baixe: https://github.com/PHPMailer/PHPMailer (Code → Download ZIP).  
+   - Extraia e envie para o servidor a pasta **PHPMailer** (com os arquivos `Exception.php`, `PHPMailer.php`, `SMTP.php`) na **mesma pasta** onde está o **send-lead.php** (ex.: `public_html/lp/PHPMailer/` ou `public_html/PHPMailer/`).
+
+2. **Configurar senha SMTP (Google App Password)**  
+   - Abra **send-lead.php** no servidor.  
+   - Localize a linha `define('SMTP_PASS', 'YOUR_APP_PASSWORD_HERE');`.  
+   - Troque `YOUR_APP_PASSWORD_HERE` pela **App Password** do Gmail/Google Workspace (conta usada em `SMTP_USER`, ex.: contact@senior-floors.com).  
+   - Para criar App Password: Google Account → Segurança → Verificação em 2 etapas (ativar) → Senhas de app → gerar uma para "Mail".
+
+3. **Testar de novo**  
+   - Envie um lead de teste (formulário ou **form-test-lp.html**).  
+   - Se a resposta incluir `email_error` e `email_error_hint`, use essa mensagem para corrigir (ex.: `smtp_not_configured` = coloque a App Password; `phpmailer_not_installed` = instale a pasta PHPMailer).  
+   - No servidor, confira **email-status.log** (na mesma pasta do log de leads) para erros detalhados do SMTP.
+
+*Documentação detalhada: **PHPMailer_SETUP.md** e **QUICK_SETUP_APP_PASSWORD.md**.*
+
+---
+
 ## 6. Depois de concluir (testar)
 
 - [ ] Envie um lead de teste pelo formulário do site (hero ou contato).
@@ -102,3 +125,4 @@ O formulário envia para `https://SEU_DOMINIO/send-lead.php` (raiz do site). Se 
 | **Leads não aparecem no Pipeline** | Execute **database/migration-pipeline-only.sql** no phpMyAdmin (cria estágios e coluna `pipeline_stage_id` em leads). |
 | **Responsável pelo lead / Histórico de contatos** | Execute **database/migration-lead-owner-and-activities.sql** (coluna `owner_id` em leads + tabelas `activities` e `assignment_history`). Cadastre usuários em **Users** para poder atribuir responsável. |
 | **Pipeline com 11 estágios / Auditoria / Qualificação** | Execute **database/migration-crm-full-spec.sql** (11 estágios, `lead_qualification`, `lead_status_change_log`, `audit_log`, `interactions`). Necessário para validação de etapas e logs de status. |
+| **email_sent: false (e-mail não enviado)** | Verifique PHPMailer/SMTP em **send-lead.php**: instale a pasta **PHPMailer** e configure **SMTP_PASS** com a Google App Password. Use **form-test-lp.html** e o campo **email_error_hint** na resposta para ver o motivo. Ver **5c** e **PHPMailer_SETUP.md**. |

@@ -10,18 +10,41 @@ jobs:
   deploy:
     name: Deploy to Hostinger via FTP
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Setup FTP Deploy
-        uses: SamKirkland/FTP-Deploy-Action@4.3.0
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Validate FTP secrets
+        run: |
+          if [ -z "${{ secrets.HOSTINGER_FTP_HOST }}" ]; then
+            echo "::error::HOSTINGER_FTP_HOST secret is not set. Add it in repo Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          if [ -z "${{ secrets.HOSTINGER_FTP_USER }}" ]; then
+            echo "::error::HOSTINGER_FTP_USER secret is not set. Add it in repo Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          if [ -z "${{ secrets.HOSTINGER_FTP_PASSWORD }}" ]; then
+            echo "::error::HOSTINGER_FTP_PASSWORD secret is not set. Add it in repo Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          echo "FTP secrets are set (host and user names hidden)."
+
+      # Hostinger often uses FTPS. If deploy fails with connection error, try removing protocol/port to use plain FTP.
+      - name: Deploy to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.HOSTINGER_FTP_HOST }}
           username: ${{ secrets.HOSTINGER_FTP_USER }}
           password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
           server-dir: /public_html/
+          local-dir: ./
+          # form-test-lp.html is included (does not match test-*.html). Only files named test-*.html are excluded.
           exclude: |
             **/.git*
             **/.git*/**
@@ -37,3 +60,8 @@ jobs:
             **/test-*.php
             **/debug-*.html
             **/.github/**
+
+      - name: Deploy summary
+        run: |
+          echo "Deploy step completed. Check the step output above for upload details."
+          echo "If files are still missing on the server, verify FTP host/user/password in GitHub Secrets and that server-dir is correct (e.g. /public_html/)."

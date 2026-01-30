@@ -56,3 +56,32 @@ Assim, só o workflow FTP roda no push e o deploy segue funcionando.
 
 - **Deploy falhando por causa desse erro de SSH:** use a **Opção 1** (só FTP e desative o workflow SSH).  
 - **Quer continuar usando SSH:** siga a **Opção 2** e, se precisar, abra um ticket na Hostinger sobre liberação de SSH para o GitHub Actions.
+
+---
+
+## Deploy FTP: arquivos não chegam ao servidor
+
+Se o workflow **Deploy to Hostinger** (FTP) roda com sucesso (verde) mas os arquivos não aparecem no Hostinger:
+
+1. **Secrets**  
+   O workflow agora valida no início. Se aparecer `HOSTINGER_FTP_HOST secret is not set` (ou USER/PASSWORD), vá em **Settings** → **Secrets and variables** → **Actions** e crie/edite:
+   - `HOSTINGER_FTP_HOST` = host FTP (ex.: `ftp.hostinger.com` ou `ftp.seudominio.com`, **sem** `ftp://` nem barra no final)
+   - `HOSTINGER_FTP_USER` = usuário FTP do painel Hostinger
+   - `HOSTINGER_FTP_PASSWORD` = senha da conta FTP
+
+2. **Protocolo**  
+   O workflow usa **FTPS** (porta 21). Se o log mostrar erro de conexão/SSL, edite `.github/workflows/deploy-hostinger.yml` e **remova** as linhas `protocol: ftps` e `port: 21` para usar FTP simples.
+
+3. **Pasta no servidor**  
+   O deploy envia para `/public_html/`. Confirme no painel Hostinger que a raiz do site é `public_html` (ou ajuste `server-dir` no workflow).
+
+4. **Rodar de novo**  
+   Em **Actions** → **Deploy to Hostinger** → **Run workflow** (branch main). Veja o log do step **Deploy to FTP** para mensagens de erro.
+
+---
+
+## Erro: FTP connection failed / Upload failed
+
+- Confirme os três secrets de FTP (host, user, password) no repositório.
+- Teste as mesmas credenciais em um cliente FTP (ex.: FileZilla) no seu PC.
+- Se no FileZilla você usar “FTP explícito sobre TLS”, o workflow com `protocol: ftps` está correto; se usar FTP sem cifra, remova `protocol` e `port` do workflow.
