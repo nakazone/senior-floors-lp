@@ -382,8 +382,14 @@
 
                 if (data.success) {
                     // Success!
-                    if (heroSuccessMessage) heroSuccessMessage.classList.add('show');
+                    if (heroSuccessMessage) {
+                        heroSuccessMessage.classList.add('show');
+                        heroSuccessMessage.style.display = 'block';
+                        heroSuccessMessage.style.visibility = 'visible';
+                        heroSuccessMessage.style.opacity = '1';
+                    }
                     heroForm.reset();
+                    heroForm.style.display = 'none';
                     
                     // Scroll to show success message - better mobile handling
                     if (/Mobile|Android|iPhone|iPad/.test(navigator.userAgent)) {
@@ -650,8 +656,14 @@
 
                 if (data.success) {
                     // Success!
-                    if (contactSuccessMessage) contactSuccessMessage.classList.add('show');
+                    if (contactSuccessMessage) {
+                        contactSuccessMessage.classList.add('show');
+                        contactSuccessMessage.style.display = 'block';
+                        contactSuccessMessage.style.visibility = 'visible';
+                        contactSuccessMessage.style.opacity = '1';
+                    }
                     contactForm.reset();
+                    contactForm.style.display = 'none';
                     
                     // Scroll to show success message - better mobile handling
                     if (/Mobile|Android|iPhone|iPad/.test(navigator.userAgent)) {
