@@ -258,7 +258,7 @@ $chart_days_data = json_encode(array_values($leads_by_day));
 
     <?php if (!empty($followup_leads)): ?>
     <div class="dash-chart-card" style="margin-bottom: 24px;">
-        <div class="dash-chart-title">⚠️ Follow-up (leads em aberto – contatar)</div>
+        <div class="dash-chart-title">&#9888; Follow-up (leads em aberto – contatar)</div>
         <ul style="list-style: none; padding: 0; margin: 0; font-size: 13px;">
             <?php foreach (array_slice($followup_leads, 0, 5) as $fl): ?>
             <li style="padding: 8px 0; border-bottom: 1px solid #f1f5f9;">

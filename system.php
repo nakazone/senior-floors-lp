@@ -255,97 +255,97 @@ if (isset($_GET['api']) && $_GET['api'] === 'receive-lead' && $_SERVER['REQUEST_
 $modules = [
     'dashboard' => [
         'name' => 'Dashboard',
-        'icon' => '📊',
+        'icon' => '&#128202;',
         'file' => 'admin-modules/dashboard.php',
         'default' => true,
         'permission' => 'dashboard.view'
     ],
     'crm' => [
         'name' => 'CRM - Leads',
-        'icon' => '👥',
+        'icon' => '&#128101;',
         'file' => 'admin-modules/crm.php',
         'permission' => 'leads.view'
     ],
     'pipeline' => [
         'name' => 'Pipeline (Kanban)',
-        'icon' => '📋',
+        'icon' => '&#128203;',
         'file' => 'admin-modules/pipeline.php',
         'permission' => 'pipeline.view'
     ],
     'visits' => [
         'name' => 'Visitas e Medições',
-        'icon' => '📅',
+        'icon' => '&#128197;',
         'file' => 'admin-modules/visits.php',
         'permission' => 'visits.view'
     ],
     'visit-detail' => [
         'name' => 'Detalhe Visita',
-        'icon' => '📋',
+        'icon' => '&#128203;',
         'file' => 'admin-modules/visit-detail.php',
         'hidden' => true,
         'permission' => 'visits.view'
     ],
     'quotes' => [
         'name' => 'Orçamentos',
-        'icon' => '💰',
+        'icon' => '&#128176;',
         'file' => 'admin-modules/quotes.php',
         'permission' => 'quotes.view'
     ],
     'quote-detail' => [
         'name' => 'Detalhe Orçamento',
-        'icon' => '📋',
+        'icon' => '&#128203;',
         'file' => 'admin-modules/quote-detail.php',
         'hidden' => true,
         'permission' => 'quotes.view'
     ],
     'lead-detail' => [
         'name' => 'Lead Detail',
-        'icon' => '👤',
+        'icon' => '&#128100;',
         'file' => 'admin-modules/lead-detail.php',
         'hidden' => true,
         'permission' => 'leads.view'
     ],
     'customers' => [
         'name' => 'Customers',
-        'icon' => '🏢',
+        'icon' => '&#127970;',
         'file' => 'admin-modules/customers.php',
         'permission' => 'customers.view'
     ],
     'customer-detail' => [
         'name' => 'Customer Detail',
-        'icon' => '👤',
+        'icon' => '&#128100;',
         'file' => 'admin-modules/customer-detail.php',
         'hidden' => true,
         'permission' => 'customers.view'
     ],
     'projects' => [
         'name' => 'Projects',
-        'icon' => '🏗️',
+        'icon' => '&#127959;',
         'file' => 'admin-modules/projects.php',
         'permission' => 'projects.view'
     ],
     'project-detail' => [
         'name' => 'Project Detail',
-        'icon' => '📋',
+        'icon' => '&#128203;',
         'file' => 'admin-modules/project-detail.php',
         'hidden' => true,
         'permission' => 'projects.view'
     ],
     'coupons' => [
         'name' => 'Coupons',
-        'icon' => '🎫',
+        'icon' => '&#127915;',
         'file' => 'admin-modules/coupons.php',
         'permission' => 'coupons.view'
     ],
     'users' => [
         'name' => 'Users',
-        'icon' => '👥',
+        'icon' => '&#128101;',
         'file' => 'admin-modules/users.php',
         'permission' => 'users.view'
     ],
     'user-detail' => [
         'name' => 'User Detail',
-        'icon' => '👤',
+        'icon' => '&#128100;',
         'file' => 'admin-modules/user-detail.php',
         'hidden' => true,
         'permission' => 'users.view'

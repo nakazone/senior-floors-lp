@@ -420,14 +420,14 @@ if (isset($_GET['export'])) {
         <h1>CRM - Lead Management</h1>
         <?php if (!empty($data_source)): ?>
             <p style="margin: 5px 0 0 0; font-size: 12px; color: #718096;">
-                📊 Fonte de dados: <strong><?php echo htmlspecialchars($data_source); ?></strong>
+                &#128202; Fonte de dados: <strong><?php echo htmlspecialchars($data_source); ?></strong>
                 <?php if ($data_source === 'MySQL Database'): ?>
-                    <span style="color: #48bb78;">✅ Banco de dados ativo</span>
-                    | <a href="?module=crm&force_csv=1" style="color: #4299e1; text-decoration: none;">🔀 Usar CSV</a>
+                    <span style="color: #48bb78;">&#10003; Banco de dados ativo</span>
+                    | <a href="?module=crm&force_csv=1" style="color: #4299e1; text-decoration: none;">&#128256; Usar CSV</a>
                 <?php else: ?>
-                    <span style="color: #f59e0b;">⚠️ Usando CSV</span>
+                    <span style="color: #f59e0b;">&#9888; Usando CSV</span>
                     <?php if (isDatabaseConfigured()): ?>
-                        | <a href="?module=crm" style="color: #4299e1; text-decoration: none;">🔀 Usar Banco de Dados</a>
+                        | <a href="?module=crm" style="color: #4299e1; text-decoration: none;">&#128256; Usar Banco de Dados</a>
                     <?php endif; ?>
                 <?php endif; ?>
             </p>
@@ -439,9 +439,9 @@ $qs = http_build_query(array_filter($q, fn($v) => $v !== '' && $v !== 0));
 ?>
     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
         <?php if (isDatabaseConfigured()): ?>
-        <button type="button" class="btn btn-primary" id="btn-new-lead" style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);">➕ Novo lead (manual)</button>
+        <button type="button" class="btn btn-primary" id="btn-new-lead" style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);">&#10133; Novo lead (manual)</button>
         <?php endif; ?>
-        <a href="?module=crm&export=1&<?php echo $qs; ?>" class="btn btn-primary">📥 Export CSV</a>
+        <a href="?module=crm&export=1&<?php echo $qs; ?>" class="btn btn-primary">&#128229; Export CSV</a>
     </div>
 </div>
 
@@ -534,8 +534,8 @@ $qs = http_build_query(array_filter($q, fn($v) => $v !== '' && $v !== 0));
             </div>
         </div>
         <div class="filter-actions">
-            <button type="submit" class="btn btn-primary">?? Apply Filters</button>
-            <a href="?module=crm" class="btn btn-secondary">?? Reset</a>
+            <button type="submit" class="btn btn-primary">&#10003; Aplicar filtros</button>
+            <a href="?module=crm" class="btn btn-secondary">&#8634; Limpar</a>
         </div>
     </form>
 </div>
