@@ -436,13 +436,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     </div>
 
     <nav class="lead-tabs" role="tablist" id="lead-tablist">
-        <button type="button" class="lead-tab active" data-tab="resumo" role="tab" aria-selected="true" aria-controls="panel-resumo" id="tab-resumo">Resumo</button>
-        <button type="button" class="lead-tab" data-tab="qualificacao" role="tab" aria-selected="false" aria-controls="panel-qualificacao" id="tab-qualificacao">Qualificação</button>
-        <button type="button" class="lead-tab" data-tab="interacoes" role="tab" aria-selected="false" aria-controls="panel-interacoes" id="tab-interacoes">Interações</button>
-        <button type="button" class="lead-tab" data-tab="visitas" role="tab" aria-selected="false" aria-controls="panel-visitas" id="tab-visitas">Visitas</button>
-        <button type="button" class="lead-tab" data-tab="propostas" role="tab" aria-selected="false" aria-controls="panel-propostas" id="tab-propostas">Propostas</button>
-        <button type="button" class="lead-tab" data-tab="contrato" role="tab" aria-selected="false" aria-controls="panel-contrato" id="tab-contrato">Contrato</button>
-        <button type="button" class="lead-tab" data-tab="producao" role="tab" aria-selected="false" aria-controls="panel-producao" id="tab-producao">Produção</button>
+        <button type="button" class="lead-tab active" data-tab="resumo" onclick="window.leadDetailShowPanel('resumo')">Resumo</button>
+        <button type="button" class="lead-tab" data-tab="qualificacao" onclick="window.leadDetailShowPanel('qualificacao')">Qualificação</button>
+        <button type="button" class="lead-tab" data-tab="interacoes" onclick="window.leadDetailShowPanel('interacoes')">Interações</button>
+        <button type="button" class="lead-tab" data-tab="visitas" onclick="window.leadDetailShowPanel('visitas')">Visitas</button>
+        <button type="button" class="lead-tab" data-tab="propostas" onclick="window.leadDetailShowPanel('propostas')">Propostas</button>
+        <button type="button" class="lead-tab" data-tab="contrato" onclick="window.leadDetailShowPanel('contrato')">Contrato</button>
+        <button type="button" class="lead-tab" data-tab="producao" onclick="window.leadDetailShowPanel('producao')">Produção</button>
     </nav>
     
     <!-- Painel Resumo: dados essenciais + status e ações -->
@@ -889,47 +889,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 </div>
 
 <script>
+window.leadDetailShowPanel = function(tabId) {
+    tabId = String(tabId || '').replace(/^#/, '').replace(/^panel-/, '') || 'resumo';
+    var container = document.getElementById('lead-detail-tabs-root');
+    if (!container) container = document.querySelector('.lead-detail-container');
+    if (!container) return;
+    var panels = container.querySelectorAll('.tab-panel');
+    var tabs = container.querySelectorAll('.lead-tabs [data-tab]');
+    for (var i = 0; i < panels.length; i++) {
+        var p = panels[i];
+        var isActive = p.id === 'panel-' + tabId;
+        p.classList.toggle('active', isActive);
+        p.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+    }
+    for (var j = 0; j < tabs.length; j++) {
+        var t = tabs[j];
+        var isTabActive = t.getAttribute('data-tab') === tabId;
+        t.classList.toggle('active', isTabActive);
+        t.setAttribute('aria-selected', isTabActive ? 'true' : 'false');
+    }
+    try {
+        var url = location.pathname + (location.search || '') + '#' + tabId;
+        if (history.replaceState) history.replaceState(null, '', url);
+    } catch (err) {}
+};
 (function() {
     var container = document.querySelector('.lead-detail-container');
     if (!container) return;
-
-    function showPanel(tabId) {
-        tabId = String(tabId || '').replace(/^#/, '').replace(/^panel-/, '') || 'resumo';
-        var panels = container.querySelectorAll('.tab-panel');
-        var tabs = container.querySelectorAll('.lead-tabs [data-tab]');
-        for (var i = 0; i < panels.length; i++) {
-            var p = panels[i];
-            var isActive = p.id === 'panel-' + tabId;
-            p.classList.toggle('active', isActive);
-            p.setAttribute('aria-hidden', isActive ? 'false' : 'true');
-        }
-        for (var j = 0; j < tabs.length; j++) {
-            var t = tabs[j];
-            var isTabActive = t.getAttribute('data-tab') === tabId;
-            t.classList.toggle('active', isTabActive);
-            t.setAttribute('aria-selected', isTabActive ? 'true' : 'false');
-        }
-        try {
-            var url = location.pathname + (location.search || '') + '#' + tabId;
-            if (history.replaceState) history.replaceState(null, '', url);
-        } catch (err) {}
-    }
-
-    container.addEventListener('click', function(e) {
-        var target = e.target;
-        if (target.getAttribute && target.getAttribute('data-tab')) {
-            e.preventDefault();
-            e.stopPropagation();
-            showPanel(target.getAttribute('data-tab'));
-            return false;
-        }
-    }, true);
-
+    container.id = 'lead-detail-tabs-root';
     var hash = (location.hash || '').replace('#', '');
     if (hash && container.querySelector('#panel-' + hash)) {
-        showPanel(hash);
+        window.leadDetailShowPanel(hash);
     } else {
-        showPanel('resumo');
+        window.leadDetailShowPanel('resumo');
     }
 })();
 </script>
