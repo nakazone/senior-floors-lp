@@ -42,15 +42,12 @@ if (isDatabaseConfigured()) {
     try {
         $pdo = getDBConnection();
         
-        // Get all users
+        // Get all users (subquery evita GROUP BY ambíguo com role)
         $stmt = $pdo->query("
             SELECT 
-                u.*,
-                COUNT(DISTINCT up.id) as permission_count,
-                u.last_login
+                u.id, u.name, u.email, u.phone, u.role, u.is_active, u.last_login, u.created_at,
+                (SELECT COUNT(*) FROM user_permissions up WHERE up.user_id = u.id AND up.granted = 1) AS permission_count
             FROM users u
-            LEFT JOIN user_permissions up ON up.user_id = u.id AND up.granted = 1
-            GROUP BY u.id
             ORDER BY u.name ASC
         ");
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -60,10 +57,12 @@ if (isDatabaseConfigured()) {
             foreach ($users as &$user) {
                 $user['permissions'] = getUserPermissions($user['id']);
             }
+            unset($user);
         } else {
             foreach ($users as &$user) {
                 $user['permissions'] = [];
             }
+            unset($user);
         }
         
     } catch (Exception $e) {
