@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste do formulário LP - Senior Floors</title>
+    <style>
+        body { font-family: sans-serif; max-width: 700px; margin: 20px auto; padding: 20px; background: #f5f5f5; }
+        h1 { color: #1a2036; }
+        .box { background: #fff; border-radius: 8px; padding: 16px; margin: 16px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        label { display: block; margin: 8px 0 4px; font-weight: 600; }
+        input, textarea { width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; }
+        button { padding: 12px 24px; background: #1a2036; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; margin-top: 8px; }
+        button.secondary { background: #718096; }
+        pre { background: #1a2036; color: #e2e8f0; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 12px; white-space: pre-wrap; }
+        .ok { color: #16a34a; font-weight: 600; }
+        .fail { color: #dc2626; font-weight: 600; }
+        .warn { color: #d97706; }
+        #result { margin-top: 16px; }
+        .step { margin: 12px 0; padding: 8px; background: #f8fafc; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Teste do formulário (LP)</h1>
+    <p>Use esta página para testar se o <strong>send-lead.php</strong> está recebendo os dados e o que ele retorna. Assim você vê o que está funcionando ou falhando.</p>
+
+    <div class="box">
+        <h2>1. Verificar se send-lead.php existe</h2>
+        <p>Clique para checar se o arquivo está acessível no servidor (deve retornar 405 Method Not Allowed em GET, pois só aceita POST).</p>
+        <button type="button" id="btnCheck">Verificar URL</button>
+        <div id="checkResult" class="step" style="display: none;"></div>
+    </div>
+
+    <div class="box">
+        <h2>2. Enviar um lead de teste</h2>
+        <p>Preencha (ou use os valores padrão) e clique em <strong>Enviar teste</strong>. A resposta do servidor aparecerá abaixo.</p>
+        <form id="testForm">
+            <label>Nome</label>
+            <input type="text" name="name" value="Teste LP" required>
+            <label>E-mail</label>
+            <input type="email" name="email" value="teste@exemplo.com" required>
+            <label>Telefone</label>
+            <input type="tel" name="phone" value="11999999999" required>
+            <label>CEP</label>
+            <input type="text" name="zipcode" value="80202" required>
+            <label>Mensagem (opcional)</label>
+            <textarea name="message" rows="2">Mensagem de teste do formulário LP</textarea>
+            <input type="hidden" name="form-name" value="contact-form">
+            <button type="submit">Enviar teste</button>
+        </form>
+        <div id="result"></div>
+    </div>
+
+    <div class="box">
+        <h2>O que conferir na resposta</h2>
+        <ul>
+            <li><strong>success: true</strong> → servidor aceitou o lead.</li>
+            <li><strong>email_sent: true</strong> → e-mail foi enviado (PHPMailer/SMTP configurado).</li>
+            <li><strong>database_saved: true</strong> → lead foi salvo no MySQL.</li>
+            <li><strong>csv_saved: true</strong> → lead foi salvo no CSV (fallback).</li>
+            <li>Se der <strong>404</strong> → send-lead.php não está na raiz do site ou o caminho está errado.</li>
+            <li>Se der <strong>500</strong> → erro no PHP (veja o log do servidor ou diagnostico-banco.php).</li>
+        </ul>
+        <p><a href="diagnostico-banco.php">diagnostico-banco.php</a> — verifica conexão com o banco e tabela leads.</p>
+    </div>
+
+    <script>
+        (function() {
+            var baseUrl = window.location.origin + window.location.pathname.replace(/\/?[^\/]*$/, '');
+            if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+            var sendLeadUrl = baseUrl + '/send-lead.php';
+            if (window.location.pathname.indexOf('/') > -1 && !window.location.pathname.endsWith('.html')) {
+                sendLeadUrl = window.location.origin + '/send-lead.php';
+            }
+
+            document.getElementById('btnCheck').onclick = function() {
+                var el = document.getElementById('checkResult');
+                el.style.display = 'block';
+                el.innerHTML = 'Verificando ' + sendLeadUrl + ' ...';
+                fetch(sendLeadUrl, { method: 'GET' })
+                    .then(function(r) {
+                        if (r.status === 405) {
+                            el.innerHTML = '<span class="ok">Arquivo encontrado.</span> GET retornou 405 (esperado: send-lead.php só aceita POST). URL: ' + sendLeadUrl;
+                        } else if (r.status === 404) {
+                            el.innerHTML = '<span class="fail">404 Not Found.</span> O arquivo send-lead.php não está nessa URL. Confira se está na raiz do site (ex.: public_html/send-lead.php). URL testada: ' + sendLeadUrl;
+                        } else {
+                            el.innerHTML = 'Status: ' + r.status + '. URL: ' + sendLeadUrl;
+                        }
+                    })
+                    .catch(function(err) {
+                        el.innerHTML = '<span class="fail">Erro de rede:</span> ' + err.message + '. URL: ' + sendLeadUrl + ' (confira CORS ou se o site está online).';
+                    });
+            };
+
+            document.getElementById('testForm').onsubmit = function(e) {
+                e.preventDefault();
+                var resultEl = document.getElementById('result');
+                resultEl.innerHTML = 'Enviando...';
+                var form = document.getElementById('testForm');
+                var formData = new FormData(form);
+
+                fetch(sendLeadUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Accept': 'application/json' }
+                })
+                .then(function(response) {
+                    var status = response.status;
+                    return response.text().then(function(text) {
+                        return { status: status, text: text };
+                    });
+                })
+                .then(function(r) {
+                    var html = '<div class="step"><strong>Status HTTP:</strong> ' + r.status + '</div>';
+                    html += '<div class="step"><strong>URL:</strong> ' + sendLeadUrl + '</div>';
+                    var data = null;
+                    try {
+                        data = JSON.parse(r.text);
+                    } catch (e) {
+                        html += '<div class="step"><span class="warn">Resposta não é JSON.</span> Corpo: <pre>' + (r.text || '(vazio)').substring(0, 500) + '</pre></div>';
+                        resultEl.innerHTML = html;
+                        return;
+                    }
+                    html += '<div class="step"><strong>Resposta (JSON):</strong><pre>' + JSON.stringify(data, null, 2) + '</pre></div>';
+                    if (data.success) {
+                        html += '<div class="step"><span class="ok">success: true</span> — Lead aceito pelo servidor.</div>';
+                        html += '<div class="step">email_sent: ' + (data.email_sent ? '<span class="ok">true</span>' : '<span class="fail">false</span>') + ' — ' + (data.email_sent ? 'E-mail enviado.' : 'E-mail não enviado (verifique PHPMailer/SMTP em send-lead.php).') + '</div>';
+                        html += '<div class="step">database_saved: ' + (data.database_saved ? '<span class="ok">true</span>' : '<span class="warn">false</span>') + '</div>';
+                        html += '<div class="step">csv_saved: ' + (data.csv_saved ? '<span class="ok">true</span>' : 'false') + '</div>';
+                    } else {
+                        html += '<div class="step"><span class="fail">success: false</span> — ' + (data.message || 'Erro no servidor') + '</div>';
+                    }
+                    resultEl.innerHTML = html;
+                })
+                .catch(function(err) {
+                    resultEl.innerHTML = '<div class="step"><span class="fail">Erro:</span> ' + err.message + '</div>' +
+                        '<div class="step">URL usada: ' + sendLeadUrl + '</div>' +
+                        '<p>Possíveis causas: send-lead.php não está na raiz, site em outro domínio, ou bloqueio de rede (CORS).</p>';
+                });
+            };
+        })();
+    </script>
+</body>
+</html>
