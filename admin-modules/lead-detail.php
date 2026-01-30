@@ -424,6 +424,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
     .lead-tab:hover { background: #f1f5f9; color: #1a2036; }
     .lead-tab.active { background: #1a2036; color: white; }
+    .lead-tab { font-family: inherit; cursor: pointer; border: none; background: transparent; }
     .tab-panel { display: none !important; }
     .tab-panel.active { display: block !important; }
 </style>
@@ -435,13 +436,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     </div>
 
     <nav class="lead-tabs" role="tablist" id="lead-tablist">
-        <a href="#resumo" class="lead-tab active" data-tab="resumo" role="tab" aria-selected="true" aria-controls="panel-resumo" id="tab-resumo">Resumo</a>
-        <a href="#qualificacao" class="lead-tab" data-tab="qualificacao" role="tab" aria-selected="false" aria-controls="panel-qualificacao" id="tab-qualificacao">Qualificação</a>
-        <a href="#interacoes" class="lead-tab" data-tab="interacoes" role="tab" aria-selected="false" aria-controls="panel-interacoes" id="tab-interacoes">Interações</a>
-        <a href="#visitas" class="lead-tab" data-tab="visitas" role="tab" aria-selected="false" aria-controls="panel-visitas" id="tab-visitas">Visitas</a>
-        <a href="#propostas" class="lead-tab" data-tab="propostas" role="tab" aria-selected="false" aria-controls="panel-propostas" id="tab-propostas">Propostas</a>
-        <a href="#contrato" class="lead-tab" data-tab="contrato" role="tab" aria-selected="false" aria-controls="panel-contrato" id="tab-contrato">Contrato</a>
-        <a href="#producao" class="lead-tab" data-tab="producao" role="tab" aria-selected="false" aria-controls="panel-producao" id="tab-producao">Produção</a>
+        <button type="button" class="lead-tab active" data-tab="resumo" role="tab" aria-selected="true" aria-controls="panel-resumo" id="tab-resumo">Resumo</button>
+        <button type="button" class="lead-tab" data-tab="qualificacao" role="tab" aria-selected="false" aria-controls="panel-qualificacao" id="tab-qualificacao">Qualificação</button>
+        <button type="button" class="lead-tab" data-tab="interacoes" role="tab" aria-selected="false" aria-controls="panel-interacoes" id="tab-interacoes">Interações</button>
+        <button type="button" class="lead-tab" data-tab="visitas" role="tab" aria-selected="false" aria-controls="panel-visitas" id="tab-visitas">Visitas</button>
+        <button type="button" class="lead-tab" data-tab="propostas" role="tab" aria-selected="false" aria-controls="panel-propostas" id="tab-propostas">Propostas</button>
+        <button type="button" class="lead-tab" data-tab="contrato" role="tab" aria-selected="false" aria-controls="panel-contrato" id="tab-contrato">Contrato</button>
+        <button type="button" class="lead-tab" data-tab="producao" role="tab" aria-selected="false" aria-controls="panel-producao" id="tab-producao">Produção</button>
     </nav>
     
     <!-- Painel Resumo: dados essenciais + status e ações -->
@@ -889,52 +890,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 <script>
 (function() {
-    function initLeadTabs() {
-        var container = document.querySelector('.lead-detail-container');
-        if (!container) return;
-        var tabs = container.querySelectorAll('.lead-tabs [data-tab]');
+    var container = document.querySelector('.lead-detail-container');
+    if (!container) return;
+
+    function showPanel(tabId) {
+        tabId = String(tabId || '').replace(/^#/, '').replace(/^panel-/, '') || 'resumo';
         var panels = container.querySelectorAll('.tab-panel');
-        if (!tabs.length || !panels.length) return;
-
-        function showPanel(tabId) {
-            tabId = tabId.replace(/^#/, '').replace(/^panel-/, '');
-            if (!tabId) tabId = 'resumo';
-            panels.forEach(function(p) {
-                var isPanelActive = p.id === 'panel-' + tabId;
-                p.classList.toggle('active', isPanelActive);
-                p.setAttribute('aria-hidden', isPanelActive ? 'false' : 'true');
-            });
-            tabs.forEach(function(t) {
-                var isActive = t.getAttribute('data-tab') === tabId;
-                t.classList.toggle('active', isActive);
-                t.setAttribute('aria-selected', isActive ? 'true' : 'false');
-            });
-            try {
-                var newUrl = location.pathname + (location.search || '') + '#' + tabId;
-                if (history.replaceState) history.replaceState(null, '', newUrl);
-            } catch (e) {}
+        var tabs = container.querySelectorAll('.lead-tabs [data-tab]');
+        for (var i = 0; i < panels.length; i++) {
+            var p = panels[i];
+            var isActive = p.id === 'panel-' + tabId;
+            p.classList.toggle('active', isActive);
+            p.setAttribute('aria-hidden', isActive ? 'false' : 'true');
         }
-
-        tabs.forEach(function(t) {
-            t.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                showPanel(t.getAttribute('data-tab'));
-                return false;
-            });
-        });
-
-        var hash = (location.hash || '').replace('#', '');
-        if (hash && container.querySelector('#panel-' + hash)) {
-            showPanel(hash);
-        } else {
-            showPanel('resumo');
+        for (var j = 0; j < tabs.length; j++) {
+            var t = tabs[j];
+            var isTabActive = t.getAttribute('data-tab') === tabId;
+            t.classList.toggle('active', isTabActive);
+            t.setAttribute('aria-selected', isTabActive ? 'true' : 'false');
         }
+        try {
+            var url = location.pathname + (location.search || '') + '#' + tabId;
+            if (history.replaceState) history.replaceState(null, '', url);
+        } catch (err) {}
     }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initLeadTabs);
+
+    container.addEventListener('click', function(e) {
+        var target = e.target;
+        if (target.getAttribute && target.getAttribute('data-tab')) {
+            e.preventDefault();
+            e.stopPropagation();
+            showPanel(target.getAttribute('data-tab'));
+            return false;
+        }
+    }, true);
+
+    var hash = (location.hash || '').replace('#', '');
+    if (hash && container.querySelector('#panel-' + hash)) {
+        showPanel(hash);
     } else {
-        initLeadTabs();
+        showPanel('resumo');
     }
 })();
 </script>
