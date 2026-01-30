@@ -28,7 +28,11 @@
         var btn = form.querySelector('button[type="submit"]');
         if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
         var formData = new FormData(form);
-        var url = window.location.origin + '/send-lead.php';
+        // Enviar para system.php?api=receive-lead garante que o lead seja salvo no banco do CRM (mesmo servidor).
+        // Use window.SENIOR_FLOORS_FORM_URL para apontar para outro endpoint (ex.: send-lead.php).
+        var url = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
+            ? window.SENIOR_FLOORS_FORM_URL
+            : (window.location.origin + '/system.php?api=receive-lead');
         fetch(url, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } })
             .then(function(r) { return r.text().then(function(t) { return { status: r.status, text: t }; }); })
             .then(function(r) {

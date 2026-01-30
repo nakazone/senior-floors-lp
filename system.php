@@ -180,7 +180,19 @@ if (isset($_GET['logout'])) {
 // ============================================
 // API ENDPOINT - Receive Form Submissions
 // ============================================
-if (isset($_GET['api']) && $_GET['api'] === 'receive-lead' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if (isset($_GET['api']) && $_GET['api'] === 'receive-lead') {
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type');
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        http_response_code(204);
+        exit;
+    }
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+        exit;
+    }
     header('Content-Type: application/json; charset=UTF-8');
     
     // Get form data
@@ -290,13 +302,47 @@ if (isset($_GET['api']) && $_GET['api'] === 'receive-lead' && $_SERVER['REQUEST_
     $log_entry = date('Y-m-d H:i:s') . " | ✅ API: Lead received" . ($db_saved ? " and saved to DB (id=$lead_id)" : " (DB not saved)") . " | Form: $form_name | Name: $name | Email: $email | Phone: $phone\n";
     @file_put_contents($log_file, $log_entry, FILE_APPEND | LOCK_EX);
     
+    // Optional: send notification email (same DB server = PHPMailer may be in $SYSTEM_ROOT/PHPMailer)
+    $email_sent = false;
+    $phpmailer_path = $SYSTEM_ROOT . '/PHPMailer/PHPMailer.php';
+    $smtp_config = $SYSTEM_ROOT . '/config/smtp.php';
+    if (file_exists($phpmailer_path) && file_exists($smtp_config)) {
+        require_once $SYSTEM_ROOT . '/PHPMailer/Exception.php';
+            require_once $SYSTEM_ROOT . '/PHPMailer/PHPMailer.php';
+            require_once $SYSTEM_ROOT . '/PHPMailer/SMTP.php';
+            require_once $smtp_config;
+            try {
+                $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+                $mail->isSMTP();
+                $mail->Host = defined('SMTP_HOST') ? SMTP_HOST : 'smtp.gmail.com';
+                $mail->SMTPAuth = true;
+                $mail->Username = defined('SMTP_USER') ? SMTP_USER : '';
+                $mail->Password = defined('SMTP_PASS') ? SMTP_PASS : '';
+                $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+                $mail->Port = defined('SMTP_PORT') ? (int) SMTP_PORT : 587;
+                $mail->CharSet = 'UTF-8';
+                $mail->setFrom(defined('SMTP_FROM_EMAIL') ? SMTP_FROM_EMAIL : $mail->Username, defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : 'Senior Floors');
+                $mail->addAddress(defined('SMTP_TO_EMAIL') ? SMTP_TO_EMAIL : $mail->Username);
+                $mail->addReplyTo($email, $name);
+                $mail->isHTML(true);
+                $mail->Subject = 'New Lead from Website - ' . ($form_name === 'hero-form' ? 'Hero' : 'Contact');
+                $mail->Body = '<p><strong>Name:</strong> ' . $name . '</p><p><strong>Email:</strong> ' . $email . '</p><p><strong>Phone:</strong> ' . $phone . '</p><p><strong>Zip:</strong> ' . $zipcode . '</p>' . ($message ? '<p><strong>Message:</strong> ' . nl2br(htmlspecialchars($message)) . '</p>' : '');
+                $mail->send();
+                $email_sent = true;
+            } catch (Throwable $e) {
+                @file_put_contents($SYSTEM_ROOT . '/system-api.log', date('Y-m-d H:i:s') . " | ⚠️ Email: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
+            }
+        }
+    }
+    
     http_response_code(200);
     echo json_encode([
         'success' => true,
-        'message' => 'Lead received and processed by system',
+        'message' => 'Thank you! We\'ll contact you within 24 hours.',
         'timestamp' => date('Y-m-d H:i:s'),
         'lead_id' => $lead_id,
         'database_saved' => $db_saved,
+        'email_sent' => $email_sent,
         'data' => [
             'form_type' => $form_name,
             'name' => $name,

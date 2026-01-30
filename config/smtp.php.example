@@ -1,0 +1,13 @@
+<?php
+/**
+ * SMTP config for system.php receive-lead (optional email notification).
+ * Copy to smtp.php and set your Google App Password.
+ * Used when the form posts to system.php?api=receive-lead.
+ */
+define('SMTP_HOST', 'smtp.gmail.com');
+define('SMTP_PORT', 587);
+define('SMTP_USER', 'contact@senior-floors.com');
+define('SMTP_PASS', 'YOUR_APP_PASSWORD_HERE');
+define('SMTP_FROM_EMAIL', 'contact@senior-floors.com');
+define('SMTP_FROM_NAME', 'Senior Floors Website');
+define('SMTP_TO_EMAIL', 'leads@senior-floors.com');

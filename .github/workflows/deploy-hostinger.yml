@@ -54,6 +54,7 @@ jobs:
             **/*.log
             **/leads.csv
             **/config/database.php
+            **/config/smtp.php
             **/admin-config.php
             **/PHPMailer/
             **/test-*.html

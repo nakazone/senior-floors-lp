@@ -2,6 +2,8 @@
 
 Siga na ordem. Quando todos os itens estiverem ✓, os leads passarão a ser salvos no MySQL.
 
+**Formulário da LP:** O formulário envia para **system.php?api=receive-lead** (mesmo servidor do CRM), garantindo que o lead seja salvo no banco. E-mail opcional via **config/smtp.php** (copie de config/smtp.php.example).
+
 ---
 
 ## 1. Criar `config/database.php`
