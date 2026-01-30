@@ -35,18 +35,21 @@ return [
         'other'      => 'Outro',
     ],
 
-    // Estágios do pipeline (slug => nome)
+    // Estágios do pipeline (slug => nome) - 11 estágios conforme especificação
     'stages' => [
-        'lead_received'   => 'Lead recebido',
-        'contact_made'    => 'Contato feito',
-        'qualified'       => 'Qualificado',
-        'visit_scheduled' => 'Visita / Medição agendada',
-        'measurement_done'=> 'Medição realizada',
-        'quote_sent'      => 'Orçamento enviado',
-        'negotiation'     => 'Negociação',
-        'closed_won'      => 'Fechado - Ganhou',
-        'closed_lost'     => 'Fechado - Perdeu',
-        'post_sale'       => 'Pós-venda',
+        'lead_received'    => 'Lead Recebido',
+        'contact_made'     => 'Contato Realizado',
+        'qualified'        => 'Qualificado',
+        'visit_scheduled'  => 'Visita Agendada',
+        'measurement_done' => 'Medição Realizada',
+        'proposal_created' => 'Proposta Criada',
+        'proposal_sent'    => 'Proposta Enviada',
+        'quote_sent'       => 'Orçamento enviado', // legado
+        'negotiation'      => 'Em Negociação',
+        'closed_won'       => 'Fechado - Ganhou',
+        'closed_lost'      => 'Fechado - Perdido',
+        'production'      => 'Produção / Obra',
+        'post_sale'        => 'Pós-venda', // legado
     ],
 
     // Urgência

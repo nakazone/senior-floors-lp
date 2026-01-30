@@ -10,6 +10,10 @@ header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
 require_once __DIR__ . '/../../config/database.php';
+if (file_exists(__DIR__ . '/../../config/audit.php')) {
+    require_once __DIR__ . '/../../config/audit.php';
+}
+session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -36,6 +40,11 @@ try {
     $pdo = getDBConnection();
     if (!$pdo) throw new Exception('No connection');
 
+    $get_current = $pdo->prepare("SELECT pipeline_stage_id FROM leads WHERE id = ?");
+    $get_current->execute([$lead_id]);
+    $row = $get_current->fetch(PDO::FETCH_ASSOC);
+    $from_stage_id = $row ? ($row['pipeline_stage_id'] ?? null) : null;
+
     $has_activity = $pdo->query("SHOW COLUMNS FROM leads LIKE 'last_activity_at'")->rowCount() > 0;
     $sql = $has_activity
         ? "UPDATE leads SET pipeline_stage_id = :stage_id, last_activity_at = NOW() WHERE id = :id"
@@ -44,6 +53,10 @@ try {
     $stmt->execute([':stage_id' => $stage_id, ':id' => $lead_id]);
 
     if ($stmt->rowCount() > 0) {
+        if (function_exists('logLeadStatusChange')) {
+            $uid = function_exists('auditCurrentUserId') ? auditCurrentUserId() : null;
+            logLeadStatusChange($lead_id, $from_stage_id, $stage_id, $uid, '');
+        }
         echo json_encode([
             'success' => true,
             'message' => 'Lead moved',
