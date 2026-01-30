@@ -140,6 +140,36 @@ $last_lines = $last_log ? implode("\n", array_slice(explode("\n", $last_log), -1
             <p><strong>O que fazer:</strong> No phpMyAdmin (Hostinger), importe/execute o arquivo <code>database/schema-v3-completo.sql</code> no seu banco de dados.</p>
         <?php endif; ?>
     </div>
+    <?php
+    if ($pdo && $table_exists) {
+        $crm_tables = ['pipeline_stages', 'lead_qualification', 'lead_status_change_log', 'audit_log', 'interactions'];
+        $crm_ok = 0;
+        $stage_count = 0;
+        $crm_full = false;
+        foreach ($crm_tables as $t) {
+            try {
+                $r = $pdo->query("SHOW TABLES LIKE " . $pdo->quote($t));
+                if ($r && $r->rowCount() > 0) $crm_ok++;
+            } catch (Throwable $e) { }
+        }
+        if (in_array('pipeline_stages', $crm_tables)) {
+            try {
+                $r = $pdo->query("SELECT COUNT(*) FROM pipeline_stages");
+                $stage_count = $r ? (int) $r->fetchColumn() : 0;
+            } catch (Throwable $e) { }
+        }
+        $crm_full = ($crm_ok === count($crm_tables) && $stage_count >= 11);
+    ?>
+    <div class="box">
+        <h2>4b. CRM completo (opcional)</h2>
+        <?php if (!empty($crm_full)): ?>
+            <p class="ok">✓ CRM completo configurado: 11 estágios no pipeline, auditoria e qualificação.</p>
+        <?php else: ?>
+            <p class="warn">— Tabelas do CRM completo: <?php echo (int) $crm_ok; ?>/<?php echo count($crm_tables); ?> (estágios: <?php echo (int) $stage_count; ?>).</p>
+            <p>Para validação de etapas no Pipeline e logs de status, execute <code>database/migration-crm-full-spec.sql</code> no phpMyAdmin.</p>
+        <?php endif; ?>
+    </div>
+    <?php } ?>
     <?php endif; ?>
     <?php endif; ?>
 

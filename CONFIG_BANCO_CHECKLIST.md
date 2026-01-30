@@ -59,6 +59,16 @@ Para os leads aparecerem no **Pipeline Comercial** (menu Pipeline no painel):
 
 ---
 
+## 5b. (Opcional) CRM completo – 11 estágios, auditoria e qualificação
+
+Para validação de etapas no Pipeline, logs de mudança de status e telas de qualificação/auditoria:
+
+- [ ] No phpMyAdmin, no mesmo banco, execute o arquivo **database/migration-crm-full-spec.sql** (Importar ou colar o conteúdo na aba SQL).
+- [ ] Confirme que existem as tabelas: `lead_qualification`, `lead_status_change_log`, `audit_log`, `interactions` e que `pipeline_stages` tem 11 estágios.
+- [ ] No painel: Pipeline passa a validar “não pular etapas”, e mudanças de status são registradas no histórico.
+
+---
+
 ## 6. Depois de concluir (testar)
 
 - [ ] Envie um lead de teste pelo formulário do site (hero ou contato).
@@ -91,3 +101,4 @@ O formulário envia para `https://SEU_DOMINIO/send-lead.php` (raiz do site). Se 
 | **Tabela leads não existe** | Execute **database/schema-v3-completo.sql** no MySQL (phpMyAdmin). |
 | **Leads não aparecem no Pipeline** | Execute **database/migration-pipeline-only.sql** no phpMyAdmin (cria estágios e coluna `pipeline_stage_id` em leads). |
 | **Responsável pelo lead / Histórico de contatos** | Execute **database/migration-lead-owner-and-activities.sql** (coluna `owner_id` em leads + tabelas `activities` e `assignment_history`). Cadastre usuários em **Users** para poder atribuir responsável. |
+| **Pipeline com 11 estágios / Auditoria / Qualificação** | Execute **database/migration-crm-full-spec.sql** (11 estágios, `lead_qualification`, `lead_status_change_log`, `audit_log`, `interactions`). Necessário para validação de etapas e logs de status. |

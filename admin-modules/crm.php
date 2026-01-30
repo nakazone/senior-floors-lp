@@ -340,6 +340,10 @@ if (isset($_GET['export'])) {
         background: #f3e5f5;
         color: #7b1fa2;
     }
+    .badge-manual {
+        background: #d1fae5;
+        color: #047857;
+    }
     .link {
         color: #1a2036;
         text-decoration: none;
@@ -377,6 +381,38 @@ if (isset($_GET['export'])) {
         padding: 60px 20px;
         color: #999;
     }
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+        background: #fff;
+        border-radius: 12px;
+        max-width: 480px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .modal-box h2 { margin: 0 0 20px 0; font-size: 20px; color: #1a2036; }
+    .modal-box .form-row { margin-bottom: 16px; }
+    .modal-box label { display: block; font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 6px; }
+    .modal-box input, .modal-box select, .modal-box textarea {
+        width: 100%; padding: 10px 12px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px; box-sizing: border-box;
+    }
+    .modal-box input:focus, .modal-box select:focus, .modal-box textarea:focus {
+        outline: none; border-color: #1a2036;
+    }
+    .modal-box .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+    .modal-box .modal-error { color: #dc2626; font-size: 13px; margin-top: 8px; }
+    .modal-box .modal-success { color: #16a34a; font-size: 13px; margin-top: 8px; }
 </style>
 
 <div class="crm-header">
@@ -401,7 +437,12 @@ if (isset($_GET['export'])) {
 $q = ['search'=>$search,'form'=>$form_filter,'stage'=>$stage_filter,'owner'=>$owner_filter,'source'=>$source_filter,'date_from'=>$date_from,'date_to'=>$date_to];
 $qs = http_build_query(array_filter($q, fn($v) => $v !== '' && $v !== 0));
 ?>
-    <a href="?module=crm&export=1&<?php echo $qs; ?>" class="btn btn-primary">📥 Export CSV</a>
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <?php if (isDatabaseConfigured()): ?>
+        <button type="button" class="btn btn-primary" id="btn-new-lead" style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);">➕ Novo lead (manual)</button>
+        <?php endif; ?>
+        <a href="?module=crm&export=1&<?php echo $qs; ?>" class="btn btn-primary">📥 Export CSV</a>
+    </div>
 </div>
 
 <!-- Statistics -->
@@ -447,6 +488,7 @@ $qs = http_build_query(array_filter($q, fn($v) => $v !== '' && $v !== 0));
                     <option value="">All Forms</option>
                     <option value="hero-form" <?php echo $form_filter === 'hero-form' ? 'selected' : ''; ?>>Hero Form</option>
                     <option value="contact-form" <?php echo $form_filter === 'contact-form' ? 'selected' : ''; ?>>Contact Form</option>
+                    <option value="manual" <?php echo $form_filter === 'manual' ? 'selected' : ''; ?>>Manual</option>
                 </select>
             </div>
             <?php if (!empty($pipeline_stages)): ?>
@@ -532,8 +574,9 @@ $qs = http_build_query(array_filter($q, fn($v) => $v !== '' && $v !== 0));
                         <td><?php echo htmlspecialchars($user_name_by_id[(int)($lead['owner_id'] ?? 0)] ?? '—'); ?></td>
                         <?php endif; ?>
                         <td>
-                            <span class="badge <?php echo ($lead['Form'] ?? '') === 'hero-form' ? 'badge-hero' : 'badge-contact'; ?>">
-                                <?php echo htmlspecialchars($lead['Form'] ?? ''); ?>
+                            <?php $form_type = $lead['Form'] ?? ''; ?>
+                            <span class="badge <?php echo $form_type === 'hero-form' ? 'badge-hero' : ($form_type === 'manual' ? 'badge-manual' : 'badge-contact'); ?>">
+                                <?php echo htmlspecialchars($form_type ?: '—'); ?>
                             </span>
                         </td>
                         <td>
@@ -595,3 +638,126 @@ $qs = http_build_query(array_filter($q, fn($v) => $v !== '' && $v !== 0));
         <?php endif; ?>
     <?php endif; ?>
 </div>
+
+<!-- Modal: Novo lead manual -->
+<div class="modal-overlay" id="modal-new-lead" role="dialog" aria-labelledby="modal-new-lead-title">
+    <div class="modal-box">
+        <h2 id="modal-new-lead-title">Novo lead (manual)</h2>
+        <p style="margin: 0 0 16px 0; font-size: 13px; color: #718096;">Para leads que chegaram por telefone, indicação, evento ou outra forma.</p>
+        <form id="form-new-lead">
+            <div class="form-row">
+                <label for="manual-name">Nome *</label>
+                <input type="text" id="manual-name" name="name" required minlength="2" placeholder="Nome completo">
+            </div>
+            <div class="form-row">
+                <label for="manual-phone">Telefone *</label>
+                <input type="tel" id="manual-phone" name="phone" required placeholder="(00) 00000-0000">
+            </div>
+            <div class="form-row">
+                <label for="manual-email">E-mail (opcional)</label>
+                <input type="email" id="manual-email" name="email" placeholder="email@exemplo.com">
+            </div>
+            <div class="form-row">
+                <label for="manual-zipcode">CEP (opcional)</label>
+                <input type="text" id="manual-zipcode" name="zipcode" placeholder="00000-000">
+            </div>
+            <div class="form-row">
+                <label for="manual-source">Fonte / Como chegou</label>
+                <select id="manual-source" name="source">
+                    <option value="Manual">Manual</option>
+                    <option value="Telefone">Telefone</option>
+                    <option value="Indicação">Indicação</option>
+                    <option value="Evento">Evento</option>
+                    <option value="Site">Site</option>
+                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="Outro">Outro</option>
+                </select>
+            </div>
+            <?php if (!empty($list_users)): ?>
+            <div class="form-row">
+                <label for="manual-owner">Responsável</label>
+                <select id="manual-owner" name="owner_id">
+                    <option value="">Distribuição automática</option>
+                    <?php foreach ($list_users as $u): ?>
+                    <option value="<?php echo (int)$u['id']; ?>"><?php echo htmlspecialchars($u['name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php endif; ?>
+            <div class="form-row">
+                <label for="manual-message">Observações</label>
+                <textarea id="manual-message" name="message" rows="3" placeholder="Anotações sobre o lead..."></textarea>
+            </div>
+            <div id="form-new-lead-error" class="modal-error" style="display: none;"></div>
+            <div id="form-new-lead-success" class="modal-success" style="display: none;"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="btn-modal-cancel">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="btn-modal-submit">Criar lead</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+(function() {
+    var modal = document.getElementById('modal-new-lead');
+    var btnOpen = document.getElementById('btn-new-lead');
+    var btnCancel = document.getElementById('btn-modal-cancel');
+    var form = document.getElementById('form-new-lead');
+    var errEl = document.getElementById('form-new-lead-error');
+    var successEl = document.getElementById('form-new-lead-success');
+    if (!modal || !btnOpen || !form) return;
+    function showError(msg) {
+        errEl.textContent = msg || '';
+        errEl.style.display = msg ? 'block' : 'none';
+        successEl.style.display = 'none';
+    }
+    function showSuccess(msg) {
+        successEl.textContent = msg || '';
+        successEl.style.display = msg ? 'block' : 'none';
+        errEl.style.display = 'none';
+    }
+    btnOpen.addEventListener('click', function() {
+        showError('');
+        showSuccess('');
+        form.reset();
+        modal.classList.add('open');
+    });
+    btnCancel.addEventListener('click', function() {
+        modal.classList.remove('open');
+    });
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) modal.classList.remove('open');
+    });
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        showError('');
+        showSuccess('');
+        var submitBtn = document.getElementById('btn-modal-submit');
+        submitBtn.disabled = true;
+        var fd = new FormData(form);
+        fetch('api/leads/create-manual.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+            .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, status: r.status, json: j }; }); })
+            .then(function(res) {
+                if (res.json.success) {
+                    showSuccess(res.json.message || 'Lead criado.');
+                    var leadId = res.json.data && res.json.data.lead_id;
+                    if (leadId) {
+                        setTimeout(function() {
+                            window.location.href = '?module=lead-detail&id=' + leadId;
+                        }, 800);
+                    } else {
+                        setTimeout(function() { window.location.reload(); }, 1200);
+                    }
+                } else {
+                    var msg = (res.json.errors && res.json.errors.length) ? res.json.errors.join(' ') : (res.json.message || 'Erro ao criar lead.');
+                    showError(msg);
+                    submitBtn.disabled = false;
+                }
+            })
+            .catch(function() {
+                showError('Erro de conexão. Tente novamente.');
+                submitBtn.disabled = false;
+            });
+    });
+})();
+</script>
