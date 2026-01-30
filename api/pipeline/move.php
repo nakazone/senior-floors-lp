@@ -36,6 +36,8 @@ if (!isDatabaseConfigured()) {
     exit;
 }
 
+$pipeline_rules = file_exists(__DIR__ . '/../../config/pipeline-rules.php') ? require __DIR__ . '/../../config/pipeline-rules.php' : null;
+
 try {
     $pdo = getDBConnection();
     if (!$pdo) throw new Exception('No connection');
@@ -44,6 +46,39 @@ try {
     $get_current->execute([$lead_id]);
     $row = $get_current->fetch(PDO::FETCH_ASSOC);
     $from_stage_id = $row ? ($row['pipeline_stage_id'] ?? null) : null;
+
+    // Validação: não pular etapas (exceto Fechado - Perdido)
+    if ($pipeline_rules && isset($pipeline_rules['stage_order'])) {
+        $stage_order = $pipeline_rules['stage_order'];
+        $can_skip_to = $pipeline_rules['can_skip_to'] ?? [];
+        $messages = $pipeline_rules['messages'] ?? [];
+
+        $get_stage = $pdo->prepare("SELECT id, slug, order_num FROM pipeline_stages WHERE id = ?");
+        $get_stage->execute([$stage_id]);
+        $to_stage = $get_stage->fetch(PDO::FETCH_ASSOC);
+        if (!$to_stage) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Estágio inválido']);
+            exit;
+        }
+        $to_slug = $to_stage['slug'] ?? '';
+        $to_order = isset($stage_order[$to_slug]) ? $stage_order[$to_slug] : (int)($to_stage['order_num'] ?? 99);
+
+        if (!empty($can_skip_to[$to_slug])) {
+            // Pode ir para closed_lost de qualquer etapa
+        } elseif ($from_stage_id) {
+            $get_stage->execute([$from_stage_id]);
+            $from_stage = $get_stage->fetch(PDO::FETCH_ASSOC);
+            $from_slug = $from_stage['slug'] ?? '';
+            $from_order = isset($stage_order[$from_slug]) ? $stage_order[$from_slug] : (int)($from_stage['order_num'] ?? 0);
+            $diff = $to_order - $from_order;
+            if ($diff > 1) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => $messages['cannot_skip'] ?? 'Não é permitido pular etapas. Avance uma etapa por vez.']);
+                exit;
+            }
+        }
+    }
 
     $has_activity = $pdo->query("SHOW COLUMNS FROM leads LIKE 'last_activity_at'")->rowCount() > 0;
     $sql = $has_activity

@@ -81,13 +81,35 @@ if ($data_source === 'MySQL Database' && isDatabaseConfigured()) {
             $ticket_medio = $n_contracts > 0 ? $receita_realizada / $n_contracts : 0;
         }
         if ($pdo && $pdo->query("SHOW TABLES LIKE 'users'")->rowCount() > 0 && $pdo->query("SHOW COLUMNS FROM leads LIKE 'owner_id'")->rowCount() > 0) {
+            $closed_won_col = $pdo->query("SHOW COLUMNS FROM leads LIKE 'pipeline_stage_id'")->rowCount() > 0
+                ? "(SELECT COUNT(*) FROM leads l WHERE l.owner_id = u.id AND l.pipeline_stage_id = (SELECT id FROM pipeline_stages WHERE slug = 'closed_won' LIMIT 1))"
+                : "(SELECT COUNT(*) FROM leads l WHERE l.owner_id = u.id AND l.status = 'closed_won')";
             $stmt = $pdo->query("
                 SELECT u.id, u.name,
                     (SELECT COUNT(*) FROM leads l WHERE l.owner_id = u.id) as total_leads,
-                    (SELECT COUNT(*) FROM leads l WHERE l.owner_id = u.id AND l.status = 'closed_won') as closed_won
+                    $closed_won_col as closed_won
                 FROM users u WHERE u.is_active = 1 AND u.role IN ('admin','sales_rep','project_manager')
             ");
             if ($stmt) $performance_vendedor = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        $receita_projetada = null;
+        if ($pdo && $pdo->query("SHOW TABLES LIKE 'quotes'")->rowCount() > 0) {
+            $rq = $pdo->query("SELECT COALESCE(SUM(total_amount), 0) as total FROM quotes WHERE status IN ('sent','viewed','approved')");
+            if ($rq) { $row = $rq->fetch(PDO::FETCH_ASSOC); $receita_projetada = (float)($row['total'] ?? 0); }
+        }
+        $followup_leads = [];
+        if ($pdo) {
+            $has_last = $pdo->query("SHOW COLUMNS FROM leads LIKE 'last_activity_at'")->rowCount() > 0;
+            $has_stage = $pdo->query("SHOW COLUMNS FROM leads LIKE 'pipeline_stage_id'")->rowCount() > 0;
+            $has_stages_table = $pdo->query("SHOW TABLES LIKE 'pipeline_stages'")->rowCount() > 0;
+            $sql = "SELECT id, name, email, phone, created_at" . ($has_last ? ", last_activity_at" : "") . " FROM leads WHERE 1=1";
+            if ($has_stage && $has_stages_table)
+                $sql .= " AND (pipeline_stage_id IS NULL OR pipeline_stage_id NOT IN (SELECT id FROM pipeline_stages WHERE slug IN ('closed_won','closed_lost')))";
+            $sql .= " ORDER BY " . ($has_last ? "COALESCE(last_activity_at, created_at) ASC, " : "") . "created_at ASC LIMIT 10";
+            try {
+                $stmt = $pdo->query($sql);
+                if ($stmt) $followup_leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {}
         }
     } catch (Exception $e) {}
 }
@@ -224,6 +246,28 @@ $chart_days_data = json_encode(array_values($leads_by_day));
             <div class="dash-kpi-value">$<?php echo number_format($receita_realizada, 0); ?></div>
             <div class="dash-kpi-label">Receita realizada</div>
         </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if (isset($receita_projetada) && $receita_projetada > 0): ?>
+    <div class="dash-chart-card" style="margin-bottom: 24px;">
+        <div class="dash-chart-title">Receita projetada (propostas enviadas/aprovadas)</div>
+        <div class="dash-kpi-value" style="font-size: 24px; color: #10b981;">$<?php echo number_format($receita_projetada, 0); ?></div>
+    </div>
+    <?php endif; ?>
+
+    <?php if (!empty($followup_leads)): ?>
+    <div class="dash-chart-card" style="margin-bottom: 24px;">
+        <div class="dash-chart-title">⚠️ Follow-up (leads em aberto – contatar)</div>
+        <ul style="list-style: none; padding: 0; margin: 0; font-size: 13px;">
+            <?php foreach (array_slice($followup_leads, 0, 5) as $fl): ?>
+            <li style="padding: 8px 0; border-bottom: 1px solid #f1f5f9;">
+                <a href="?module=lead-detail&id=<?php echo (int)$fl['id']; ?>" style="color: #1a2036; text-decoration: none; font-weight: 500;"><?php echo htmlspecialchars($fl['name'] ?? 'N/A'); ?></a>
+                <span style="color: #64748b;"> — <?php echo htmlspecialchars($fl['phone'] ?? $fl['email'] ?? ''); ?></span>
+            </li>
+            <?php endforeach; ?>
+        </ul>
+        <p style="margin: 12px 0 0; font-size: 12px;"><a href="?module=crm" style="color: #1a2036;">Ver todos os leads →</a></p>
     </div>
     <?php endif; ?>
 

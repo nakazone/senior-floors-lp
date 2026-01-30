@@ -405,6 +405,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         outline: none;
         border-color: #1a2036;
     }
+    .lead-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-bottom: 20px;
+        padding: 8px 0;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .lead-tab {
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748b;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    .lead-tab:hover { background: #f1f5f9; color: #1a2036; }
+    .lead-tab.active { background: #1a2036; color: white; }
 </style>
 
 <div class="lead-detail-container">
@@ -412,8 +431,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <h1>Lead #<?php echo htmlspecialchars($lead['id']); ?></h1>
         <a href="?module=crm" class="back-link">← Voltar para CRM</a>
     </div>
+
+    <nav class="lead-tabs" role="tablist">
+        <a href="#resumo" class="lead-tab active">Resumo</a>
+        <a href="#qualificacao" class="lead-tab">Qualificação</a>
+        <a href="#interacoes" class="lead-tab">Interações</a>
+        <a href="#visitas" class="lead-tab">Visitas</a>
+        <a href="#propostas" class="lead-tab">Propostas</a>
+        <a href="#contrato" class="lead-tab">Contrato</a>
+        <a href="#producao" class="lead-tab">Produção</a>
+    </nav>
     
-    <div class="lead-info-grid">
+    <div class="lead-info-grid" id="resumo">
         <!-- Informações do Lead -->
         <div class="info-card">
             <h2>Informações do Lead</h2>
@@ -510,7 +539,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         </div>
         
         <!-- Qualificação (pré-venda) -->
-        <div class="info-card">
+        <div class="info-card" id="qualificacao">
             <h2>Qualificação</h2>
             <form method="POST" action="?module=lead-detail&id=<?php echo $lead_id; ?>" style="margin-bottom: 16px;">
                 <input type="hidden" name="action" value="update_qualification">
@@ -718,7 +747,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     </div>
     
     <!-- Histórico de conversas e contatos (observações + atividades) -->
-    <div class="info-card notes-section">
+    <div class="info-card notes-section" id="interacoes">
         <h2>Histórico de conversas e contatos</h2>
         
         <?php
@@ -822,5 +851,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>
+    </div>
+
+    <div class="info-card" id="visitas">
+        <h2>Visitas / Medições</h2>
+        <p style="color: #64748b; margin-bottom: 12px;">Agende visitas e registre medições para este lead.</p>
+        <a href="?module=visits&lead_id=<?php echo (int)$lead_id; ?>" class="btn btn-primary">Ver agenda de visitas</a>
+    </div>
+
+    <div class="info-card" id="propostas">
+        <h2>Propostas / Orçamentos</h2>
+        <p style="color: #64748b; margin-bottom: 12px;">Crie e envie propostas para este lead.</p>
+        <a href="?module=quotes&lead_id=<?php echo (int)$lead_id; ?>" class="btn btn-primary">Ver orçamentos</a>
+    </div>
+
+    <div class="info-card" id="contrato">
+        <h2>Contrato</h2>
+        <p style="color: #64748b; margin-bottom: 12px;">Gestão de contrato após fechamento.</p>
+        <a href="?module=crm&id=<?php echo (int)$lead_id; ?>#contrato" class="btn btn-primary">Ver detalhes do lead</a>
+    </div>
+
+    <div class="info-card" id="producao">
+        <h2>Produção / Obra</h2>
+        <p style="color: #64748b; margin-bottom: 12px;">Status da obra e cronograma.</p>
+        <a href="?module=projects" class="btn btn-primary">Ver projetos</a>
     </div>
 </div>

@@ -22,23 +22,10 @@ if ($use_database && isDatabaseConfigured()) {
         $pdo = getDBConnection();
         
         if ($pdo) {
-            $stmt = $pdo->query("
-                SELECT 
-                    id,
-                    name as Name,
-                    email as Email,
-                    phone as Phone,
-                    zipcode as ZipCode,
-                    message as Message,
-                    form_type as Form,
-                    source,
-                    status,
-                    priority,
-                    created_at as Date,
-                    ip_address
-                FROM leads 
-                ORDER BY created_at DESC
-            ");
+            $cols = "id, name as Name, email as Email, phone as Phone, zipcode as ZipCode, message as Message, form_type as Form, source, status, priority, created_at as Date, ip_address";
+            if ($pdo->query("SHOW COLUMNS FROM leads LIKE 'pipeline_stage_id'")->rowCount() > 0) $cols .= ", pipeline_stage_id";
+            if ($pdo->query("SHOW COLUMNS FROM leads LIKE 'owner_id'")->rowCount() > 0) $cols .= ", owner_id";
+            $stmt = $pdo->query("SELECT $cols FROM leads ORDER BY created_at DESC");
             
             $db_leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
@@ -100,6 +87,9 @@ if (empty($leads)) {
 // Filtering & Search
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $form_filter = isset($_GET['form']) ? $_GET['form'] : '';
+$stage_filter = isset($_GET['stage']) ? (int)$_GET['stage'] : 0;
+$owner_filter = isset($_GET['owner']) ? (int)$_GET['owner'] : 0;
+$source_filter = isset($_GET['source']) ? trim($_GET['source']) : '';
 $date_from = isset($_GET['date_from']) ? $_GET['date_from'] : '';
 $date_to = isset($_GET['date_to']) ? $_GET['date_to'] : '';
 
@@ -121,6 +111,24 @@ if ($form_filter) {
     });
 }
 
+if ($stage_filter > 0) {
+    $filtered_leads = array_filter($filtered_leads, function($lead) use ($stage_filter) {
+        return (int)($lead['pipeline_stage_id'] ?? 0) === $stage_filter;
+    });
+}
+
+if ($owner_filter > 0) {
+    $filtered_leads = array_filter($filtered_leads, function($lead) use ($owner_filter) {
+        return (int)($lead['owner_id'] ?? 0) === $owner_filter;
+    });
+}
+
+if ($source_filter !== '') {
+    $filtered_leads = array_filter($filtered_leads, function($lead) use ($source_filter) {
+        return ($lead['source'] ?? '') === $source_filter;
+    });
+}
+
 if ($date_from) {
     $filtered_leads = array_filter($filtered_leads, function($lead) use ($date_from) {
         return ($lead['Date'] ?? '') >= $date_from;
@@ -134,6 +142,26 @@ if ($date_to) {
 }
 
 $filtered_leads = array_values($filtered_leads);
+
+// Listas para filtros (estágio, responsável, fonte)
+$pipeline_stages = [];
+$list_users = [];
+$sources_list = [];
+if (isDatabaseConfigured()) {
+    try {
+        $pdo = getDBConnection();
+        if ($pdo && $pdo->query("SHOW TABLES LIKE 'pipeline_stages'")->rowCount() > 0) {
+            $pipeline_stages = $pdo->query("SELECT id, name FROM pipeline_stages ORDER BY order_num ASC")->fetchAll(PDO::FETCH_ASSOC);
+        }
+        if ($pdo && $pdo->query("SHOW TABLES LIKE 'users'")->rowCount() > 0) {
+            $list_users = $pdo->query("SELECT id, name FROM users WHERE is_active = 1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+        }
+        if ($pdo && !empty($leads)) {
+            $sources_list = array_unique(array_filter(array_column($leads, 'source')));
+            sort($sources_list);
+        }
+    } catch (Exception $e) {}
+}
 
 // Pagination
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
@@ -369,7 +397,11 @@ if (isset($_GET['export'])) {
             </p>
         <?php endif; ?>
     </div>
-    <a href="?module=crm&export=1<?php echo $search ? '&search=' . urlencode($search) : ''; ?><?php echo $form_filter ? '&form=' . urlencode($form_filter) : ''; ?>" class="btn btn-primary">?? Export CSV</a>
+    <?php
+$q = ['search'=>$search,'form'=>$form_filter,'stage'=>$stage_filter,'owner'=>$owner_filter,'source'=>$source_filter,'date_from'=>$date_from,'date_to'=>$date_to];
+$qs = http_build_query(array_filter($q, fn($v) => $v !== '' && $v !== 0));
+?>
+    <a href="?module=crm&export=1&<?php echo $qs; ?>" class="btn btn-primary">📥 Export CSV</a>
 </div>
 
 <!-- Statistics -->
@@ -417,6 +449,39 @@ if (isset($_GET['export'])) {
                     <option value="contact-form" <?php echo $form_filter === 'contact-form' ? 'selected' : ''; ?>>Contact Form</option>
                 </select>
             </div>
+            <?php if (!empty($pipeline_stages)): ?>
+            <div class="filter-group">
+                <label>Estágio (Pipeline)</label>
+                <select name="stage">
+                    <option value="">Todos</option>
+                    <?php foreach ($pipeline_stages as $s): ?>
+                    <option value="<?php echo (int)$s['id']; ?>" <?php echo $stage_filter === (int)$s['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($s['name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($list_users)): ?>
+            <div class="filter-group">
+                <label>Responsável</label>
+                <select name="owner">
+                    <option value="">Todos</option>
+                    <?php foreach ($list_users as $u): ?>
+                    <option value="<?php echo (int)$u['id']; ?>" <?php echo $owner_filter === (int)$u['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($u['name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($sources_list)): ?>
+            <div class="filter-group">
+                <label>Fonte</label>
+                <select name="source">
+                    <option value="">Todas</option>
+                    <?php foreach ($sources_list as $src): ?>
+                    <option value="<?php echo htmlspecialchars($src); ?>" <?php echo $source_filter === $src ? 'selected' : ''; ?>><?php echo htmlspecialchars($src); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php endif; ?>
             <div class="filter-group">
                 <label>Date From</label>
                 <input type="date" name="date_from" value="<?php echo htmlspecialchars($date_from); ?>">
@@ -445,6 +510,8 @@ if (isset($_GET['export'])) {
             <thead>
                 <tr>
                     <th>Date & Time</th>
+                    <?php if ($has_stage_col): ?><th>Estágio</th><?php endif; ?>
+                    <?php if ($has_owner_col): ?><th>Responsável</th><?php endif; ?>
                     <th>Form</th>
                     <th>Name</th>
                     <th>Phone</th>
@@ -458,6 +525,12 @@ if (isset($_GET['export'])) {
                 <?php foreach ($paginated_leads as $lead): ?>
                     <tr>
                         <td><?php echo htmlspecialchars($lead['Date'] ?? ''); ?></td>
+                        <?php if ($has_stage_col): ?>
+                        <td><?php echo htmlspecialchars($stage_name_by_id[(int)($lead['pipeline_stage_id'] ?? 0)] ?? '—'); ?></td>
+                        <?php endif; ?>
+                        <?php if ($has_owner_col): ?>
+                        <td><?php echo htmlspecialchars($user_name_by_id[(int)($lead['owner_id'] ?? 0)] ?? '—'); ?></td>
+                        <?php endif; ?>
                         <td>
                             <span class="badge <?php echo ($lead['Form'] ?? '') === 'hero-form' ? 'badge-hero' : 'badge-contact'; ?>">
                                 <?php echo htmlspecialchars($lead['Form'] ?? ''); ?>
@@ -504,19 +577,19 @@ if (isset($_GET['export'])) {
         <?php if ($total_pages > 1): ?>
             <div class="pagination">
                 <?php if ($page > 1): ?>
-                    <a href="?module=crm&page=<?php echo $page - 1; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?><?php echo $form_filter ? '&form=' . urlencode($form_filter) : ''; ?><?php echo $date_from ? '&date_from=' . urlencode($date_from) : ''; ?><?php echo $date_to ? '&date_to=' . urlencode($date_to) : ''; ?>">? Previous</a>
+                    <a href="?module=crm&page=<?php echo $page - 1; ?>&<?php echo $qs; ?>">← Previous</a>
                 <?php endif; ?>
                 
                 <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
                     <?php if ($i == $page): ?>
                         <span class="current"><?php echo $i; ?></span>
                     <?php else: ?>
-                        <a href="?module=crm&page=<?php echo $i; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?><?php echo $form_filter ? '&form=' . urlencode($form_filter) : ''; ?><?php echo $date_from ? '&date_from=' . urlencode($date_from) : ''; ?><?php echo $date_to ? '&date_to=' . urlencode($date_to) : ''; ?>"><?php echo $i; ?></a>
+                        <a href="?module=crm&page=<?php echo $i; ?>&<?php echo $qs; ?>"><?php echo $i; ?></a>
                     <?php endif; ?>
                 <?php endfor; ?>
                 
                 <?php if ($page < $total_pages): ?>
-                    <a href="?module=crm&page=<?php echo $page + 1; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?><?php echo $form_filter ? '&form=' . urlencode($form_filter) : ''; ?><?php echo $date_from ? '&date_from=' . urlencode($date_from) : ''; ?><?php echo $date_to ? '&date_to=' . urlencode($date_to) : ''; ?>">Next ?</a>
+                    <a href="?module=crm&page=<?php echo $page + 1; ?>&<?php echo $qs; ?>">Next →</a>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
