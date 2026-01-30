@@ -5,7 +5,53 @@
 
 (function() {
     'use strict';
-    
+
+    // Função global chamada pelo onsubmit da LP (igual ao form-test-lp que funciona)
+    window.submitLPForm = function(e) {
+        if (e) e.preventDefault();
+        var form = e && e.target ? e.target : document.getElementById('heroForm') || document.getElementById('contactForm');
+        if (!form || form.tagName !== 'FORM') return;
+        var formId = form.id;
+        var isHero = formId === 'heroForm';
+        var successEl = document.getElementById(isHero ? 'heroSuccessMessage' : 'contactSuccessMessage');
+        var errorEl = document.getElementById(isHero ? 'heroErrorMessage' : 'contactErrorMessage');
+        var nameVal = (form.querySelector('[name="name"]') || {}).value || '';
+        var emailVal = (form.querySelector('[name="email"]') || {}).value || '';
+        var phoneVal = (form.querySelector('[name="phone"]') || {}).value || '';
+        var zipVal = (form.querySelector('[name="zipcode"]') || {}).value || '';
+        if (!nameVal || nameVal.trim().length < 2) { if (errorEl) { errorEl.textContent = 'Nome é obrigatório.'; errorEl.style.display = 'block'; } return; }
+        if (!/^[^@]+@[^@]+\.[^@]+$/.test((emailVal || '').trim())) { if (errorEl) { errorEl.textContent = 'E-mail válido é obrigatório.'; errorEl.style.display = 'block'; } return; }
+        if (!phoneVal || phoneVal.replace(/\D/g, '').length < 10) { if (errorEl) { errorEl.textContent = 'Telefone é obrigatório.'; errorEl.style.display = 'block'; } return; }
+        var zipClean = (zipVal || '').replace(/\D/g, '');
+        if (!zipClean || zipClean.length < 5) { if (errorEl) { errorEl.textContent = 'CEP válido é obrigatório.'; errorEl.style.display = 'block'; } return; }
+        if (errorEl) errorEl.style.display = 'none';
+        var btn = form.querySelector('button[type="submit"]');
+        if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+        var formData = new FormData(form);
+        var url = window.location.origin + '/send-lead.php';
+        fetch(url, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } })
+            .then(function(r) { return r.text().then(function(t) { return { status: r.status, text: t }; }); })
+            .then(function(r) {
+                var data = null;
+                try { data = JSON.parse(r.text); } catch (err) { data = { success: false, message: r.text || 'Resposta inválida' }; }
+                if (btn) { btn.disabled = false; btn.textContent = isHero ? 'Get My Free Estimate' : 'Request My Free Estimate Now'; }
+                if (data.success && successEl) {
+                    successEl.style.display = 'block';
+                    successEl.style.visibility = 'visible';
+                    successEl.classList.add('show');
+                    form.reset();
+                    form.style.display = 'none';
+                } else if (errorEl) {
+                    errorEl.textContent = data.message || 'Erro ao enviar. Tente novamente.';
+                    errorEl.style.display = 'block';
+                }
+            })
+            .catch(function(err) {
+                if (btn) { btn.disabled = false; btn.textContent = isHero ? 'Get My Free Estimate' : 'Request My Free Estimate Now'; }
+                if (errorEl) { errorEl.textContent = err.message || 'Erro de conexão. Tente novamente.'; errorEl.style.display = 'block'; }
+            });
+    };
+
     // ============================================
     // Force hide error messages on page load (Chrome compatibility)
     // ============================================
