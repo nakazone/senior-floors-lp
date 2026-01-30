@@ -424,6 +424,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
     .lead-tab:hover { background: #f1f5f9; color: #1a2036; }
     .lead-tab.active { background: #1a2036; color: white; }
+    .tab-panel { display: none !important; }
+    .tab-panel.active { display: block !important; }
 </style>
 
 <div class="lead-detail-container">
@@ -432,159 +434,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <a href="?module=crm" class="back-link">← Voltar para CRM</a>
     </div>
 
-    <nav class="lead-tabs" role="tablist">
-        <a href="#resumo" class="lead-tab active">Resumo</a>
-        <a href="#qualificacao" class="lead-tab">Qualificação</a>
-        <a href="#interacoes" class="lead-tab">Interações</a>
-        <a href="#visitas" class="lead-tab">Visitas</a>
-        <a href="#propostas" class="lead-tab">Propostas</a>
-        <a href="#contrato" class="lead-tab">Contrato</a>
-        <a href="#producao" class="lead-tab">Produção</a>
+    <nav class="lead-tabs" role="tablist" id="lead-tablist">
+        <a href="#resumo" class="lead-tab active" data-tab="resumo" role="tab" aria-selected="true" aria-controls="panel-resumo" id="tab-resumo">Resumo</a>
+        <a href="#qualificacao" class="lead-tab" data-tab="qualificacao" role="tab" aria-selected="false" aria-controls="panel-qualificacao" id="tab-qualificacao">Qualificação</a>
+        <a href="#interacoes" class="lead-tab" data-tab="interacoes" role="tab" aria-selected="false" aria-controls="panel-interacoes" id="tab-interacoes">Interações</a>
+        <a href="#visitas" class="lead-tab" data-tab="visitas" role="tab" aria-selected="false" aria-controls="panel-visitas" id="tab-visitas">Visitas</a>
+        <a href="#propostas" class="lead-tab" data-tab="propostas" role="tab" aria-selected="false" aria-controls="panel-propostas" id="tab-propostas">Propostas</a>
+        <a href="#contrato" class="lead-tab" data-tab="contrato" role="tab" aria-selected="false" aria-controls="panel-contrato" id="tab-contrato">Contrato</a>
+        <a href="#producao" class="lead-tab" data-tab="producao" role="tab" aria-selected="false" aria-controls="panel-producao" id="tab-producao">Produção</a>
     </nav>
     
-    <div class="lead-info-grid" id="resumo">
-        <!-- Informações do Lead -->
+    <!-- Painel Resumo: dados essenciais + status e ações -->
+    <div class="tab-panel active" id="panel-resumo" role="tabpanel" aria-labelledby="tab-resumo" aria-hidden="false">
+    <div class="lead-info-grid">
+        <!-- Informações do Lead (resumo) -->
         <div class="info-card">
             <h2>Informações do Lead</h2>
-            
             <div class="info-row">
                 <div class="info-label">Nome:</div>
                 <div class="info-value"><?php echo htmlspecialchars($lead['name']); ?></div>
             </div>
-            
             <div class="info-row">
                 <div class="info-label">Email:</div>
                 <div class="info-value">
-                    <a href="mailto:<?php echo htmlspecialchars($lead['email']); ?>" style="color: #1a2036;">
-                        <?php echo htmlspecialchars($lead['email']); ?>
-                    </a>
+                    <a href="mailto:<?php echo htmlspecialchars($lead['email']); ?>" style="color: #1a2036;"><?php echo htmlspecialchars($lead['email']); ?></a>
                 </div>
             </div>
-            
             <div class="info-row">
                 <div class="info-label">Telefone:</div>
                 <div class="info-value">
-                    <a href="tel:<?php echo htmlspecialchars($lead['phone']); ?>" style="color: #1a2036;">
-                        <?php echo htmlspecialchars($lead['phone']); ?>
-                    </a>
+                    <a href="tel:<?php echo htmlspecialchars($lead['phone']); ?>" style="color: #1a2036;"><?php echo htmlspecialchars($lead['phone']); ?></a>
                 </div>
             </div>
-            
             <div class="info-row">
                 <div class="info-label">CEP:</div>
-                <div class="info-value"><?php echo htmlspecialchars($lead['zipcode'] ?? 'N/A'); ?></div>
+                <div class="info-value"><?php echo htmlspecialchars($lead['zipcode'] ?? '—'); ?></div>
             </div>
-            
-            <?php if (!empty($lead['message'])): ?>
-            <div class="info-row">
-                <div class="info-label">Mensagem:</div>
-                <div class="info-value"><?php echo nl2br(htmlspecialchars($lead['message'])); ?></div>
-            </div>
-            <?php endif; ?>
-            
             <div class="info-row">
                 <div class="info-label">Origem:</div>
-                <div class="info-value"><?php echo htmlspecialchars($lead['source'] ?? 'N/A'); ?></div>
+                <div class="info-value"><?php echo htmlspecialchars($lead['source'] ?? '—'); ?></div>
             </div>
-            
-            <?php if (!empty($lead['address'])): ?>
-            <div class="info-row">
-                <div class="info-label">Endereço:</div>
-                <div class="info-value"><?php echo htmlspecialchars($lead['address']); ?></div>
-            </div>
-            <?php endif; ?>
-            <?php if (!empty($lead['property_type'])): ?>
-            <div class="info-row">
-                <div class="info-label">Tipo imóvel:</div>
-                <div class="info-value"><?php echo $lead['property_type'] === 'casa' ? 'Casa' : ($lead['property_type'] === 'apartamento' ? 'Apartamento' : 'Comercial'); ?></div>
-            </div>
-            <?php endif; ?>
-            <?php if (!empty($lead['service_type'])): ?>
-            <div class="info-row">
-                <div class="info-label">Tipo serviço:</div>
-                <div class="info-value"><?php echo htmlspecialchars($lead['service_type']); ?></div>
-            </div>
-            <?php endif; ?>
-            <?php if (!empty($lead['main_interest'])): ?>
-            <div class="info-row">
-                <div class="info-label">Interesse principal:</div>
-                <div class="info-value"><?php echo htmlspecialchars($lead['main_interest']); ?></div>
-            </div>
-            <?php endif; ?>
-            <?php if (isset($lead['lead_score']) && $lead['lead_score'] > 0): ?>
-            <div class="info-row">
-                <div class="info-label">Score:</div>
-                <div class="info-value"><strong><?php echo (int)$lead['lead_score']; ?></strong> / 100</div>
-            </div>
-            <?php endif; ?>
             <div class="info-row">
                 <div class="info-label">Formulário:</div>
-                <div class="info-value"><?php echo htmlspecialchars($lead['form_type'] ?? 'N/A'); ?></div>
+                <div class="info-value"><?php echo htmlspecialchars($lead['form_type'] ?? '—'); ?></div>
             </div>
-            
             <div class="info-row">
-                <div class="info-label">IP:</div>
-                <div class="info-value"><?php echo htmlspecialchars($lead['ip_address'] ?? 'N/A'); ?></div>
+                <div class="info-label">Status:</div>
+                <div class="info-value">
+                    <span class="status-badge status-<?php echo htmlspecialchars($lead['status']); ?>">
+                        <?php $status_labels = ['new' => 'Novo', 'contacted' => 'Contatado', 'qualified' => 'Qualificado', 'proposal' => 'Proposta', 'closed_won' => 'Fechado - Ganho', 'closed_lost' => 'Fechado - Perdido']; echo $status_labels[$lead['status']] ?? $lead['status']; ?>
+                    </span>
+                </div>
             </div>
-            
+            <div class="info-row">
+                <div class="info-label">Prioridade:</div>
+                <div class="info-value">
+                    <span class="priority-badge priority-<?php echo htmlspecialchars($lead['priority']); ?>">
+                        <?php $priority_labels = ['low' => 'Baixa', 'medium' => 'Média', 'high' => 'Alta']; echo $priority_labels[$lead['priority']] ?? $lead['priority']; ?>
+                    </span>
+                </div>
+            </div>
+            <?php if ($has_owner_col && $owner_name): ?>
+            <div class="info-row">
+                <div class="info-label">Responsável:</div>
+                <div class="info-value"><?php echo htmlspecialchars($owner_name); ?></div>
+            </div>
+            <?php endif; ?>
             <div class="info-row">
                 <div class="info-label">Criado em:</div>
                 <div class="info-value"><?php echo date('d/m/Y H:i', strtotime($lead['created_at'])); ?></div>
             </div>
-            
-            <div class="info-row">
-                <div class="info-label">Atualizado em:</div>
-                <div class="info-value"><?php echo date('d/m/Y H:i', strtotime($lead['updated_at'])); ?></div>
-            </div>
         </div>
         
-        <!-- Qualificação (pré-venda) -->
-        <div class="info-card" id="qualificacao">
-            <h2>Qualificação</h2>
-            <form method="POST" action="?module=lead-detail&id=<?php echo $lead_id; ?>" style="margin-bottom: 16px;">
-                <input type="hidden" name="action" value="update_qualification">
-                <div class="form-group">
-                    <label>Orçamento estimado ($)</label>
-                    <input type="text" name="budget_estimated" value="<?php echo htmlspecialchars($lead['budget_estimated'] ?? ''); ?>" placeholder="Ex: 5000">
-                </div>
-                <div class="form-group">
-                    <label>Urgência</label>
-                    <select name="urgency">
-                        <option value="">—</option>
-                        <option value="imediato" <?php echo ($lead['urgency'] ?? '') === 'imediato' ? 'selected' : ''; ?>>Imediato</option>
-                        <option value="30_dias" <?php echo ($lead['urgency'] ?? '') === '30_dias' ? 'selected' : ''; ?>>30 dias</option>
-                        <option value="60_mais" <?php echo ($lead['urgency'] ?? '') === '60_mais' ? 'selected' : ''; ?>>60+ dias</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Decisor?</label>
-                    <select name="is_decision_maker">
-                        <option value="">—</option>
-                        <option value="1" <?php echo isset($lead['is_decision_maker']) && $lead['is_decision_maker'] ? 'selected' : ''; ?>>Sim</option>
-                        <option value="0" <?php echo isset($lead['is_decision_maker']) && $lead['is_decision_maker'] === '0' ? 'selected' : ''; ?>>Não</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Tipo pagamento</label>
-                    <select name="payment_type">
-                        <option value="">—</option>
-                        <option value="cash" <?php echo ($lead['payment_type'] ?? '') === 'cash' ? 'selected' : ''; ?>>À vista (Cash)</option>
-                        <option value="financing" <?php echo ($lead['payment_type'] ?? '') === 'financing' ? 'selected' : ''; ?>>Financiamento</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Concorrência?</label>
-                    <select name="has_competition">
-                        <option value="">—</option>
-                        <option value="1" <?php echo isset($lead['has_competition']) && $lead['has_competition'] ? 'selected' : ''; ?>>Sim</option>
-                        <option value="0" <?php echo isset($lead['has_competition']) && $lead['has_competition'] === '0' ? 'selected' : ''; ?>>Não</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary">Salvar qualificação (atualiza score e tags)</button>
-            </form>
-        </div>
-
-        <!-- Status e Ações -->
+        <!-- Status e Ações (no Resumo) -->
         <div class="info-card">
             <h2>Status e Ações</h2>
             
@@ -681,73 +603,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             <?php endif; ?>
         </div>
     </div>
-    
-    <!-- Adicionar observação (em destaque) -->
-    <div class="info-card" style="margin-bottom: 24px;">
-        <h2>Adicionar observação</h2>
-        <p style="color: #64748b; margin-bottom: 16px; font-size: 14px;">Registre uma observação interna sobre este lead. Ela aparecerá no histórico abaixo.</p>
-        <form method="POST" action="?module=lead-detail&id=<?php echo (int)$lead_id; ?>">
-            <input type="hidden" name="action" value="add_note">
-            <div class="form-group">
-                <textarea name="note" class="textarea" placeholder="Digite sua observação..." required style="min-height: 100px;"></textarea>
-            </div>
-            <button type="submit" class="btn btn-primary">Salvar observação</button>
-        </form>
-        <?php if (!empty($notes)): ?>
-        <p style="margin-top: 16px; color: #475569; font-size: 13px;"><?php echo count($notes); ?> observação(ões) no histórico.</p>
-        <?php endif; ?>
     </div>
+    <!-- Fim painel Resumo -->
     
-    <!-- Tags -->
-    <div class="info-card notes-section">
-        <h2>Tags</h2>
-        
-        <div style="margin-bottom: 20px;">
-            <?php if (empty($tags)): ?>
-                <p style="color: #718096; font-style: italic; margin-bottom: 15px;">Nenhuma tag adicionada ainda.</p>
-            <?php else: ?>
-                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
-                    <?php foreach ($tags as $tag_item): ?>
-                        <span style="background: #1a2036; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; display: inline-flex; align-items: center; gap: 8px;">
-                            <?php echo htmlspecialchars(getTagLabel($tag_item['tag_name'] ?? $tag_item['tag'] ?? '')); ?>
-                            <form method="POST" style="display: inline; margin: 0;">
-                                <input type="hidden" name="action" value="remove_tag">
-                                <input type="hidden" name="tag" value="<?php echo htmlspecialchars($tag_item['tag_name'] ?? $tag_item['tag'] ?? ''); ?>">
-                                <button type="submit" style="background: rgba(255,255,255,0.2); border: none; color: white; cursor: pointer; padding: 2px 6px; border-radius: 10px; font-size: 10px;">×</button>
-                            </form>
-                        </span>
-                    <?php endforeach; ?>
-                </div>
+    <!-- Painel Qualificação -->
+    <div class="tab-panel" id="panel-qualificacao" role="tabpanel" aria-labelledby="tab-qualificacao" aria-hidden="true">
+        <div class="lead-info-grid">
+        <div class="info-card">
+            <h2>Dados de qualificação</h2>
+            <?php if (!empty($lead['message'])): ?>
+            <div class="info-row">
+                <div class="info-label">Mensagem:</div>
+                <div class="info-value"><?php echo nl2br(htmlspecialchars($lead['message'])); ?></div>
+            </div>
             <?php endif; ?>
-            
-            <form method="POST">
-                <input type="hidden" name="action" value="add_tag">
-                <div class="form-group" style="display: flex; gap: 10px; align-items: flex-end;">
-                    <div style="flex: 1;">
-                        <label>Adicionar Tag:</label>
-                        <select name="tag" class="form-group select" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
-                            <option value="">Selecione uma tag...</option>
-                            <?php 
-                            $available_tags = getAvailableTags();
-                            $current_tags = array_column($tags, 'tag_name');
-                            foreach ($available_tags as $tag_key => $tag_label): 
-                                if (!in_array($tag_key, $current_tags)):
-                            ?>
-                                <option value="<?php echo htmlspecialchars($tag_key); ?>"><?php echo htmlspecialchars($tag_label); ?></option>
-                            <?php 
-                                endif;
-                            endforeach; 
-                            ?>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Adicionar Tag</button>
+            <?php if (!empty($lead['address'])): ?>
+            <div class="info-row">
+                <div class="info-label">Endereço:</div>
+                <div class="info-value"><?php echo htmlspecialchars($lead['address']); ?></div>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($lead['property_type'])): ?>
+            <div class="info-row">
+                <div class="info-label">Tipo imóvel:</div>
+                <div class="info-value"><?php echo $lead['property_type'] === 'casa' ? 'Casa' : ($lead['property_type'] === 'apartamento' ? 'Apartamento' : 'Comercial'); ?></div>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($lead['service_type'])): ?>
+            <div class="info-row">
+                <div class="info-label">Tipo serviço:</div>
+                <div class="info-value"><?php echo htmlspecialchars($lead['service_type']); ?></div>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($lead['main_interest'])): ?>
+            <div class="info-row">
+                <div class="info-label">Interesse principal:</div>
+                <div class="info-value"><?php echo htmlspecialchars($lead['main_interest']); ?></div>
+            </div>
+            <?php endif; ?>
+            <?php if (isset($lead['lead_score']) && $lead['lead_score'] > 0): ?>
+            <div class="info-row">
+                <div class="info-label">Score:</div>
+                <div class="info-value"><strong><?php echo (int)$lead['lead_score']; ?></strong> / 100</div>
+            </div>
+            <?php endif; ?>
+            <div class="info-row">
+                <div class="info-label">IP:</div>
+                <div class="info-value"><?php echo htmlspecialchars($lead['ip_address'] ?? '—'); ?></div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Atualizado em:</div>
+                <div class="info-value"><?php echo date('d/m/Y H:i', strtotime($lead['updated_at'])); ?></div>
+            </div>
+        </div>
+        <div class="info-card">
+            <h2>Qualificação (atualizar)</h2>
+            <form method="POST" action="?module=lead-detail&id=<?php echo $lead_id; ?>">
+                <input type="hidden" name="action" value="update_qualification">
+                <div class="form-group">
+                    <label>Orçamento estimado ($)</label>
+                    <input type="text" name="budget_estimated" value="<?php echo htmlspecialchars($lead['budget_estimated'] ?? ''); ?>" placeholder="Ex: 5000">
                 </div>
+                <div class="form-group">
+                    <label>Urgência</label>
+                    <select name="urgency">
+                        <option value="">—</option>
+                        <option value="imediato" <?php echo ($lead['urgency'] ?? '') === 'imediato' ? 'selected' : ''; ?>>Imediato</option>
+                        <option value="30_dias" <?php echo ($lead['urgency'] ?? '') === '30_dias' ? 'selected' : ''; ?>>30 dias</option>
+                        <option value="60_mais" <?php echo ($lead['urgency'] ?? '') === '60_mais' ? 'selected' : ''; ?>>60+ dias</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Decisor?</label>
+                    <select name="is_decision_maker">
+                        <option value="">—</option>
+                        <option value="1" <?php echo isset($lead['is_decision_maker']) && $lead['is_decision_maker'] ? 'selected' : ''; ?>>Sim</option>
+                        <option value="0" <?php echo isset($lead['is_decision_maker']) && $lead['is_decision_maker'] === '0' ? 'selected' : ''; ?>>Não</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tipo pagamento</label>
+                    <select name="payment_type">
+                        <option value="">—</option>
+                        <option value="cash" <?php echo ($lead['payment_type'] ?? '') === 'cash' ? 'selected' : ''; ?>>À vista (Cash)</option>
+                        <option value="financing" <?php echo ($lead['payment_type'] ?? '') === 'financing' ? 'selected' : ''; ?>>Financiamento</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Concorrência?</label>
+                    <select name="has_competition">
+                        <option value="">—</option>
+                        <option value="1" <?php echo isset($lead['has_competition']) && $lead['has_competition'] ? 'selected' : ''; ?>>Sim</option>
+                        <option value="0" <?php echo isset($lead['has_competition']) && $lead['has_competition'] === '0' ? 'selected' : ''; ?>>Não</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Salvar qualificação</button>
             </form>
         </div>
+        </div>
     </div>
+    <!-- Fim painel Qualificação -->
     
-    <!-- Histórico de conversas e contatos (observações + atividades) -->
-    <div class="info-card notes-section" id="interacoes">
+    <!-- Painel Interações -->
+    <div class="tab-panel" id="panel-interacoes" role="tabpanel" aria-labelledby="tab-interacoes" aria-hidden="true">
+    <div class="info-card notes-section">
         <h2>Histórico de conversas e contatos</h2>
         
         <?php
@@ -852,28 +811,130 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
+    
+    <div class="info-card notes-section" style="margin-top: 24px;">
+        <h2>Tags</h2>
+        <?php if (empty($tags)): ?>
+            <p style="color: #718096; font-style: italic; margin-bottom: 15px;">Nenhuma tag adicionada ainda.</p>
+        <?php else: ?>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                <?php foreach ($tags as $tag_item): ?>
+                    <span style="background: #1a2036; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; display: inline-flex; align-items: center; gap: 8px;">
+                        <?php echo htmlspecialchars(getTagLabel($tag_item['tag_name'] ?? $tag_item['tag'] ?? '')); ?>
+                        <form method="POST" style="display: inline; margin: 0;">
+                            <input type="hidden" name="action" value="remove_tag">
+                            <input type="hidden" name="tag" value="<?php echo htmlspecialchars($tag_item['tag_name'] ?? $tag_item['tag'] ?? ''); ?>">
+                            <button type="submit" style="background: rgba(255,255,255,0.2); border: none; color: white; cursor: pointer; padding: 2px 6px; border-radius: 10px; font-size: 10px;">×</button>
+                        </form>
+                    </span>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+        <form method="POST">
+            <input type="hidden" name="action" value="add_tag">
+            <div class="form-group" style="display: flex; gap: 10px; align-items: flex-end;">
+                <div style="flex: 1;">
+                    <label>Adicionar Tag:</label>
+                    <select name="tag" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px;">
+                        <option value="">Selecione uma tag...</option>
+                        <?php 
+                        $available_tags = getAvailableTags();
+                        $current_tags = array_column($tags, 'tag_name');
+                        foreach ($available_tags as $tag_key => $tag_label): 
+                            if (!in_array($tag_key, $current_tags)):
+                        ?>
+                            <option value="<?php echo htmlspecialchars($tag_key); ?>"><?php echo htmlspecialchars($tag_label); ?></option>
+                        <?php endif; endforeach; ?>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Adicionar Tag</button>
+            </div>
+        </form>
+    </div>
+    </div>
+    <!-- Fim painel Interações -->
 
-    <div class="info-card" id="visitas">
+    <div class="tab-panel" id="panel-visitas" role="tabpanel" aria-labelledby="tab-visitas" aria-hidden="true">
+    <div class="info-card">
         <h2>Visitas / Medições</h2>
         <p style="color: #64748b; margin-bottom: 12px;">Agende visitas e registre medições para este lead.</p>
         <a href="?module=visits&lead_id=<?php echo (int)$lead_id; ?>" class="btn btn-primary">Ver agenda de visitas</a>
     </div>
+    </div>
 
-    <div class="info-card" id="propostas">
+    <div class="tab-panel" id="panel-propostas" role="tabpanel" aria-labelledby="tab-propostas" aria-hidden="true">
+    <div class="info-card">
         <h2>Propostas / Orçamentos</h2>
         <p style="color: #64748b; margin-bottom: 12px;">Crie e envie propostas para este lead.</p>
         <a href="?module=quotes&lead_id=<?php echo (int)$lead_id; ?>" class="btn btn-primary">Ver orçamentos</a>
     </div>
+    </div>
 
-    <div class="info-card" id="contrato">
+    <div class="tab-panel" id="panel-contrato">
+    <div class="info-card">
         <h2>Contrato</h2>
         <p style="color: #64748b; margin-bottom: 12px;">Gestão de contrato após fechamento.</p>
         <a href="?module=crm&id=<?php echo (int)$lead_id; ?>#contrato" class="btn btn-primary">Ver detalhes do lead</a>
     </div>
+    </div>
 
-    <div class="info-card" id="producao">
+    <div class="tab-panel" id="panel-producao" role="tabpanel" aria-labelledby="tab-producao" aria-hidden="true">
+    <div class="info-card">
         <h2>Produção / Obra</h2>
         <p style="color: #64748b; margin-bottom: 12px;">Status da obra e cronograma.</p>
         <a href="?module=projects" class="btn btn-primary">Ver projetos</a>
     </div>
+    </div>
 </div>
+
+<script>
+(function() {
+    function initLeadTabs() {
+        var container = document.querySelector('.lead-detail-container');
+        if (!container) return;
+        var tabs = container.querySelectorAll('.lead-tabs [data-tab]');
+        var panels = container.querySelectorAll('.tab-panel');
+        if (!tabs.length || !panels.length) return;
+
+        function showPanel(tabId) {
+            tabId = tabId.replace(/^#/, '').replace(/^panel-/, '');
+            if (!tabId) tabId = 'resumo';
+            panels.forEach(function(p) {
+                var isPanelActive = p.id === 'panel-' + tabId;
+                p.classList.toggle('active', isPanelActive);
+                p.setAttribute('aria-hidden', isPanelActive ? 'false' : 'true');
+            });
+            tabs.forEach(function(t) {
+                var isActive = t.getAttribute('data-tab') === tabId;
+                t.classList.toggle('active', isActive);
+                t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+            try {
+                var newUrl = location.pathname + (location.search || '') + '#' + tabId;
+                if (history.replaceState) history.replaceState(null, '', newUrl);
+            } catch (e) {}
+        }
+
+        tabs.forEach(function(t) {
+            t.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                showPanel(t.getAttribute('data-tab'));
+                return false;
+            });
+        });
+
+        var hash = (location.hash || '').replace('#', '');
+        if (hash && container.querySelector('#panel-' + hash)) {
+            showPanel(hash);
+        } else {
+            showPanel('resumo');
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLeadTabs);
+    } else {
+        initLeadTabs();
+    }
+})();
+</script>
