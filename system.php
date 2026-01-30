@@ -219,25 +219,84 @@ if (isset($_GET['api']) && $_GET['api'] === 'receive-lead' && $_SERVER['REQUEST_
     $zipcode = htmlspecialchars($zipcode, ENT_QUOTES, 'UTF-8');
     $message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
     
-    // Note: CSV is already saved by send-lead.php, so we just process/notify here
-    // This endpoint receives the data and can trigger additional processing
+    // Save lead to database (same DB/table as CRM so it appears in the system)
+    $lead_id = null;
+    $db_saved = false;
+    if (isDatabaseConfigured()) {
+        try {
+            $pdo = getDBConnection();
+            if ($pdo) {
+                $check_table = $pdo->query("SHOW TABLES LIKE 'leads'");
+                if ($check_table->rowCount() > 0) {
+                    $source = ($form_name === 'hero-form') ? 'LP-Hero' : 'LP-Contact';
+                    $ip_address = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : null;
+                    $owner_id = null;
+                    $is_dup = false;
+                    $existing_id = null;
+                    $lead_logic = $SYSTEM_ROOT . '/config/lead-logic.php';
+                    if (file_exists($lead_logic)) {
+                        require_once $lead_logic;
+                        $dup = checkDuplicateLead($pdo, $email, preg_replace('/\D/', '', $phone), null);
+                        if ($dup['is_duplicate']) {
+                            $is_dup = true;
+                            $existing_id = $dup['existing_id'];
+                            $lead_id = $existing_id;
+                            $db_saved = true;
+                        } else {
+                            $owner_id = getNextOwnerRoundRobin($pdo);
+                        }
+                    }
+                    if (!$is_dup) {
+                        $cols = "name, email, phone, zipcode, message, source, form_type, status, priority, ip_address";
+                        $place = ":name, :email, :phone, :zipcode, :message, :source, :form_type, 'new', 'medium', :ip_address";
+                        $params = [
+                            ':name' => $name, ':email' => $email, ':phone' => $phone, ':zipcode' => $zipcode,
+                            ':message' => $message, ':source' => $source, ':form_type' => $form_name, ':ip_address' => $ip_address
+                        ];
+                        if ($owner_id !== null) {
+                            try {
+                                $pdo->query("SELECT owner_id FROM leads LIMIT 1");
+                                $cols .= ", owner_id";
+                                $place .= ", :owner_id";
+                                $params[':owner_id'] = $owner_id;
+                            } catch (Throwable $e) {}
+                        }
+                        try {
+                            $pdo->query("SELECT pipeline_stage_id FROM leads LIMIT 1");
+                            $cols .= ", pipeline_stage_id";
+                            $place .= ", 1";
+                        } catch (Throwable $e) {}
+                        $stmt = $pdo->prepare("INSERT INTO leads ($cols) VALUES ($place)");
+                        $stmt->execute($params);
+                        $lead_id = (int) $pdo->lastInsertId();
+                        $db_saved = true;
+                        if ($lead_id && function_exists('createLeadEntryTask')) {
+                            $has_tasks = $pdo->query("SHOW TABLES LIKE 'tasks'")->rowCount() > 0;
+                            if ($has_tasks) {
+                                createLeadEntryTask($pdo, $lead_id, $owner_id);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+            $log_file = __DIR__ . '/system-api.log';
+            @file_put_contents($log_file, date('Y-m-d H:i:s') . " | ❌ API receive-lead DB error: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
+        }
+    }
     
     // Log to system API log
     $log_file = __DIR__ . '/system-api.log';
-    $log_entry = date('Y-m-d H:i:s') . " | ✅ API: Lead received and processed | Form: $form_name | Name: $name | Email: $email | Phone: $phone\n";
+    $log_entry = date('Y-m-d H:i:s') . " | ✅ API: Lead received" . ($db_saved ? " and saved to DB (id=$lead_id)" : " (DB not saved)") . " | Form: $form_name | Name: $name | Email: $email | Phone: $phone\n";
     @file_put_contents($log_file, $log_entry, FILE_APPEND | LOCK_EX);
-    
-    // You can add additional processing here:
-    // - Send notifications
-    // - Trigger webhooks
-    // - Update database
-    // - Send to other systems
     
     http_response_code(200);
     echo json_encode([
         'success' => true,
         'message' => 'Lead received and processed by system',
         'timestamp' => date('Y-m-d H:i:s'),
+        'lead_id' => $lead_id,
+        'database_saved' => $db_saved,
         'data' => [
             'form_type' => $form_name,
             'name' => $name,
