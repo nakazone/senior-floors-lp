@@ -332,7 +332,6 @@ if (isset($_GET['api']) && $_GET['api'] === 'receive-lead') {
             } catch (Throwable $e) {
                 @file_put_contents($SYSTEM_ROOT . '/system-api.log', date('Y-m-d H:i:s') . " | ⚠️ Email: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
             }
-        }
     }
     
     http_response_code(200);
