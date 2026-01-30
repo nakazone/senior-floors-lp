@@ -139,14 +139,23 @@ $db_saved = false;
 $db_error = null;
 $lead_id = null;
 
-// Encontrar config/database.php (send-lead pode estar na raiz ou em /lp/)
+// Encontrar config/database.php (send-lead pode estar na raiz, em /lp/, ou em subpasta)
 $possible_configs = [
     __DIR__ . '/config/database.php',
     dirname(__DIR__) . '/config/database.php',
+    dirname(__DIR__, 2) . '/config/database.php',
 ];
 if (!empty($_SERVER['DOCUMENT_ROOT'])) {
     $possible_configs[] = $_SERVER['DOCUMENT_ROOT'] . '/config/database.php';
+    $possible_configs[] = rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') . '/config/database.php';
 }
+// Subir diretórios a partir de __DIR__ até achar config/database.php (máx. 5 níveis)
+$search_dir = __DIR__;
+for ($i = 0; $i < 5 && $search_dir !== '/' && $search_dir !== ''; $i++) {
+    $possible_configs[] = $search_dir . '/config/database.php';
+    $search_dir = dirname($search_dir);
+}
+$possible_configs = array_unique(array_filter($possible_configs));
 $db_config_file = null;
 foreach ($possible_configs as $path) {
     if (file_exists($path)) {
@@ -595,20 +604,21 @@ $system_error = '';
 // Get the base URL for system.php
 // Use manual URL if configured, otherwise auto-detect
 if (!empty(SYSTEM_API_URL)) {
-    $system_api_url = SYSTEM_API_URL;
+    $system_api_url = trim(SYSTEM_API_URL);
 } else {
-    // system.php is in public_html, send-lead.php is in public_html/lp
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-    $host = $_SERVER['HTTP_HOST'];
-    $script_path = dirname($_SERVER['SCRIPT_NAME']); // This will be /lp or /public_html/lp
-    
-    // Go up one directory level to reach public_html where system.php is located
-    // If script is in /lp, go to root. If in /public_html/lp, go to /public_html
-    $path_parts = array_filter(explode('/', trim($script_path, '/')));
-    if (!empty($path_parts) && end($path_parts) === 'lp') {
-        array_pop($path_parts); // Remove 'lp' from path
+    $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
+    $script_path = isset($_SERVER['SCRIPT_NAME']) ? dirname($_SERVER['SCRIPT_NAME']) : '';
+    if ($script_path === '' && isset($_SERVER['PHP_SELF'])) {
+        $script_path = dirname($_SERVER['PHP_SELF']);
     }
-    $base_path = !empty($path_parts) ? '/' . implode('/', $path_parts) : '';
+    $script_path = trim($script_path, '/\\');
+    $path_parts = $script_path === '' ? [] : array_filter(explode('/', $script_path));
+    // Subir até a raiz do site: se estamos em /lp ou /xxx/lp, system.php fica na raiz
+    while (!empty($path_parts) && (end($path_parts) === 'lp' || end($path_parts) === 'public_html')) {
+        array_pop($path_parts);
+    }
+    $base_path = empty($path_parts) ? '' : '/' . implode('/', $path_parts);
     $system_api_url = $protocol . $host . $base_path . '/system.php?api=receive-lead';
 }
 
@@ -646,6 +656,18 @@ if ($system_http_code >= 200 && $system_http_code < 300) {
     $system_log = date('Y-m-d H:i:s') . " | ✅ Lead sent to system.php API successfully\n";
     $system_log .= "   Response: " . substr($system_response, 0, 200) . "\n";
     @file_put_contents($log_dir . '/system-integration.log', $system_log, FILE_APPEND | LOCK_EX);
+    // Se o system (receive-lead) salvou no banco, refletir na resposta para o front
+    $sys_json = @json_decode($system_response, true);
+    if (is_array($sys_json) && !empty($sys_json['database_saved']) && !empty($sys_json['lead_id'])) {
+        if (!$db_saved) {
+            $db_saved = true;
+            $lead_id = (int) $sys_json['lead_id'];
+            writeLeadLog("✅ Lead saved via system.php receive-lead | ID: $lead_id", $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
+        }
+        if ($lead_id === null || $lead_id === 0) {
+            $lead_id = (int) $sys_json['lead_id'];
+        }
+    }
 } else {
     $system_error = 'System API failed: HTTP ' . $system_http_code;
     if ($curl_error) {
