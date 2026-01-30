@@ -429,7 +429,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     .tab-panel.active { display: block !important; }
 </style>
 
-<div class="lead-detail-container">
+<div class="lead-detail-container" id="lead-detail-tabs-root">
     <div class="lead-header">
         <h1>Lead #<?php echo htmlspecialchars($lead['id']); ?></h1>
         <a href="?module=crm" class="back-link">← Voltar para CRM</a>
@@ -444,6 +444,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <button type="button" class="lead-tab" data-tab="contrato" onclick="window.leadDetailShowPanel('contrato')">Contrato</button>
         <button type="button" class="lead-tab" data-tab="producao" onclick="window.leadDetailShowPanel('producao')">Produção</button>
     </nav>
+    <script>
+    window.leadDetailShowPanel = function(tabId) {
+        tabId = String(tabId || '').replace(/^#/, '').replace(/^panel-/, '') || 'resumo';
+        var container = document.getElementById('lead-detail-tabs-root');
+        if (!container) return;
+        var panels = container.querySelectorAll('.tab-panel');
+        var tabs = container.querySelectorAll('.lead-tabs [data-tab]');
+        for (var i = 0; i < panels.length; i++) {
+            var p = panels[i];
+            var isActive = p.id === 'panel-' + tabId;
+            p.classList.toggle('active', isActive);
+            p.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+        }
+        for (var j = 0; j < tabs.length; j++) {
+            var t = tabs[j];
+            var isTabActive = t.getAttribute('data-tab') === tabId;
+            t.classList.toggle('active', isTabActive);
+            t.setAttribute('aria-selected', isTabActive ? 'true' : 'false');
+        }
+        try {
+            var url = location.pathname + (location.search || '') + '#' + tabId;
+            if (history.replaceState) history.replaceState(null, '', url);
+        } catch (err) {}
+    };
+    </script>
     
     <!-- Painel Resumo: dados essenciais + status e ações -->
     <div class="tab-panel active" id="panel-resumo" role="tabpanel" aria-labelledby="tab-resumo" aria-hidden="false">
@@ -889,34 +914,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 </div>
 
 <script>
-window.leadDetailShowPanel = function(tabId) {
-    tabId = String(tabId || '').replace(/^#/, '').replace(/^panel-/, '') || 'resumo';
-    var container = document.getElementById('lead-detail-tabs-root');
-    if (!container) container = document.querySelector('.lead-detail-container');
-    if (!container) return;
-    var panels = container.querySelectorAll('.tab-panel');
-    var tabs = container.querySelectorAll('.lead-tabs [data-tab]');
-    for (var i = 0; i < panels.length; i++) {
-        var p = panels[i];
-        var isActive = p.id === 'panel-' + tabId;
-        p.classList.toggle('active', isActive);
-        p.setAttribute('aria-hidden', isActive ? 'false' : 'true');
-    }
-    for (var j = 0; j < tabs.length; j++) {
-        var t = tabs[j];
-        var isTabActive = t.getAttribute('data-tab') === tabId;
-        t.classList.toggle('active', isTabActive);
-        t.setAttribute('aria-selected', isTabActive ? 'true' : 'false');
-    }
-    try {
-        var url = location.pathname + (location.search || '') + '#' + tabId;
-        if (history.replaceState) history.replaceState(null, '', url);
-    } catch (err) {}
-};
 (function() {
-    var container = document.querySelector('.lead-detail-container');
+    var container = document.getElementById('lead-detail-tabs-root');
     if (!container) return;
-    container.id = 'lead-detail-tabs-root';
     var hash = (location.hash || '').replace('#', '');
     if (hash && container.querySelector('#panel-' + hash)) {
         window.leadDetailShowPanel(hash);
