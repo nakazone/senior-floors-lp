@@ -70,7 +70,7 @@ Se o workflow **Deploy to Hostinger** (FTP) roda com sucesso (verde) mas os arqu
    - `HOSTINGER_FTP_PASSWORD` = senha da conta FTP
 
 2. **Protocolo**  
-   O workflow usa **FTPS** (porta 21). Se o log mostrar erro de conexão/SSL, edite `.github/workflows/deploy-hostinger.yml` e **remova** as linhas `protocol: ftps` e `port: 21` para usar FTP simples.
+   O workflow está configurado para **FTP simples** (sem FTPS) para evitar "Timeout (control socket)" no Hostinger. Se precisar de FTPS, descomente no workflow as linhas `protocol: ftps` e `port: 21`.
 
 3. **Pasta no servidor**  
    O deploy envia para `/public_html/`. Confirme no painel Hostinger que a raiz do site é `public_html` (ou ajuste `server-dir` no workflow).
@@ -80,7 +80,7 @@ Se o workflow **Deploy to Hostinger** (FTP) roda com sucesso (verde) mas os arqu
 
 ---
 
-## Erro: FTP connection failed / Upload failed
+## Erro: Timeout (control socket) ou FTP connection failed
 
 - Confirme os três secrets de FTP (host, user, password) no repositório.
 - Teste as mesmas credenciais em um cliente FTP (ex.: FileZilla) no seu PC.

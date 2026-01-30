@@ -33,15 +33,15 @@ jobs:
           fi
           echo "FTP secrets are set (host and user names hidden)."
 
-      # Hostinger often uses FTPS. If deploy fails with connection error, try removing protocol/port to use plain FTP.
+      # Usar FTP simples (sem FTPS) para evitar Timeout no Hostinger. Se precisar de FTPS, descomente protocol e port.
       - name: Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.HOSTINGER_FTP_HOST }}
           username: ${{ secrets.HOSTINGER_FTP_USER }}
           password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
+          # protocol: ftps
+          # port: 21
           server-dir: /public_html/
           local-dir: ./
           # form-test-lp.html is included (does not match test-*.html). Only files named test-*.html are excluded.
