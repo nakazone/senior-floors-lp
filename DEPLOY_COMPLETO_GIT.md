@@ -1,6 +1,15 @@
 # Deploy completo pelo Git
 
-Este guia faz o **deploy completo** do projeto para o Hostinger via Git: você faz push na branch `main` e o GitHub Actions envia os arquivos por FTP.
+Este guia faz o **deploy completo** do projeto para o Hostinger via Git: você faz push na branch `main` e o GitHub Actions envia os arquivos por FTP (e/ou SSH).
+
+## Deploy automático após qualquer atualização
+
+**Qualquer push na branch `main`** dispara o deploy automaticamente:
+
+- **Deploy to Hostinger** (FTP) — roda em todo push para `main`
+- **Deploy to Hostinger (SSH) - Fixed** — também roda em todo push para `main`
+
+Fluxo: você altera arquivos → `git add .` → `git commit -m "..."` → `git push origin main` → os workflows rodam sozinhos e enviam os arquivos para o servidor. Não é preciso acionar nada manualmente em Actions (a não ser que queira rodar de novo pelo **Run workflow**).
 
 ---
 

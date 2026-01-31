@@ -38,6 +38,17 @@ if ($log_path_used === null) {
     $log_path_used = $log_file_primary;
 }
 $last_lines = $last_log ? implode("\n", array_slice(explode("\n", $last_log), -15)) : '(vazio)';
+
+// Log da integração send-lead → system.php (curl para receive-lead)
+$log_dir = (!empty($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') : __DIR__);
+$system_integration_log = $log_dir . '/system-integration.log';
+$system_integration_lines = '';
+if (file_exists($system_integration_log) && is_readable($system_integration_log)) {
+    $content = @file_get_contents($system_integration_log);
+    $system_integration_lines = $content ? implode("\n", array_slice(explode("\n", trim($content)), -25)) : '(vazio)';
+} else {
+    $system_integration_lines = '(arquivo não existe ou não legível: ' . $system_integration_log . ')';
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -186,6 +197,23 @@ $last_lines = $last_log ? implode("\n", array_slice(explode("\n", $last_log), -1
         </ul>
         <p>Se após enviar o formulário <em>não</em> aparecer "send-lead.php chamado", o pedido está indo para outra URL ou há erro antes do PHP (404, CORS, etc.).</p>
         <pre><?php echo htmlspecialchars($last_lines); ?></pre>
+    </div>
+
+    <div class="box">
+        <h2>6. Log da integração (system-integration.log)</h2>
+        <p>Este log mostra o que o <code>send-lead.php</code> faz ao chamar o <code>system.php?api=receive-lead</code> (curl). Se os dados vão só para o CSV e não para o banco, confira aqui:</p>
+        <ul>
+            <li><strong>System API URL</strong> = URL usada no curl (deve ser <code>https://senior-floors.com/system.php?api=receive-lead</code>)</li>
+            <li><strong>✅ Lead sent to system.php API successfully</strong> = curl retornou 200 e o receive-lead respondeu</li>
+            <li><strong>Retry with internal URL</strong> = a primeira URL falhou (timeout/404); o script tentou 127.0.0.1</li>
+        </ul>
+        <p>Se aparecer erro HTTP (404, 500) ou timeout, o problema é no servidor (system.php não encontrado ou erro no receive-lead). Se o curl der certo mas o banco não gravar, veja na resposta do receive-lead o campo <code>db_error</code> e use o <strong>db-check</strong> abaixo.</p>
+        <pre><?php echo htmlspecialchars($system_integration_lines); ?></pre>
+    </div>
+
+    <div class="box">
+        <h2>7. db-check (JSON)</h2>
+        <p>Abra no navegador: <a href="system.php?api=db-check" target="_blank"><code>system.php?api=db-check</code></a>. Deve retornar JSON com <code>database_configured: true</code>, <code>connection_ok: true</code> e <code>table_leads_exists: true</code>. Se algum for <code>false</code>, o campo <code>hint</code> indica o que fazer.</p>
     </div>
 
     <div class="box">

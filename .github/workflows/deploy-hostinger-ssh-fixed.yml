@@ -1,11 +1,11 @@
 name: Deploy to Hostinger (SSH) - Fixed
 
-# Deploy por SSH no push. Se der Connection timed out, confira firewall Hostinger e use deploy-hostinger.yml (FTP).
+# Deploy automático: qualquer push na branch main dispara este workflow (SSH).
 on:
   push:
     branches:
       - main
-  workflow_dispatch: # Permite rodar manualmente
+  workflow_dispatch: # Permite rodar manualmente em Actions
 
 jobs:
   deploy:

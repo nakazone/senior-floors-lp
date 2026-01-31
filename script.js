@@ -27,19 +27,20 @@
         if (errorEl) errorEl.style.display = 'none';
         var btn = form.querySelector('button[type="submit"]');
         if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
-        // Igual ao teste Lead#10: application/x-www-form-urlencoded (evita preflight CORS e mesmo formato do curl)
-        var params = new URLSearchParams();
-        var inputs = form.querySelectorAll('input, textarea');
-        for (var i = 0; i < inputs.length; i++) {
-            var el = inputs[i];
-            if (el.name && el.name.length) params.append(el.name, el.value || '');
-        }
+        // Igual ao curl que salvou no banco (teste.curl@exemplo.com): mesmo URL, mesmo body (6 campos)
+        var formNameVal = (form.querySelector('[name="form-name"]') || {}).value || form.getAttribute('name') || 'contact-form';
+        var body = 'form-name=' + encodeURIComponent(formNameVal) +
+            '&name=' + encodeURIComponent(nameVal.trim()) +
+            '&email=' + encodeURIComponent(emailVal.trim()) +
+            '&phone=' + encodeURIComponent(phoneVal.trim()) +
+            '&zipcode=' + encodeURIComponent(zipVal.trim()) +
+            '&message=' + encodeURIComponent((form.querySelector('[name="message"]') || {}).value || '');
         var url = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
             ? window.SENIOR_FLOORS_FORM_URL
             : (window.location.hostname === 'lp.senior-floors.com'
                 ? 'https://senior-floors.com/send-lead.php'
                 : (new URL(form.getAttribute('action') || 'send-lead.php', window.location.href).href));
-        fetch(url, { method: 'POST', body: params.toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' } })
+        fetch(url, { method: 'POST', body: body, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' } })
             .then(function(r) { return r.text().then(function(t) { return { status: r.status, text: t }; }); })
             .then(function(r) {
                 var data = null;
@@ -296,45 +297,25 @@
             });
         });
 
-        // Handle form submission - support both click and touch events
+        // Handle form submission — delega para submitLPForm (mesma lógica do curl que salvou no banco)
         const handleFormSubmit = async (e) => {
             if (e) {
                 e.preventDefault();
                 e.stopPropagation();
             }
-            console.log('Hero form submitted - Device:', /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? 'Mobile' : 'Desktop');
-            console.log('Hero form submit event:', e ? e.type : 'manual');
-
-            // Hide previous messages
-            if (heroSuccessMessage) heroSuccessMessage.classList.remove('show');
-            if (heroErrorMessage) heroErrorMessage.classList.remove('show');
-
-            // Remove all error styling
-            inputs.forEach(input => {
-                input.classList.remove('error');
-                const errorDiv = document.getElementById(input.id + 'Error');
-                if (errorDiv) {
-                    errorDiv.classList.remove('show');
-                }
-            });
-
-            // Get form data - read directly from inputs for better mobile compatibility
+            if (typeof window.submitLPForm === 'function') {
+                window.submitLPForm(e || { target: heroForm, preventDefault: function() {} });
+                return;
+            }
+            // Fallback se submitLPForm não existir
             const nameInput = document.getElementById('hero-name');
             const emailInput = document.getElementById('hero-email');
             const phoneInput = document.getElementById('hero-phone');
             const zipcodeInput = document.getElementById('hero-zipcode');
-
             const name = (nameInput ? nameInput.value : '').trim();
             const email = (emailInput ? emailInput.value : '').trim();
             const phone = (phoneInput ? phoneInput.value : '').trim();
             const zipcode = (zipcodeInput ? zipcodeInput.value : '').trim();
-
-            // Igual ao teste Lead#10: application/x-www-form-urlencoded (mesmo formato do curl que salvou no banco)
-            const heroParams = new URLSearchParams();
-            heroForm.querySelectorAll('input, textarea').forEach(function(el) {
-                if (el.name) heroParams.append(el.name, el.value || '');
-            });
-            if (!heroParams.has('form-name')) heroParams.append('form-name', 'hero-form');
 
             // Validate
             let hasErrors = false;
@@ -584,36 +565,24 @@
                 e.preventDefault();
                 e.stopPropagation();
             }
-            console.log('Contact form submitted - Device:', /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? 'Mobile' : 'Desktop');
-            console.log('Contact form submit event:', e ? e.type : 'manual');
-
-            // Hide previous messages
-            if (contactSuccessMessage) contactSuccessMessage.classList.remove('show');
-            if (contactErrorMessage) contactErrorMessage.classList.remove('show');
-
-            // Remove all error styling
-            inputs.forEach(input => {
-                input.classList.remove('error');
-                const errorDiv = document.getElementById(input.id + 'Error');
-                if (errorDiv) {
-                    errorDiv.classList.remove('show');
-                }
-            });
-
-            // Get form data - read directly from inputs for better mobile compatibility
+            // Mesma lógica do curl: delega para submitLPForm (mesmo URL e body)
+            if (typeof window.submitLPForm === 'function') {
+                window.submitLPForm(e || { target: contactForm, preventDefault: function() {} });
+                return;
+            }
             const nameInput = document.getElementById('name');
             const emailInput = document.getElementById('email');
             const phoneInput = document.getElementById('phone');
             const zipcodeInput = document.getElementById('zipcode');
-
             const name = (nameInput ? nameInput.value : '').trim();
             const email = (emailInput ? emailInput.value : '').trim();
             const phone = (phoneInput ? phoneInput.value : '').trim();
             const zipcode = (zipcodeInput ? zipcodeInput.value : '').trim();
-
-            // Create FormData
-            const formData = new FormData(contactForm);
-            formData.append('form-name', 'contact-form');
+            const contactParams = new URLSearchParams();
+            contactForm.querySelectorAll('input, textarea').forEach(function(el) {
+                if (el.name) contactParams.append(el.name, el.value || '');
+            });
+            if (!contactParams.has('form-name')) contactParams.append('form-name', 'contact-form');
 
             // Validate
             let hasErrors = false;

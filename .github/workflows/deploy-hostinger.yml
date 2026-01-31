@@ -1,10 +1,11 @@
 name: Deploy to Hostinger
 
+# Deploy automático: qualquer push na branch main dispara este workflow.
 on:
   push:
     branches:
       - main
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch: # Permite rodar manualmente em Actions
 
 jobs:
   deploy:
