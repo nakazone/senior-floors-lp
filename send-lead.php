@@ -726,6 +726,10 @@ if ($system_http_code >= 200 && $system_http_code < 300) {
     $system_log .= "   Response: " . substr($system_response, 0, 200) . "\n";
     @file_put_contents($log_dir . '/system-integration.log', $system_log, FILE_APPEND | LOCK_EX);
     $sys_json = @json_decode($system_response, true);
+    // Se o receive-lead respondeu 200 mas não salvou no banco, registrar o motivo no log para diagnóstico
+    if (is_array($sys_json) && empty($sys_json['database_saved']) && !empty($sys_json['db_error'])) {
+        @file_put_contents($log_dir . '/system-integration.log', date('Y-m-d H:i:s') . " | ❌ DB not saved by receive-lead: " . $sys_json['db_error'] . "\n", FILE_APPEND | LOCK_EX);
+    }
     // Se a resposta veio com texto antes/depois do JSON (ex.: BOM, aviso PHP), tenta extrair o JSON
     if (!is_array($sys_json) && $system_response !== '' && $system_response !== false) {
         $start = strpos($system_response, '{');

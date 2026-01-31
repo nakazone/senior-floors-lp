@@ -68,6 +68,7 @@ $log_file = $SYSTEM_ROOT . '/system-api.log';
 
 $lead_id = null;
 $db_saved = false;
+$inserted_new = null;
 $db_error_reason = null;
 if (!isDatabaseConfigured()) {
     $db_error_reason = 'Database not configured (config/database.php missing or placeholders not replaced)';

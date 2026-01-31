@@ -7,23 +7,38 @@
 // ========== API FIRST: run BEFORE session/includes so response is always pure JSON ==========
 if (isset($_GET['api']) && ($_GET['api'] === 'receive-lead' || $_GET['api'] === 'db-check')) {
     $SYSTEM_ROOT = __DIR__;
-    if (!is_file(__DIR__ . '/config/database.php') && is_file(dirname(__DIR__) . '/config/database.php')) {
+    $config_db_path = __DIR__ . '/config/database.php';
+    $config_db_alt = dirname(__DIR__) . '/config/database.php';
+    if (is_file($config_db_path)) {
+        require_once $config_db_path;
+    } elseif (is_file($config_db_alt)) {
         $SYSTEM_ROOT = dirname(__DIR__);
+        require_once $config_db_alt;
+    } else {
+        // config/database.php não existe no servidor (não vai no deploy por .gitignore) — stubs para não dar fatal
+        if (!function_exists('isDatabaseConfigured')) {
+            function isDatabaseConfigured() { return false; }
+        }
+        if (!function_exists('getDBConnection')) {
+            function getDBConnection() { return null; }
+        }
     }
-    require_once $SYSTEM_ROOT . '/config/database.php';
     if ($_GET['api'] === 'db-check') {
         header('Content-Type: application/json; charset=UTF-8');
         header('Access-Control-Allow-Origin: *');
+        $config_loaded = is_file($config_db_path) || is_file($config_db_alt);
         $out = [
-            'config_loaded' => true,
-            'database_configured' => isDatabaseConfigured(),
+            'config_loaded' => $config_loaded,
+            'database_configured' => $config_loaded && isDatabaseConfigured(),
             'connection_ok' => false,
             'table_leads_exists' => false,
             'hint' => '',
             'api_version' => 'v2-early'
         ];
-        if (!$out['database_configured']) {
-            $out['hint'] = 'Edite config/database.php no servidor e substitua DB_USER/DB_PASS (não use seu_usuario/sua_senha).';
+        if (!$out['config_loaded']) {
+            $out['hint'] = 'Arquivo config/database.php não existe no servidor. Copie config/database.php.example para config/database.php e preencha DB_NAME, DB_USER, DB_PASS com as credenciais MySQL do Hostinger.';
+        } elseif (!$out['database_configured']) {
+            $out['hint'] = 'Edite config/database.php no servidor e substitua DB_USER/DB_PASS (não use seu_usuario/sua_senha ou SEU_USUARIO/SUA_SENHA_AQUI).';
         } else {
             try {
                 $pdo = getDBConnection();
