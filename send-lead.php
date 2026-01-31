@@ -127,12 +127,29 @@ writeLeadLog("LP recebido | form=$form_name | name=" . substr($name, 0, 30) . " 
 // ============================================
 // SMTP CONFIGURATION
 // ============================================
-// IMPORTANT: Replace with your Google App Password
-define('SMTP_USER', 'contact@senior-floors.com'); // Your Google Workspace email
-define('SMTP_PASS', 'YOUR_APP_PASSWORD_HERE'); // Google App Password (16 characters, no spaces)
-define('SMTP_FROM_EMAIL', 'contact@senior-floors.com');
-define('SMTP_FROM_NAME', 'Senior Floors Website');
-define('SMTP_TO_EMAIL', 'leads@senior-floors.com'); // Destination email
+// Prefer config/smtp.php on server (copy from config/smtp.php.example, set SMTP_PASS = Google App Password)
+$smtp_configs = [__DIR__ . '/config/smtp.php', dirname(__DIR__) . '/config/smtp.php'];
+foreach ($smtp_configs as $cfg) {
+    if (file_exists($cfg)) {
+        require_once $cfg;
+        break;
+    }
+}
+if (!defined('SMTP_USER')) {
+    define('SMTP_USER', 'contact@senior-floors.com');
+}
+if (!defined('SMTP_PASS')) {
+    define('SMTP_PASS', 'YOUR_APP_PASSWORD_HERE'); // Set in config/smtp.php on server
+}
+if (!defined('SMTP_FROM_EMAIL')) {
+    define('SMTP_FROM_EMAIL', 'contact@senior-floors.com');
+}
+if (!defined('SMTP_FROM_NAME')) {
+    define('SMTP_FROM_NAME', 'Senior Floors Website');
+}
+if (!defined('SMTP_TO_EMAIL')) {
+    define('SMTP_TO_EMAIL', 'leads@senior-floors.com');
+}
 
 // ============================================
 // SYSTEM.PHP API CONFIGURATION (OBRIGATÓRIO para lead chegar no CRM)
