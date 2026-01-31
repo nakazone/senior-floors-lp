@@ -51,6 +51,89 @@ if (isset($_GET['api']) && ($_GET['api'] === 'receive-lead' || $_GET['api'] === 
             require $api_handler;
             exit;
         }
+        // Fallback: handler não existe no servidor (ex.: api/ não deployado) — rodar receive-lead aqui para retornar JSON puro e salvar no banco
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Access-Control-Allow-Origin: *');
+        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Method not allowed', 'api_version' => 'receive-lead-fallback']);
+            exit;
+        }
+        $form_name = isset($_POST['form-name']) ? trim($_POST['form-name']) : 'contact-form';
+        $name = isset($_POST['name']) ? trim($_POST['name']) : '';
+        $phone = isset($_POST['phone']) ? trim($_POST['phone']) : '';
+        $email = isset($_POST['email']) ? trim($_POST['email']) : '';
+        $zipcode = isset($_POST['zipcode']) ? trim($_POST['zipcode']) : '';
+        $message = isset($_POST['message']) ? trim($_POST['message']) : '';
+        if (empty($name) && empty($email) && ($raw = @file_get_contents('php://input'))) {
+            $dec = @json_decode($raw, true);
+            if (is_array($dec)) {
+                $form_name = $dec['form-name'] ?? $form_name;
+                $name = trim($dec['name'] ?? '');
+                $phone = trim($dec['phone'] ?? $phone);
+                $email = trim($dec['email'] ?? '');
+                $zipcode = trim($dec['zipcode'] ?? $zipcode);
+                $message = trim($dec['message'] ?? $message);
+            } else {
+                parse_str($raw, $parsed);
+                if (!empty($parsed)) {
+                    $form_name = trim($parsed['form-name'] ?? $form_name);
+                    $name = trim($parsed['name'] ?? '');
+                    $phone = trim($parsed['phone'] ?? $phone);
+                    $email = trim($parsed['email'] ?? '');
+                    $zipcode = trim($parsed['zipcode'] ?? $zipcode);
+                    $message = trim($parsed['message'] ?? $message);
+                }
+            }
+        }
+        $errors = [];
+        if (empty($name) || strlen($name) < 2) $errors[] = 'Name is required';
+        if (empty($phone)) $errors[] = 'Phone is required';
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email is required';
+        if (empty($zipcode) || !preg_match('/^\d{5}(-\d{4})?$/', $zipcode)) $errors[] = 'Valid zip code is required';
+        if (!empty($errors)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'errors' => $errors, 'api_version' => 'receive-lead-fallback']);
+            exit;
+        }
+        $name = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+        $phone = htmlspecialchars($phone, ENT_QUOTES, 'UTF-8');
+        $email = filter_var($email, FILTER_SANITIZE_EMAIL);
+        $zipcode = htmlspecialchars($zipcode, ENT_QUOTES, 'UTF-8');
+        $message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+        $lead_id = null;
+        $db_saved = false;
+        $db_error_reason = null;
+        if (!isDatabaseConfigured()) {
+            $db_error_reason = 'Database not configured (config/database.php missing or placeholders not replaced)';
+        } else {
+            try {
+                $pdo = getDBConnection();
+                if (!$pdo) {
+                    $db_error_reason = 'Could not connect to database';
+                } else {
+                    $t = $pdo->query("SHOW TABLES LIKE 'leads'");
+                    if (!$t || $t->rowCount() === 0) {
+                        $db_error_reason = "Table 'leads' does not exist. Run database/schema-v3-completo.sql in MySQL.";
+                    } else {
+                        $source = ($form_name === 'hero-form') ? 'LP-Hero' : 'LP-Contact';
+                        $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : null;
+                        $stmt = $pdo->prepare("INSERT INTO leads (name, email, phone, zipcode, message, source, form_type, status, priority, ip_address) VALUES (:name, :email, :phone, :zipcode, :message, :source, :form_type, 'new', 'medium', :ip)");
+                        $stmt->execute([':name' => $name, ':email' => $email, ':phone' => $phone, ':zipcode' => $zipcode, ':message' => $message, ':source' => $source, ':form_type' => $form_name, ':ip' => $ip]);
+                        $lead_id = (int) $pdo->lastInsertId();
+                        $db_saved = true;
+                    }
+                }
+            } catch (Throwable $e) {
+                $db_error_reason = $e->getMessage();
+            }
+        }
+        $resp = ['success' => true, 'message' => 'Thank you! We\'ll contact you within 24 hours.', 'timestamp' => date('Y-m-d H:i:s'), 'lead_id' => $lead_id, 'database_saved' => $db_saved, 'api_version' => 'receive-lead-fallback', 'data' => ['form_type' => $form_name, 'name' => $name, 'email' => $email, 'phone' => $phone, 'zipcode' => $zipcode]];
+        if (!$db_saved) $resp['db_error'] = $db_error_reason ?: 'Unknown';
+        http_response_code(200);
+        echo json_encode($resp);
+        exit;
     }
 }
 

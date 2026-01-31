@@ -128,6 +128,7 @@ if (!isDatabaseConfigured()) {
                     $stmt->execute($params);
                     $lead_id = (int) $pdo->lastInsertId();
                     $db_saved = true;
+                    $inserted_new = true;
                     if ($lead_id && function_exists('createLeadEntryTask')) {
                         $has_tasks = $pdo->query("SHOW TABLES LIKE 'tasks'")->rowCount() > 0;
                         if ($has_tasks) createLeadEntryTask($pdo, $lead_id, $owner_id);
