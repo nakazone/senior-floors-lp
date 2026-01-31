@@ -42,16 +42,22 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           
-          # Write SSH key
-          echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/id_rsa
+          # Write SSH key (restore newlines if key was pasted with \n literal in GitHub Secrets)
+          echo "${{ secrets.HOSTINGER_SSH_KEY }}" | sed 's/\\n/\n/g' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
           # Add host to known_hosts
           ssh-keyscan -H ${{ secrets.HOSTINGER_SSH_HOST }} -p ${{ secrets.HOSTINGER_SSH_PORT || 22 }} >> ~/.ssh/known_hosts 2>/dev/null || true
           
-          # Verify SSH key was created
+          # Verify SSH key was created and looks valid
           if [ ! -f ~/.ssh/id_rsa ]; then
             echo "❌ Error: Failed to create SSH key file"
+            exit 1
+          fi
+          if ! grep -q "BEGIN.*PRIVATE KEY" ~/.ssh/id_rsa; then
+            echo "❌ Error: SSH key file does not look valid (missing BEGIN PRIVATE KEY)."
+            echo "   In GitHub Secrets, paste the full key including -----BEGIN ... ----- and -----END ... -----"
+            echo "   Use one line per line, or if pasted as one line use literal \\n between lines."
             exit 1
           fi
           echo "✅ SSH key setup completed"
