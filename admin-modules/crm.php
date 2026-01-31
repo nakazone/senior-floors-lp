@@ -1,50 +1,63 @@
 <?php
 /**
  * CRM Module - Lead Management System
- * Lê leads do MySQL (prioridade) ou CSV (fallback)
+ * Lê leads do MySQL (prioridade). CSV só quando banco não está configurado ou conexão falha.
  */
 
-require_once __DIR__ . '/../config/database.php';
+// Usar exatamente o mesmo config que system.php (quando incluído por system.php, $SYSTEM_ROOT existe)
+if (isset($SYSTEM_ROOT) && is_file($SYSTEM_ROOT . '/config/database.php')) {
+    require_once $SYSTEM_ROOT . '/config/database.php';
+} else {
+    require_once __DIR__ . '/../config/database.php';
+}
 
 $LEADS_PER_PAGE = 25;
 
-// Read leads from MySQL (if configured) or CSV (fallback)
+// Read leads from MySQL (priority). CSV only when DB not configured or connection failed.
 $leads = [];
 $data_source = '';
+$db_error_message = ''; // quando banco está configurado mas falhou (não usar CSV)
 
-// Check if we should force CSV usage (via GET parameter or config)
+// Check if we should force CSV usage (via GET parameter)
 $force_csv = isset($_GET['force_csv']) && $_GET['force_csv'] === '1';
-$use_database = !$force_csv; // Only use database if not forcing CSV
+$use_database = !$force_csv;
 
-// Try MySQL first (unless CSV is forced)
 if ($use_database && isDatabaseConfigured()) {
     try {
         $pdo = getDBConnection();
-        
-        if ($pdo) {
-            $cols = "id, name as Name, email as Email, phone as Phone, zipcode as ZipCode, message as Message, form_type as Form, source, status, priority, created_at as Date, ip_address";
-            if ($pdo->query("SHOW COLUMNS FROM leads LIKE 'pipeline_stage_id'")->rowCount() > 0) $cols .= ", pipeline_stage_id";
-            if ($pdo->query("SHOW COLUMNS FROM leads LIKE 'owner_id'")->rowCount() > 0) $cols .= ", owner_id";
-            $stmt = $pdo->query("SELECT $cols FROM leads ORDER BY created_at DESC");
-            
-            $db_leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Always use database result when query succeeded (even if empty) — do not fall back to CSV
-            $leads = $db_leads;
-            $data_source = 'MySQL Database';
-            foreach ($leads as &$lead) {
-                $lead['Date'] = $lead['Date'] ?? '';
+        if (!$pdo) {
+            $db_error_message = 'Falha ao conectar ao MySQL. Verifique DB_HOST, DB_NAME, DB_USER e DB_PASS em config/database.php.';
+            error_log("CRM: " . $db_error_message);
+        } else {
+            // Verificar se a tabela existe antes de query
+            $tables = $pdo->query("SHOW TABLES LIKE 'leads'");
+            if (!$tables || $tables->rowCount() === 0) {
+                $db_error_message = "Tabela 'leads' não existe. No phpMyAdmin, execute database/schema-v3-completo.sql (ou schema.sql).";
+                error_log("CRM: " . $db_error_message);
+            } else {
+                $cols = "id, name as Name, email as Email, phone as Phone, zipcode as ZipCode, message as Message, form_type as Form, source, status, priority, created_at as Date, ip_address";
+                try {
+                    if ($pdo->query("SHOW COLUMNS FROM leads LIKE 'pipeline_stage_id'")->rowCount() > 0) $cols .= ", pipeline_stage_id";
+                    if ($pdo->query("SHOW COLUMNS FROM leads LIKE 'owner_id'")->rowCount() > 0) $cols .= ", owner_id";
+                } catch (Throwable $e) { /* colunas opcionais */ }
+                $stmt = $pdo->query("SELECT $cols FROM leads ORDER BY created_at DESC");
+                $db_leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $leads = $db_leads;
+                $data_source = 'MySQL Database';
+                foreach ($leads as &$lead) {
+                    $lead['Date'] = $lead['Date'] ?? '';
+                }
+                unset($lead);
             }
-            unset($lead);
         }
-    } catch (PDOException $e) {
-        error_log("CRM: Database error - " . $e->getMessage());
-        // Fall through to CSV only on exception
+    } catch (Throwable $e) {
+        $db_error_message = 'Erro no banco: ' . $e->getMessage();
+        error_log("CRM: " . $db_error_message);
     }
 }
 
-// Fallback to CSV if MySQL not available or failed
-if (empty($leads)) {
+// CSV só quando banco NÃO está configurado (ou forçado por ?force_csv=1). Se banco configurado mas falhou, não usar CSV.
+if (empty($leads) && empty($db_error_message)) {
     // Use same logic as send-lead.php to ensure same path
     // CRM is in public_html/admin-modules/, so dirname(__DIR__) should be public_html/
     $csv_dir = null;
@@ -75,6 +88,9 @@ if (empty($leads)) {
     // Reverse to show newest first (CSV)
     $leads = array_reverse($leads);
     $data_source = 'CSV File';
+}
+if (!empty($db_error_message)) {
+    $data_source = $db_error_message;
 }
 
 // Filtering & Search
@@ -413,17 +429,27 @@ if (isset($_GET['export'])) {
         <h1>CRM - Lead Management</h1>
         <?php if (!empty($data_source)): ?>
             <p style="margin: 5px 0 0 0; font-size: 12px; color: #718096;">
-                &#128202; Fonte de dados: <strong><?php echo htmlspecialchars($data_source); ?></strong>
+                &#128202; Fonte de dados:
                 <?php if ($data_source === 'MySQL Database'): ?>
+                    <strong><?php echo htmlspecialchars($data_source); ?></strong>
                     <span style="color: #48bb78;">&#10003; Banco de dados ativo</span>
                     | <a href="?module=crm&force_csv=1" style="color: #4299e1; text-decoration: none;">&#128256; Usar CSV</a>
+                <?php elseif (!empty($db_error_message)): ?>
+                    <span style="color: #dc2626;">&#9888; <?php echo htmlspecialchars($data_source); ?></span>
+                    | <a href="?module=crm&force_csv=1" style="color: #4299e1; text-decoration: none;">Ver CSV (backup)</a>
                 <?php else: ?>
+                    <strong><?php echo htmlspecialchars($data_source); ?></strong>
                     <span style="color: #f59e0b;">&#9888; Usando CSV</span>
                     <?php if (isDatabaseConfigured()): ?>
                         | <a href="?module=crm" style="color: #4299e1; text-decoration: none;">&#128256; Usar Banco de Dados</a>
                     <?php endif; ?>
                 <?php endif; ?>
             </p>
+            <?php if ($data_source === 'MySQL Database' && !empty($leads)): 
+                $most_recent = $leads[0]['Date'] ?? '';
+            ?>
+            <p style="margin: 2px 0 0 0; font-size: 11px; color: #94a3b8;">&#128337; Último lead no banco: <strong><?php echo htmlspecialchars($most_recent); ?></strong> — se acabou de enviar e não aparece, <a href="?module=crm">limpe os filtros</a> ou confira a resposta do formulário (system_sent / database_saved).</p>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
     <?php
@@ -537,8 +563,15 @@ $qs = http_build_query(array_filter($q, fn($v) => $v !== '' && $v !== 0));
 <div class="leads-table-container">
     <?php if (empty($paginated_leads)): ?>
         <div class="empty-state">
-            <h3>No leads found</h3>
-            <p>Try adjusting your filters or check back later.</p>
+            <h3>Nenhum lead na lista</h3>
+            <?php if ($total_all_leads > 0): ?>
+                <p>Os filtros não retornaram resultados. <a href="?module=crm">Clique aqui para limpar os filtros</a> e ver todos os <?php echo $total_all_leads; ?> leads.</p>
+            <?php elseif ($data_source === 'MySQL Database'): ?>
+                <p>O banco está ativo mas não há leads. Confira se os formulários estão salvando (resposta com <strong>database_saved: true</strong> no form-test-lp.html) e se é a mesma base (<a href="<?php echo (isset($_SERVER['PHP_SELF']) ? basename($_SERVER['PHP_SELF']) : 'system.php') . '?api=db-check'; ?>" target="_blank">system.php?api=db-check</a>).</p>
+            <?php else: ?>
+                <p>Nenhum lead encontrado. Ajuste os filtros ou tente mais tarde.</p>
+            <?php endif; ?>
+            <p><a href="?module=crm" class="btn btn-secondary">&#8634; Limpar filtros</a></p>
         </div>
     <?php else: ?>
         <table>

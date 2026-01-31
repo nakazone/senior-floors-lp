@@ -22,9 +22,19 @@ if (file_exists(__DIR__ . '/PHPMailer/Exception.php') &&
     $phpmailer_available = true;
 }
 
-// Set response headers
-header('Content-Type: application/json; charset=UTF-8');
+// Set response headers (CORS: LP em lp.senior-floors.com envia POST para senior-floors.com)
 header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Accept');
+header('Access-Control-Max-Age: 86400');
+
+// Preflight CORS: navegador envia OPTIONS antes do POST cross-origin; responder 200 para o POST ser enviado
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
+header('Content-Type: application/json; charset=UTF-8');
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -125,12 +135,21 @@ define('SMTP_FROM_NAME', 'Senior Floors Website');
 define('SMTP_TO_EMAIL', 'leads@senior-floors.com'); // Destination email
 
 // ============================================
-// SYSTEM.PHP API CONFIGURATION
+// SYSTEM.PHP API CONFIGURATION (OBRIGATÓRIO para lead chegar no CRM)
 // ============================================
-// If auto-detection doesn't work, manually set your system.php URL here:
-// Example: 'https://yourdomain.com/system.php?api=receive-lead'
-// Leave empty to use auto-detection
-define('SYSTEM_API_URL', ''); // Set your full URL here if needed
+// Opção 1: Crie config/system-api-url.php (copie de config/system-api-url.php.example) e defina a URL lá.
+// Opção 2: Defina SYSTEM_API_URL abaixo com a URL completa onde você abre o painel.
+$system_api_configs = [__DIR__ . '/config/system-api-url.php', dirname(__DIR__) . '/config/system-api-url.php'];
+foreach ($system_api_configs as $cfg) {
+    if (file_exists($cfg)) {
+        require_once $cfg;
+        break;
+    }
+}
+if (!defined('SYSTEM_API_URL')) {
+    // LP = lp.senior-floors.com | Painel = senior-floors.com/system.php
+    define('SYSTEM_API_URL', 'https://senior-floors.com/system.php?api=receive-lead');
+}
 
 // ============================================
 // SAVE TO DATABASE (FASE 1 - MÓDULO 01)
@@ -600,10 +619,15 @@ if ($phpmailer_available) {
 // ============================================
 $system_sent = false;
 $system_error = '';
+$system_database_saved = null;
+$system_db_error = null;
+$system_api_version = null;
+$system_inserted_new = null;
 
 // Get the base URL for system.php
 // Use manual URL if configured, otherwise auto-detect
-if (!empty(SYSTEM_API_URL)) {
+$system_url_configured = !empty(SYSTEM_API_URL);
+if ($system_url_configured) {
     $system_api_url = trim(SYSTEM_API_URL);
 } else {
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
@@ -636,49 +660,101 @@ $system_data = [
     'message' => $message
 ];
 
-$ch = curl_init($system_api_url);
-curl_setopt($ch, CURLOPT_POST, 1);
-curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($system_data));
-curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // For Hostinger compatibility
-curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // For Hostinger compatibility
+$system_response = false;
+$system_http_code = 0;
+$curl_error = '';
 
-$system_response = curl_exec($ch);
-$system_http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$curl_error = curl_error($ch);
-curl_close($ch);
+$try_urls = [$system_api_url];
+// Quando SYSTEM_API_URL aponta para o mesmo host da requisição, tentar também URL interna (evita bloqueio/loop em alguns hostings)
+$req_host = isset($_SERVER['HTTP_HOST']) ? strtolower($_SERVER['HTTP_HOST']) : '';
+$parsed = @parse_url($system_api_url);
+$api_host = isset($parsed['host']) ? strtolower($parsed['host']) : '';
+$api_path = isset($parsed['path']) ? $parsed['path'] : '/system.php';
+$api_query = isset($parsed['query']) ? '?' . $parsed['query'] : '?api=receive-lead';
+if ($api_host !== '' && ($req_host === $api_host || $req_host === 'www.' . $api_host || 'www.' . $req_host === $api_host)) {
+    $try_urls[] = 'http://127.0.0.1' . $api_path . $api_query;
+}
+
+foreach ($try_urls as $url_to_try) {
+    $ch = curl_init($url_to_try);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($system_data));
+    $headers = ['Content-Type: application/x-www-form-urlencoded'];
+    if (strpos($url_to_try, '127.0.0.1') !== false && $api_host !== '') {
+        $headers[] = 'Host: ' . $api_host;
+    }
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+    $system_response = curl_exec($ch);
+    $system_http_code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curl_error = curl_error($ch);
+    curl_close($ch);
+
+    if ($system_http_code >= 200 && $system_http_code < 300) {
+        break;
+    }
+    if ($url_to_try !== end($try_urls)) {
+        @file_put_contents($log_dir . '/system-integration.log', date('Y-m-d H:i:s') . " | Retry with internal URL (first failed: $system_http_code $curl_error)\n", FILE_APPEND | LOCK_EX);
+    }
+}
 
 if ($system_http_code >= 200 && $system_http_code < 300) {
     $system_sent = true;
     $system_log = date('Y-m-d H:i:s') . " | ✅ Lead sent to system.php API successfully\n";
     $system_log .= "   Response: " . substr($system_response, 0, 200) . "\n";
     @file_put_contents($log_dir . '/system-integration.log', $system_log, FILE_APPEND | LOCK_EX);
-    // Se o system (receive-lead) salvou no banco, refletir na resposta para o front
     $sys_json = @json_decode($system_response, true);
-    if (is_array($sys_json) && !empty($sys_json['database_saved']) && !empty($sys_json['lead_id'])) {
-        if (!$db_saved) {
-            $db_saved = true;
-            $lead_id = (int) $sys_json['lead_id'];
-            writeLeadLog("✅ Lead saved via system.php receive-lead | ID: $lead_id", $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
+    // Se a resposta veio com texto antes/depois do JSON (ex.: BOM, aviso PHP), tenta extrair o JSON
+    if (!is_array($sys_json) && $system_response !== '' && $system_response !== false) {
+        $start = strpos($system_response, '{');
+        $end = strrpos($system_response, '}');
+        if ($start !== false && $end !== false && $end > $start) {
+            $sys_json = @json_decode(substr($system_response, $start, $end - $start + 1), true);
         }
-        if ($lead_id === null || $lead_id === 0) {
-            $lead_id = (int) $sys_json['lead_id'];
+    }
+    $system_api_version = null;
+    if (is_array($sys_json)) {
+        $system_database_saved = !empty($sys_json['database_saved']);
+        if (!empty($sys_json['db_error'])) {
+            $system_db_error = $sys_json['db_error'];
         }
+        if (isset($sys_json['api_version'])) {
+            $system_api_version = $sys_json['api_version'];
+        }
+        if ($system_database_saved && !empty($sys_json['lead_id'])) {
+            if (!$db_saved) {
+                $db_saved = true;
+                $lead_id = (int) $sys_json['lead_id'];
+                writeLeadLog("✅ Lead saved via system.php receive-lead | ID: $lead_id", $LEAD_LOG_FILE, $LEAD_LOG_FALLBACK);
+            }
+            if ($lead_id === null || $lead_id === 0) {
+                $lead_id = (int) $sys_json['lead_id'];
+            }
+        }
+    } elseif ($system_sent) {
+        $system_database_saved = false;
     }
 } else {
     $system_error = 'System API failed: HTTP ' . $system_http_code;
     if ($curl_error) {
-        $system_error .= ' | cURL Error: ' . $curl_error;
+        $system_error .= ' | cURL: ' . $curl_error;
     }
     if ($system_response) {
-        $system_error .= ' | Response: ' . substr($system_response, 0, 200);
+        $system_error .= ' | Response: ' . substr(trim($system_response), 0, 200);
     }
     $system_log = date('Y-m-d H:i:s') . " | ⚠️ System API: {$system_error}\n";
     $system_log .= "   URL attempted: $system_api_url\n";
     @file_put_contents($log_dir . '/system-integration.log', $system_log, FILE_APPEND | LOCK_EX);
+}
+
+// Se cURL falhou antes de receber HTTP (ex.: timeout, connection refused), garantir que system_error tenha a mensagem
+if (!$system_sent && $curl_error && strpos($system_error, 'cURL') === false) {
+    $system_error = 'cURL: ' . $curl_error . ($system_http_code ? ' | HTTP ' . $system_http_code : '');
 }
 
 // ============================================
@@ -793,15 +869,26 @@ $response = [
     'message' => 'Thank you! We\'ll contact you within 24 hours.',
     'email_sent' => $mail_sent,
     'system_sent' => $system_sent,
+    'system_url_configured' => $system_url_configured,
+    'system_database_saved' => $system_database_saved,
     'database_saved' => $db_saved,
     'csv_saved' => $csv_saved,
     'telegram_sent' => $telegram_sent,
     'lead_id' => $lead_id,
-    'timestamp' => date('Y-m-d H:i:s')
+    'timestamp' => date('Y-m-d H:i:s'),
+    'system_api_version' => ($system_api_version !== null && $system_api_version !== '') ? $system_api_version : 'not_returned',
+    'system_inserted_new' => $system_inserted_new
 ];
+if ($system_sent && ($system_database_saved === false || $system_database_saved === null)) {
+    $response['system_db_error'] = ($system_db_error !== null && $system_db_error !== '') ? $system_db_error : 'Painel não retornou o motivo. Atualize system.php em senior-floors.com e confira system-api.log no painel.';
+} elseif ($system_db_error !== null) {
+    $response['system_db_error'] = $system_db_error;
+}
+if (!$system_sent && $system_error !== '') {
+    $response['system_error'] = $system_error;
+}
 if (!$mail_sent && $email_error_reason !== '') {
     $response['email_error'] = $email_error_reason;
-    // Human-readable hints (safe to expose)
     $hints = [
         'smtp_not_configured' => 'Configure SMTP_PASS (Google App Password) in send-lead.php',
         'smtp_auth_failed' => 'SMTP auth failed: check SMTP_USER/SMTP_PASS and App Password',
@@ -809,6 +896,19 @@ if (!$mail_sent && $email_error_reason !== '') {
         'phpmailer_not_installed' => 'Install PHPMailer in the PHPMailer/ folder (see PHPMailer_SETUP.md)'
     ];
     $response['email_error_hint'] = isset($hints[$email_error_reason]) ? $hints[$email_error_reason] : 'Check send-lead.php and email-status.log';
+}
+if (!$system_sent) {
+    if (!$system_url_configured) {
+        $response['system_error_hint'] = 'SYSTEM_API_URL não está definida. No servidor: crie config/system-api-url.php (copie de config/system-api-url.php.example) e defina a URL completa, ex.: https://seudominio.com/system.php?api=receive-lead — ou edite send-lead.php e defina SYSTEM_API_URL.';
+    } else {
+        $response['system_error_hint'] = 'A URL do CRM está definida mas a chamada falhou. Veja "system_error" acima (ex.: timeout, 404). Confira se a URL abre no navegador e se system.php está no mesmo servidor ou acessível.';
+    }
+}
+if ($system_sent && ($system_database_saved === false || $system_database_saved === null)) {
+    $response['system_error_hint'] = 'O CRM recebeu o lead mas NÃO salvou no banco. Veja "system_db_error" acima. No painel (senior-floors.com): atualize system.php e confira config/database.php + tabela leads.';
+}
+if ($system_sent && $system_database_saved === true && $system_inserted_new === null) {
+    $response['system_inserted_new_hint'] = 'Painel ainda não retorna inserted_new. No servidor do painel (senior-floors.com), atualize o arquivo api/receive-lead-handler.php para ver true/false (nova linha vs duplicata).';
 }
 
 // Always return success to user (lead is saved in CSV and/or DB)

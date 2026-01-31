@@ -27,13 +27,19 @@
         if (errorEl) errorEl.style.display = 'none';
         var btn = form.querySelector('button[type="submit"]');
         if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
-        var formData = new FormData(form);
-        // URL do endpoint: configurável ou mesmo servidor (raiz). Garante lead no banco do CRM.
-        var base = window.location.origin;
+        // Igual ao teste Lead#10: application/x-www-form-urlencoded (evita preflight CORS e mesmo formato do curl)
+        var params = new URLSearchParams();
+        var inputs = form.querySelectorAll('input, textarea');
+        for (var i = 0; i < inputs.length; i++) {
+            var el = inputs[i];
+            if (el.name && el.name.length) params.append(el.name, el.value || '');
+        }
         var url = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
             ? window.SENIOR_FLOORS_FORM_URL
-            : (base + '/system.php?api=receive-lead');
-        fetch(url, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' }, mode: 'cors' })
+            : (window.location.hostname === 'lp.senior-floors.com'
+                ? 'https://senior-floors.com/send-lead.php'
+                : (new URL(form.getAttribute('action') || 'send-lead.php', window.location.href).href));
+        fetch(url, { method: 'POST', body: params.toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' } })
             .then(function(r) { return r.text().then(function(t) { return { status: r.status, text: t }; }); })
             .then(function(r) {
                 var data = null;
@@ -323,9 +329,12 @@
             const phone = (phoneInput ? phoneInput.value : '').trim();
             const zipcode = (zipcodeInput ? zipcodeInput.value : '').trim();
 
-            // Create FormData
-            const formData = new FormData(heroForm);
-            formData.append('form-name', 'hero-form');
+            // Igual ao teste Lead#10: application/x-www-form-urlencoded (mesmo formato do curl que salvou no banco)
+            const heroParams = new URLSearchParams();
+            heroForm.querySelectorAll('input, textarea').forEach(function(el) {
+                if (el.name) heroParams.append(el.name, el.value || '');
+            });
+            if (!heroParams.has('form-name')) heroParams.append('form-name', 'hero-form');
 
             // Validate
             let hasErrors = false;
@@ -385,11 +394,12 @@
             submitBtn.innerHTML = '<span class="loading"></span>Submitting...';
 
             try {
-                // Use fetch with better mobile support
+                // Use fetch - application/x-www-form-urlencoded (igual Lead#10)
                 const fetchOptions = {
                     method: 'POST',
-                    body: formData,
+                    body: heroParams.toString(),
                     headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
                         'Accept': 'application/json'
                     }
                 };
@@ -402,8 +412,12 @@
                     fetchOptions.signal = controller.signal;
                 }
 
-                // URL do handler: sempre na raiz do domínio para garantir que encontre send-lead.php
-                const formActionUrl = window.location.origin + '/send-lead.php';
+                // Igual ao teste Lead#10: POST para senior-floors.com/send-lead.php
+                const formActionUrl = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
+                    ? window.SENIOR_FLOORS_FORM_URL
+                    : (window.location.hostname === 'lp.senior-floors.com'
+                        ? 'https://senior-floors.com/send-lead.php'
+                        : (window.location.origin + '/send-lead.php'));
                 const response = await fetch(formActionUrl, fetchOptions);
                 
                 // Clear timeout if request succeeded
@@ -659,11 +673,12 @@
             submitBtn.innerHTML = '<span class="loading"></span>Submitting...';
 
             try {
-                // Use fetch with better mobile support
+                // Use fetch - application/x-www-form-urlencoded (igual Lead#10)
                 const fetchOptions = {
                     method: 'POST',
-                    body: formData,
+                    body: contactParams.toString(),
                     headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
                         'Accept': 'application/json'
                     }
                 };
@@ -676,8 +691,12 @@
                     fetchOptions.signal = controller.signal;
                 }
 
-                // URL do handler: sempre na raiz do domínio
-                const formActionUrlContact = window.location.origin + '/send-lead.php';
+                // Igual ao teste Lead#10: POST para senior-floors.com/send-lead.php
+                const formActionUrlContact = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
+                    ? window.SENIOR_FLOORS_FORM_URL
+                    : (window.location.hostname === 'lp.senior-floors.com'
+                        ? 'https://senior-floors.com/send-lead.php'
+                        : (window.location.origin + '/send-lead.php'));
                 const response = await fetch(formActionUrlContact, fetchOptions);
                 
                 // Clear timeout if request succeeded

@@ -4,6 +4,60 @@
  * Main entry point for all admin functions
  */
 
+// ========== API FIRST: run BEFORE session/includes so response is always pure JSON ==========
+if (isset($_GET['api']) && ($_GET['api'] === 'receive-lead' || $_GET['api'] === 'db-check')) {
+    $SYSTEM_ROOT = __DIR__;
+    if (!is_file(__DIR__ . '/config/database.php') && is_file(dirname(__DIR__) . '/config/database.php')) {
+        $SYSTEM_ROOT = dirname(__DIR__);
+    }
+    require_once $SYSTEM_ROOT . '/config/database.php';
+    if ($_GET['api'] === 'db-check') {
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Access-Control-Allow-Origin: *');
+        $out = [
+            'config_loaded' => true,
+            'database_configured' => isDatabaseConfigured(),
+            'connection_ok' => false,
+            'table_leads_exists' => false,
+            'hint' => '',
+            'api_version' => 'v2-early'
+        ];
+        if (!$out['database_configured']) {
+            $out['hint'] = 'Edite config/database.php no servidor e substitua DB_USER/DB_PASS (não use seu_usuario/sua_senha).';
+        } else {
+            try {
+                $pdo = getDBConnection();
+                $out['connection_ok'] = ($pdo !== null);
+                if ($pdo) {
+                    $t = $pdo->query("SHOW TABLES LIKE 'leads'");
+                    $out['table_leads_exists'] = $t && $t->rowCount() > 0;
+                    if (!$out['table_leads_exists']) {
+                        $out['hint'] = "Tabela 'leads' não existe. Execute no MySQL: database/schema-v3-completo.sql (ou schema.sql).";
+                    }
+                } else {
+                    $out['hint'] = 'Falha ao conectar ao MySQL. Verifique DB_HOST, DB_NAME, DB_USER e DB_PASS em config/database.php.';
+                }
+            } catch (Throwable $e) {
+                $out['connection_ok'] = false;
+                $out['hint'] = $e->getMessage();
+            }
+        }
+        echo json_encode($out);
+        exit;
+    }
+    if ($_GET['api'] === 'receive-lead') {
+        $api_handler = $SYSTEM_ROOT . '/api/receive-lead-handler.php';
+        if (is_file($api_handler)) {
+            require $api_handler;
+            exit;
+        }
+    }
+}
+
+// API responses must be pure JSON; capture any accidental output from session/includes
+if (isset($_GET['api']) && ($_GET['api'] === 'receive-lead' || $_GET['api'] === 'db-check')) {
+    ob_start();
+}
 session_start();
 
 // Raiz do projeto (funciona com system.php na raiz ou em subpasta como /lp/)
@@ -178,6 +232,43 @@ if (isset($_GET['logout'])) {
 }
 
 // ============================================
+// API ENDPOINT - DB check (diagnóstico: por que database_saved: false?)
+// ============================================
+if (isset($_GET['api']) && $_GET['api'] === 'db-check') {
+    header('Content-Type: application/json; charset=UTF-8');
+    header('Access-Control-Allow-Origin: *');
+    $out = [
+        'config_loaded' => true,
+        'database_configured' => isDatabaseConfigured(),
+        'connection_ok' => false,
+        'table_leads_exists' => false,
+        'hint' => ''
+    ];
+    if (!$out['database_configured']) {
+        $out['hint'] = 'Edite config/database.php no servidor e substitua DB_USER/DB_PASS (não use seu_usuario/sua_senha).';
+    } else {
+        try {
+            $pdo = getDBConnection();
+            $out['connection_ok'] = ($pdo !== null);
+            if ($pdo) {
+                $t = $pdo->query("SHOW TABLES LIKE 'leads'");
+                $out['table_leads_exists'] = $t && $t->rowCount() > 0;
+                if (!$out['table_leads_exists']) {
+                    $out['hint'] = "Tabela 'leads' não existe. Execute no MySQL: database/schema-v3-completo.sql (ou schema.sql).";
+                }
+            } else {
+                $out['hint'] = 'Falha ao conectar ao MySQL. Verifique DB_HOST, DB_NAME, DB_USER e DB_PASS em config/database.php.';
+            }
+        } catch (Throwable $e) {
+            $out['connection_ok'] = false;
+            $out['hint'] = $e->getMessage();
+        }
+    }
+    echo json_encode($out);
+    exit;
+}
+
+// ============================================
 // API ENDPOINT - Receive Form Submissions
 // ============================================
 if (isset($_GET['api']) && $_GET['api'] === 'receive-lead') {
@@ -195,13 +286,34 @@ if (isset($_GET['api']) && $_GET['api'] === 'receive-lead') {
     }
     header('Content-Type: application/json; charset=UTF-8');
     
-    // Get form data
+    // Get form data (POST form-urlencoded or JSON body — send-lead.php envia form-urlencoded)
     $form_name = isset($_POST['form-name']) ? trim($_POST['form-name']) : 'contact-form';
     $name = isset($_POST['name']) ? trim($_POST['name']) : '';
     $phone = isset($_POST['phone']) ? trim($_POST['phone']) : '';
     $email = isset($_POST['email']) ? trim($_POST['email']) : '';
     $zipcode = isset($_POST['zipcode']) ? trim($_POST['zipcode']) : '';
     $message = isset($_POST['message']) ? trim($_POST['message']) : '';
+    if (empty($name) && empty($email) && ($raw = @file_get_contents('php://input'))) {
+        $json = @json_decode($raw, true);
+        if (is_array($json)) {
+            $form_name = isset($json['form-name']) ? trim($json['form-name']) : $form_name;
+            $name = isset($json['name']) ? trim($json['name']) : '';
+            $phone = isset($json['phone']) ? trim($json['phone']) : '';
+            $email = isset($json['email']) ? trim($json['email']) : '';
+            $zipcode = isset($json['zipcode']) ? trim($json['zipcode']) : '';
+            $message = isset($json['message']) ? trim($json['message']) : $message;
+        } else {
+            parse_str($raw, $parsed);
+            if (!empty($parsed)) {
+                $form_name = isset($parsed['form-name']) ? trim($parsed['form-name']) : $form_name;
+                $name = isset($parsed['name']) ? trim($parsed['name']) : '';
+                $phone = isset($parsed['phone']) ? trim($parsed['phone']) : '';
+                $email = isset($parsed['email']) ? trim($parsed['email']) : '';
+                $zipcode = isset($parsed['zipcode']) ? trim($parsed['zipcode']) : '';
+                $message = isset($parsed['message']) ? trim($parsed['message']) : $message;
+            }
+        }
+    }
     
     // Validate
     $errors = [];
@@ -231,15 +343,25 @@ if (isset($_GET['api']) && $_GET['api'] === 'receive-lead') {
     $zipcode = htmlspecialchars($zipcode, ENT_QUOTES, 'UTF-8');
     $message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
     
+    $log_file = __DIR__ . '/system-api.log';
+    @file_put_contents($log_file, date('Y-m-d H:i:s') . " | receive-lead POST received | name=$name | email=" . substr($email, 0, 40) . "\n", FILE_APPEND | LOCK_EX);
+    
     // Save lead to database (same DB/table as CRM so it appears in the system)
     $lead_id = null;
     $db_saved = false;
-    if (isDatabaseConfigured()) {
+    $db_error_reason = null;
+    if (!isDatabaseConfigured()) {
+        $db_error_reason = 'Database not configured (config/database.php missing or placeholders not replaced)';
+    } else {
         try {
             $pdo = getDBConnection();
-            if ($pdo) {
+            if (!$pdo) {
+                $db_error_reason = 'Could not connect to database (getDBConnection returned null)';
+            } else {
                 $check_table = $pdo->query("SHOW TABLES LIKE 'leads'");
-                if ($check_table->rowCount() > 0) {
+                if ($check_table->rowCount() === 0) {
+                    $db_error_reason = "Table 'leads' does not exist. Run database/schema-v3-completo.sql (or schema.sql) in MySQL.";
+                } elseif ($check_table->rowCount() > 0) {
                     $source = ($form_name === 'hero-form') ? 'LP-Hero' : 'LP-Contact';
                     $ip_address = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : null;
                     $owner_id = null;
@@ -247,15 +369,20 @@ if (isset($_GET['api']) && $_GET['api'] === 'receive-lead') {
                     $existing_id = null;
                     $lead_logic = $SYSTEM_ROOT . '/config/lead-logic.php';
                     if (file_exists($lead_logic)) {
-                        require_once $lead_logic;
-                        $dup = checkDuplicateLead($pdo, $email, preg_replace('/\D/', '', $phone), null);
-                        if ($dup['is_duplicate']) {
-                            $is_dup = true;
-                            $existing_id = $dup['existing_id'];
-                            $lead_id = $existing_id;
-                            $db_saved = true;
-                        } else {
-                            $owner_id = getNextOwnerRoundRobin($pdo);
+                        try {
+                            require_once $lead_logic;
+                            $dup = checkDuplicateLead($pdo, $email, preg_replace('/\D/', '', $phone), null);
+                            if ($dup['is_duplicate']) {
+                                $is_dup = true;
+                                $existing_id = $dup['existing_id'];
+                                $lead_id = $existing_id;
+                                $db_saved = true;
+                            } else {
+                                $owner_id = getNextOwnerRoundRobin($pdo);
+                            }
+                        } catch (Throwable $e) {
+                            // lead-logic falhou (ex.: tabela users não existe) — segue sem owner_id
+                            @file_put_contents(__DIR__ . '/system-api.log', date('Y-m-d H:i:s') . " | ⚠️ lead-logic: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
                         }
                     }
                     if (!$is_dup) {
@@ -292,6 +419,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'receive-lead') {
                 }
             }
         } catch (Throwable $e) {
+            $db_error_reason = $e->getMessage();
             $log_file = __DIR__ . '/system-api.log';
             @file_put_contents($log_file, date('Y-m-d H:i:s') . " | ❌ API receive-lead DB error: " . $e->getMessage() . "\n", FILE_APPEND | LOCK_EX);
         }
@@ -334,14 +462,14 @@ if (isset($_GET['api']) && $_GET['api'] === 'receive-lead') {
             }
     }
     
-    http_response_code(200);
-    echo json_encode([
+    $resp = [
         'success' => true,
         'message' => 'Thank you! We\'ll contact you within 24 hours.',
         'timestamp' => date('Y-m-d H:i:s'),
         'lead_id' => $lead_id,
         'database_saved' => $db_saved,
         'email_sent' => $email_sent,
+        'api_version' => 'receive-lead-v2',
         'data' => [
             'form_type' => $form_name,
             'name' => $name,
@@ -349,7 +477,14 @@ if (isset($_GET['api']) && $_GET['api'] === 'receive-lead') {
             'phone' => $phone,
             'zipcode' => $zipcode
         ]
-    ]);
+    ];
+    if (!$db_saved) {
+        $resp['db_error'] = $db_error_reason ?: 'Unknown (check system-api.log on panel server)';
+    }
+    if (ob_get_level()) ob_end_clean();
+    header('Content-Type: application/json; charset=UTF-8');
+    http_response_code(200);
+    echo json_encode($resp);
     exit;
 }
 

@@ -1,12 +1,11 @@
 #!/bin/bash
 
-# Script de Deploy - CRM v3.0 Completo
-# Este script prepara e faz push das mudanças para GitHub
-# O GitHub Actions fará o deploy automático para Hostinger
+# Deploy completo pelo Git
+# Faz add, commit e push para main; o GitHub Actions (FTP) envia os arquivos para o Hostinger.
 
 set -e
 
-echo "🚀 Iniciando Deploy do CRM v3.0..."
+echo "🚀 Deploy completo pelo Git..."
 echo ""
 
 # Cores para output
@@ -16,15 +15,15 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 # Verificar se estamos no diretório correto
-if [ ! -f "system.php" ]; then
-    echo -e "${RED}❌ Erro: Execute este script a partir do diretório raiz do projeto${NC}"
+if [ ! -f "system.php" ] && [ ! -f "send-lead.php" ]; then
+    echo -e "${RED}❌ Erro: Execute este script a partir do diretório raiz do projeto (senior-floors-landing)${NC}"
     exit 1
 fi
 
 # Verificar se git está configurado
 if ! git remote -v | grep -q "origin"; then
     echo -e "${RED}❌ Erro: Git remote não configurado${NC}"
-    echo "Configure o remote com: git remote add origin <URL>"
+    echo "Configure o remote com: git remote add origin <URL_DO_REPOSITORIO>"
     exit 1
 fi
 
@@ -33,57 +32,46 @@ git status --short
 
 echo ""
 echo -e "${YELLOW}📦 Adicionando arquivos ao staging...${NC}"
-
-# Adicionar todos os arquivos novos e modificados
 git add .
+
+# Verificar se há algo para commitar
+if git diff --cached --quiet 2>/dev/null && git diff --quiet 2>/dev/null; then
+    echo -e "${YELLOW}Nenhuma alteração para commitar. (Já está tudo em dia ou nada foi adicionado.)${NC}"
+    echo "Para forçar um deploy, faça uma pequena alteração e rode o script de novo."
+    exit 0
+fi
 
 echo ""
 echo -e "${YELLOW}💾 Criando commit...${NC}"
+COMMIT_MSG="Deploy completo: LP, send-lead, CORS, form para banco
 
-# Criar commit com mensagem descritiva
-COMMIT_MSG="Deploy CRM v3.0: Customers, Projects, Coupons, Activities e Assignment
-
-- ✅ Módulo de Customers completo
-- ✅ Módulo de Projects com Pós-Atendimento
-- ✅ Módulo de Coupons
-- ✅ Sistema de Activities
-- ✅ Sistema de Assignment
-- ✅ 21 novos endpoints de API
-- ✅ 5 novos módulos admin
-- ✅ Migration v2→v3 do banco de dados"
+- LP (index.html, script.js) envia para senior-floors.com/send-lead.php
+- send-lead.php: CORS (OPTIONS), application/x-www-form-urlencoded
+- Form hero/contact salvando no banco (receive-lead)"
 
 git commit -m "$COMMIT_MSG"
 
 echo ""
-echo -e "${GREEN}✅ Commit criado com sucesso!${NC}"
-echo ""
-
-# Mostrar resumo do commit
-echo -e "${YELLOW}📊 Resumo do commit:${NC}"
-git log -1 --stat --oneline
+echo -e "${GREEN}✅ Commit criado.${NC}"
+echo -e "${YELLOW}📊 Resumo:${NC}"
+git log -1 --oneline
 
 echo ""
-echo -e "${YELLOW}🚀 Fazendo push para GitHub...${NC}"
-echo "Isso vai disparar o deploy automático via GitHub Actions"
+echo -e "${YELLOW}🚀 Fazendo push para origin main...${NC}"
+echo "Isso dispara o workflow 'Deploy to Hostinger' (FTP) no GitHub Actions."
 echo ""
 
-# Fazer push
 git push origin main
 
 echo ""
-echo -e "${GREEN}✅ Push realizado com sucesso!${NC}"
+echo -e "${GREEN}✅ Push concluído.${NC}"
+echo -e "${GREEN}🎉 Deploy iniciado no GitHub Actions.${NC}"
 echo ""
-echo -e "${GREEN}🎉 Deploy iniciado!${NC}"
+echo "Próximos passos:"
+echo "1. Abra o repositório no GitHub → aba Actions"
+echo "2. Confira o workflow 'Deploy to Hostinger' (deve estar rodando ou já verde)"
+echo "3. Aguarde o fim do deploy (alguns minutos)"
+echo "4. Teste o site e o formulário (LP → senior-floors.com/send-lead.php → banco)"
 echo ""
-echo "📝 Próximos passos:"
-echo "1. Acesse: https://github.com/nakazone/senior-floors-system/actions"
-echo "2. Verifique o workflow 'Deploy to Hostinger (SSH) - Fixed'"
-echo "3. Aguarde a conclusão do deploy (geralmente 2-5 minutos)"
-echo "4. Execute a migration do banco: database/migration-v2-to-v3.sql"
-echo "5. Teste os novos módulos no sistema admin"
-echo ""
-echo -e "${YELLOW}⚠️  IMPORTANTE:${NC}"
-echo "- Execute a migration do banco de dados após o deploy"
-echo "- Verifique se config/database.php está configurado no servidor"
-echo "- Teste os módulos: customers, projects, coupons"
+echo -e "${YELLOW}Se o deploy falhar:${NC} confira os secrets HOSTINGER_FTP_HOST, HOSTINGER_FTP_USER, HOSTINGER_FTP_PASSWORD em Settings → Secrets and variables → Actions."
 echo ""

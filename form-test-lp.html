@@ -66,11 +66,17 @@
 
     <script>
         (function() {
+            // send-lead.php está em senior-floors.com; LP pode estar em lp.senior-floors.com
+            var sendLeadUrl = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
+                ? window.SENIOR_FLOORS_FORM_URL
+                : 'https://senior-floors.com/send-lead.php';
             var baseUrl = window.location.origin + window.location.pathname.replace(/\/?[^\/]*$/, '');
             if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
-            var sendLeadUrl = baseUrl + '/send-lead.php';
-            if (window.location.pathname.indexOf('/') > -1 && !window.location.pathname.endsWith('.html')) {
-                sendLeadUrl = window.location.origin + '/send-lead.php';
+            if (!sendLeadUrl || sendLeadUrl === 'https://senior-floors.com/send-lead.php') {
+                // fallback: se estiver no mesmo domínio do send-lead, usar raiz do domínio
+                if (window.location.hostname === 'senior-floors.com') {
+                    sendLeadUrl = window.location.origin + '/send-lead.php';
+                }
             }
 
             document.getElementById('btnCheck').onclick = function() {
@@ -129,6 +135,28 @@
                             html += '<div class="step"><strong>Motivo:</strong> <span class="warn">' + (data.email_error || '') + '</span> — ' + data.email_error_hint + '</div>';
                         }
                         html += '<div class="step">database_saved: ' + (data.database_saved ? '<span class="ok">true</span>' : '<span class="warn">false</span>') + '</div>';
+                        html += '<div class="step">system_url_configured: ' + (data.system_url_configured ? '<span class="ok">true</span>' : '<span class="fail">false</span>') + ' — ' + (data.system_url_configured ? 'SYSTEM_API_URL definida no servidor.' : 'SYSTEM_API_URL não definida (send-lead usa URL auto-detectada).') + '</div>';
+                        html += '<div class="step">system_sent: ' + (data.system_sent ? '<span class="ok">true</span>' : '<span class="fail">false</span>') + ' — ' + (data.system_sent ? 'Lead repassado ao CRM.' : 'Lead não chegou no CRM.') + '</div>';
+                        if (data.system_api_version !== undefined) {
+                            html += '<div class="step">system_api_version: <code>' + (data.system_api_version || 'not_returned') + '</code> — ' + (data.system_api_version && data.system_api_version !== 'not_returned' ? 'Painel retornou esta versão da API.' : 'Painel não retornou api_version; atualize system.php e api/receive-lead-handler.php no servidor.') + '</div>';
+                        }
+                        if (data.system_inserted_new !== undefined && data.system_inserted_new !== null) {
+                            html += '<div class="step">system_inserted_new: <code>' + data.system_inserted_new + '</code> — ' + (data.system_inserted_new === true ? 'Nova linha inserida no banco.' : data.system_inserted_new === false ? 'Duplicata (mesmo e-mail/telefone); retornou id do lead existente, não inseriu nova linha.' : '—') + '</div>';
+                        }
+                        if (data.system_error) {
+                            html += '<div class="step"><strong>system_error:</strong> <span class="warn">' + data.system_error + '</span></div>';
+                        }
+                        if (data.system_database_saved === false) {
+                            html += '<div class="step">system_database_saved: <span class="fail">false</span> — O CRM recebeu mas NÃO salvou no banco.</div>';
+                        } else if (data.system_database_saved === true) {
+                            html += '<div class="step">system_database_saved: <span class="ok">true</span> — Lead salvo no banco do CRM.</div>';
+                        }
+                        if ((!data.system_sent || data.system_database_saved === false) && data.system_error_hint) {
+                            html += '<div class="step"><strong>O que fazer:</strong> <span class="warn">' + data.system_error_hint + '</span></div>';
+                        }
+                        if (data.system_db_error) {
+                            html += '<div class="step"><strong>Detalhe do system (banco):</strong> <span class="warn">' + data.system_db_error + '</span></div>';
+                        }
                         html += '<div class="step">csv_saved: ' + (data.csv_saved ? '<span class="ok">true</span>' : 'false') + '</div>';
                     } else {
                         html += '<div class="step"><span class="fail">success: false</span> — ' + (data.message || 'Erro no servidor') + '</div>';
