@@ -1,7 +1,0 @@
-<?php
-/**
- * URL do system (CRM) para o send-lead repassar os leads.
- * LP = lp.senior-floors.com | Painel = senior-floors.com/system.php
- * Copie este arquivo para system-api-url.php (no servidor da LP).
- */
-define('SYSTEM_API_URL', 'https://senior-floors.com/system.php?api=receive-lead');

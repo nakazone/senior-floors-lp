@@ -1,67 +1,31 @@
-# Senior Floors - Git Ignore
+# Senior Floors LP - Git Ignore
 
-# Sensitive files
-config/database.php
-config/smtp.php
-admin-config.php
-*.log
-leads.csv
-form-submissions.log
-email-status.log
-system-integration.log
-system-api.log
-api-leads.log
-smtp-debug.log
-
-# Environment files
+# Environment
 .env
 .env.local
 .env.*.local
 
-# Credentials
-*credentials*
-*password*
-*secret*
+# Logs and data
+*.log
+leads.csv
+form-submissions.log
 
-# PHPMailer (if manually installed)
-PHPMailer/
-
-# OS files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-*.swp
-*.swo
-*~
-
-# IDE files
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
-
-# Temporary files
-*.tmp
-*.temp
-*.bak
-*.backup
-
-# Test files (optional - remove if you want to track them)
-test-*.html
-test-*.php
-debug-*.html
-
-# Documentation (optional - keep if you want)
-# *.md
-
-# Node modules (if any)
+# Node
 node_modules/
+server/node_modules/
 package-lock.json
 
-# Build files
+# OS
+.DS_Store
+*.swp
+*~
+
+# IDE
+.vscode/
+.idea/
+
+# Build
 dist/
 build/
+*.tmp
+*.bak

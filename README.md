@@ -1,98 +1,38 @@
-# 🏠 Senior Floors - Sistema de Gestão de Leads
+# Senior Floors – Landing Page (Node.js)
 
-Sistema completo de gestão de leads para Senior Floors, empresa de flooring nos EUA.
+Landing Page da Senior Floors para Vercel. Contém apenas os arquivos necessários para a LP: HTML, CSS, JS, assets e backend Node.js (formulários em serverless).
 
-## 🚀 Features
+O **Sistema** (CRM, painel admin) é hospedado separadamente (ex.: Railway).
 
-- ✅ Landing Page otimizada para conversão
-- ✅ Sistema de captura de leads (formulários)
-- ✅ Painel administrativo completo
-- ✅ CRM integrado
-- ✅ Banco de dados MySQL
-- ✅ Deploy automático via GitHub Actions
-- ✅ LP hospedável no **Netlify** (backend no Hostinger) — ver [NETLIFY.md](NETLIFY.md)
-- ✅ LP em **Node.js** na **Vercel** (serverless: `/api/send-lead`, `/api/receive-lead`) — ver [VERCEL.md](VERCEL.md)
+## Conteúdo
 
-## 📁 Estrutura do Projeto
+- **LP:** `index.html`, `script.js`, `styles.css`, `assets/`
+- **Backend Node (Vercel serverless):** `api/send-lead.js`, `api/receive-lead.js`, `api/db-check.js`
+- **Lógica partilhada:** `server/` (config, routes, lib)
+- **Config:** `package.json`, `vercel.json`
 
-```
-public_html/
-├── api/                    # API endpoints
-│   └── leads/
-├── admin-modules/          # Módulos do painel admin
-├── config/                  # Configurações
-├── database/               # Scripts SQL
-├── lp/                     # Landing page files
-├── assets/                 # Imagens e recursos
-├── system.php             # Painel administrativo
-└── index.html             # Landing page principal
-```
+## Deploy na Vercel
 
-## 🛠️ Tecnologias
+1. Conecte o repositório no [Vercel](https://vercel.com) (Import Git Repository).
+2. Framework: **Other**. Build e Output podem ficar em branco; Install: `npm install`.
+3. (Opcional) Variáveis de ambiente: `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS` para MySQL; `SMTP_*` para e-mail; `SYSTEM_API_URL` para reenviar leads ao Sistema (ex.: Railway).
+4. Deploy. A LP fica em `https://seu-projeto.vercel.app/` e o formulário envia para `/api/send-lead`.
 
-- **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
-- **Backend**: PHP 7.4+ **ou Node.js 18+** (ver pasta `server/`)
-- **Database**: MySQL 5.7+
-- **Email**: PHPMailer (PHP) ou Nodemailer (Node)
-- **Deploy**: GitHub Actions → Hostinger
+Ver **[VERCEL.md](VERCEL.md)** para detalhes.
 
-### Backend em Node.js (opcional)
-
-O projeto inclui uma versão do backend em **Node.js** na pasta `server/`, que substitui o fluxo PHP de recebimento de leads (`send-lead.php`, `system.php?api=receive-lead`). Use o mesmo banco MySQL. Instruções: **[server/README.md](server/README.md)**.
-
-## 📋 Requisitos
-
-- PHP 7.4 ou superior
-- MySQL 5.7 ou superior
-- Servidor web (Apache/Nginx)
-- Acesso FTP ou SSH ao Hostinger
-
-## 🔧 Instalação
-
-### 1. Clone o Repositório
+## Desenvolvimento local
 
 ```bash
-git clone https://github.com/USERNAME/senior-floors-system.git
-cd senior-floors-system
+npm install
+npm start
 ```
 
-### 2. Configure o Banco de Dados
+Abre em `http://localhost:3000` (servidor Node em `server/`).
 
-1. Crie um banco MySQL no Hostinger
-2. Execute `database/schema.sql` no phpMyAdmin
-3. Configure `config/database.php` com suas credenciais
+## Integração com o Sistema (Railway)
 
-### 3. Configure Email (Opcional)
-
-1. Configure PHPMailer em `send-lead.php`
-2. Adicione Google App Password
-
-### 4. Configure Deploy Automático
-
-Veja `DEPLOYMENT.md` para instruções completas.
-
-## 📚 Documentação
-
-- `FASE1_MODULO01_SETUP.md` - Setup do banco de dados
-- `DEPLOYMENT.md` - Deploy automático
-- `SYSTEM_INTEGRATION_SETUP.md` - Integração de sistemas
-
-## 🔐 Segurança
-
-- ✅ Senhas e credenciais em arquivos separados (não commitados)
-- ✅ Validação e sanitização de dados
-- ✅ Prepared statements (SQL injection protection)
-- ✅ HTTPS obrigatório em produção
-
-## 📝 Licença
-
-Proprietário - Senior Floors
-
-## 👥 Contribuição
-
-Sistema interno - não open source.
+Se o CRM/Sistema estiver no Railway, defina na Vercel a variável **`SYSTEM_API_URL`** com a URL do backend (ex.: `https://seu-app.railway.app`). O `send-lead` pode reenviar o lead para `SYSTEM_API_URL/api/receive-lead` quando não houver MySQL configurado na Vercel.
 
 ---
 
-**Desenvolvido para Senior Floors** 🏠
-# Deploy Test - Wed Jan 21 22:32:29 MST 2026
+Senior Floors – Denver Hardwood Flooring

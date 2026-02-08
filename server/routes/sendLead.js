@@ -2,7 +2,6 @@
  * POST /send-lead — same as send-lead.php: validate, CSV, optional email, then save to DB (via receive-lead or direct)
  */
 import { getDBConnection, isDatabaseConfigured } from '../config/db.js';
-import { handleReceiveLead } from './receiveLead.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';

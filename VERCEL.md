@@ -28,7 +28,7 @@ A LP pode ser hospedada na **Vercel** com o backend em **Node.js** (serverless).
    - Em **Settings → Environment Variables** adicione, se quiser MySQL e e-mail:
      - `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS` — para gravar leads no banco.
      - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_EMAIL`, `SMTP_TO_EMAIL` — para envio de e-mail.
-   - Se não definir DB, os leads só serão gravados em CSV em `/tmp` (efémero) ou pode usar `SYSTEM_API_URL` para reenviar para outro backend.
+   - Se não definir DB, os leads só serão gravados em CSV em `/tmp` (efémero) ou pode usar **`SYSTEM_API_URL`** para reenviar para o **Sistema no Railway** (ex.: `https://seu-app.railway.app`).
 
 4. **Deploy**
    - Clique em Deploy. A Vercel faz `npm install` e publica os ficheiros e as funções em `api/*.js`.
