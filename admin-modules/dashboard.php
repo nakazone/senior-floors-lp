@@ -256,9 +256,23 @@ $chart_days_data = json_encode(array_values($leads_by_day));
     </div>
     <?php endif; ?>
 
+    <?php if (!empty($followup_today_leads)): ?>
+    <div class="dash-chart-card" style="margin-bottom: 24px; border-left: 4px solid #059669;">
+        <div class="dash-chart-title">&#128197; Follow-up hoje</div>
+        <ul style="list-style: none; padding: 0; margin: 0; font-size: 13px;">
+            <?php foreach (array_slice($followup_today_leads, 0, 5) as $fl): ?>
+            <li style="padding: 8px 0; border-bottom: 1px solid #f1f5f9;">
+                <a href="?module=lead-detail&id=<?php echo (int)$fl['id']; ?>" style="color: #1a2036; text-decoration: none; font-weight: 500;"><?php echo htmlspecialchars($fl['name'] ?? 'N/A'); ?></a>
+                <span style="color: #64748b;"> — <?php echo !empty($fl['next_follow_up_at']) ? date('d/m H:i', strtotime($fl['next_follow_up_at'])) : ''; ?></span>
+            </li>
+            <?php endforeach; ?>
+        </ul>
+        <p style="margin: 12px 0 0; font-size: 12px;"><a href="?module=crm&filter_followup=today" style="color: #059669;">Ver follow-ups no CRM →</a></p>
+    </div>
+    <?php endif; ?>
     <?php if (!empty($followup_leads)): ?>
     <div class="dash-chart-card" style="margin-bottom: 24px;">
-        <div class="dash-chart-title">&#9888; Follow-up (leads em aberto – contatar)</div>
+        <div class="dash-chart-title">&#9888; Leads em aberto (contatar)</div>
         <ul style="list-style: none; padding: 0; margin: 0; font-size: 13px;">
             <?php foreach (array_slice($followup_leads, 0, 5) as $fl): ?>
             <li style="padding: 8px 0; border-bottom: 1px solid #f1f5f9;">

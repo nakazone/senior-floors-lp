@@ -1,8 +1,12 @@
 # Netlify deployment configuration
+# LP (Landing Page) é hospedada no Netlify; formulários enviam para o backend no Hostinger.
+# Ver NETLIFY.md para detalhes.
+
 [build]
   publish = "."
-  command = "echo 'No build step needed for static site'"
+  command = "echo 'Static site - no build step'"
 
+# SPA-style: rotas não encontradas servem index.html (útil para âncoras e links diretos)
 [[redirects]]
   from = "/*"
   to = "/index.html"
@@ -11,9 +15,7 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# Form Configuration
-# To configure email notifications for forms:
-# 1. Go to Netlify Dashboard > Site Settings > Forms
-# 2. Under "Form notifications", add email notification
-# 3. Set recipient email to: leads@senior-floors.com
-# 4. Both forms (hero-form and contact-form) will send to this address
+# Opcional: variáveis no Netlify (Site settings > Environment variables)
+# Não alteram index.html automaticamente; use para build customizado ou documentação.
+# BACKEND_URL = "https://senior-floors.com"
+# Se o backend estiver em /newSFSystemJS: BACKEND_URL = "https://senior-floors.com/newSFSystemJS"

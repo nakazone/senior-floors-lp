@@ -9,7 +9,11 @@
     // Função global chamada pelo onsubmit da LP (igual ao form-test-lp que funciona)
     window.submitLPForm = function(e) {
         if (e) e.preventDefault();
-        var form = e && e.target ? e.target : document.getElementById('heroForm') || document.getElementById('contactForm');
+        var form = null;
+        if (e && e.target) {
+            form = (e.target.tagName === 'FORM') ? e.target : (e.target.form || null);
+        }
+        if (!form) form = document.getElementById('heroForm') || document.getElementById('contactForm');
         if (!form || form.tagName !== 'FORM') return;
         var formId = form.id;
         var isHero = formId === 'heroForm';
@@ -19,14 +23,14 @@
         var emailVal = (form.querySelector('[name="email"]') || {}).value || '';
         var phoneVal = (form.querySelector('[name="phone"]') || {}).value || '';
         var zipVal = (form.querySelector('[name="zipcode"]') || {}).value || '';
-        if (!nameVal || nameVal.trim().length < 2) { if (errorEl) { errorEl.textContent = 'Nome é obrigatório.'; errorEl.style.display = 'block'; } return; }
-        if (!/^[^@]+@[^@]+\.[^@]+$/.test((emailVal || '').trim())) { if (errorEl) { errorEl.textContent = 'E-mail válido é obrigatório.'; errorEl.style.display = 'block'; } return; }
-        if (!phoneVal || phoneVal.replace(/\D/g, '').length < 10) { if (errorEl) { errorEl.textContent = 'Telefone é obrigatório.'; errorEl.style.display = 'block'; } return; }
+        if (!nameVal || nameVal.trim().length < 2) { if (errorEl) { errorEl.textContent = 'Name is required.'; errorEl.style.display = 'block'; } return; }
+        if (!/^[^@]+@[^@]+\.[^@]+$/.test((emailVal || '').trim())) { if (errorEl) { errorEl.textContent = 'Valid email is required.'; errorEl.style.display = 'block'; } return; }
+        if (!phoneVal || phoneVal.replace(/\D/g, '').length < 10) { if (errorEl) { errorEl.textContent = 'Phone number is required.'; errorEl.style.display = 'block'; } return; }
         var zipClean = (zipVal || '').replace(/\D/g, '');
-        if (!zipClean || zipClean.length < 5) { if (errorEl) { errorEl.textContent = 'CEP válido é obrigatório.'; errorEl.style.display = 'block'; } return; }
+        if (!zipClean || zipClean.length < 5) { if (errorEl) { errorEl.textContent = 'Valid 5-digit zip code is required.'; errorEl.style.display = 'block'; } return; }
         if (errorEl) errorEl.style.display = 'none';
         var btn = form.querySelector('button[type="submit"]');
-        if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+        if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
         // Igual ao curl que salvou no banco (teste.curl@exemplo.com): mesmo URL, mesmo body (6 campos)
         var formNameVal = (form.querySelector('[name="form-name"]') || {}).value || form.getAttribute('name') || 'contact-form';
         var body = 'form-name=' + encodeURIComponent(formNameVal) +
@@ -44,7 +48,7 @@
             .then(function(r) { return r.text().then(function(t) { return { status: r.status, text: t }; }); })
             .then(function(r) {
                 var data = null;
-                try { data = JSON.parse(r.text); } catch (err) { data = { success: false, message: r.text || 'Resposta inválida' }; }
+                try { data = JSON.parse(r.text); } catch (err) { data = { success: false, message: r.text || 'Invalid response' }; }
                 if (btn) { btn.disabled = false; btn.textContent = isHero ? 'Get My Free Estimate' : 'Request My Free Estimate Now'; }
                 if (data.success && successEl) {
                     successEl.style.display = 'block';
@@ -52,6 +56,10 @@
                     successEl.classList.add('show');
                     form.reset();
                     form.style.display = 'none';
+                    // Fallback: se send-lead não salvou no banco, reenviar direto para receive-lead (mesmo caminho do teste curl que funciona)
+                    if (data.success && data.system_database_saved === false && typeof window.SENIOR_FLOORS_RECEIVE_LEAD_URL === 'string' && window.SENIOR_FLOORS_RECEIVE_LEAD_URL) {
+                        fetch(window.SENIOR_FLOORS_RECEIVE_LEAD_URL, { method: 'POST', body: body, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' } }).catch(function() {});
+                    }
                 } else if (errorEl) {
                     errorEl.textContent = data.message || 'Erro ao enviar. Tente novamente.';
                     errorEl.style.display = 'block';
@@ -59,7 +67,7 @@
             })
             .catch(function(err) {
                 if (btn) { btn.disabled = false; btn.textContent = isHero ? 'Get My Free Estimate' : 'Request My Free Estimate Now'; }
-                if (errorEl) { errorEl.textContent = err.message || 'Erro de conexão. Tente novamente.'; errorEl.style.display = 'block'; }
+                if (errorEl) { errorEl.textContent = err.message || 'Connection error. Please try again.'; errorEl.style.display = 'block'; }
             });
     };
 
@@ -297,14 +305,16 @@
             });
         });
 
-        // Handle form submission — delega para submitLPForm (mesma lógica do curl que salvou no banco)
+        // Handle form submission — idêntico ao Contact: sempre delega para submitLPForm com o form correto
         const handleFormSubmit = async (e) => {
             if (e) {
                 e.preventDefault();
                 e.stopPropagation();
             }
             if (typeof window.submitLPForm === 'function') {
-                window.submitLPForm(e || { target: heroForm, preventDefault: function() {} });
+                var formEl = (e && e.target && e.target.tagName === 'FORM') ? e.target : (submitBtn && submitBtn.form) || heroForm;
+                if (!formEl || formEl.tagName !== 'FORM') return;
+                window.submitLPForm({ target: formEl, preventDefault: function() {} });
                 return;
             }
             // Fallback se submitLPForm não existir
@@ -345,9 +355,9 @@
                 hasErrors = true;
             }
 
-            // Zipcode validation - more flexible for mobile
-            const zipcodeClean = zipcode.replace(/\D/g, ''); // Remove all non-digits
-            if (!zipcodeClean || zipcodeClean.length < 5 || zipcodeClean.length > 9) {
+            // Zipcode validation - US 5-digit only
+            const zipcodeClean = zipcode.replace(/\D/g, '');
+            if (!zipcodeClean || zipcodeClean.length !== 5) {
                 if (zipcodeInput) zipcodeInput.classList.add('error');
                 const errorDiv = document.getElementById('hero-zipcodeError');
                 if (errorDiv) errorDiv.classList.add('show');
@@ -435,7 +445,10 @@
                     }
                     heroForm.reset();
                     heroForm.style.display = 'none';
-                    
+                    // Fallback: se send-lead não salvou no banco, reenviar direto para receive-lead (mesmo caminho do teste curl)
+                    if (data.system_database_saved === false && typeof window.SENIOR_FLOORS_RECEIVE_LEAD_URL === 'string' && window.SENIOR_FLOORS_RECEIVE_LEAD_URL) {
+                        fetch(window.SENIOR_FLOORS_RECEIVE_LEAD_URL, { method: 'POST', body: heroParams.toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' } }).catch(function() {});
+                    }
                     // Scroll to show success message - better mobile handling
                     if (/Mobile|Android|iPhone|iPad/.test(navigator.userAgent)) {
                         // On mobile, scroll to success message after a delay to let keyboard close
@@ -447,7 +460,6 @@
                     } else {
                         heroForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
-                    
                     // Track conversion
                     if (typeof gtag !== 'undefined') {
                         gtag('event', 'form_submission', {
@@ -528,7 +540,7 @@
     }
 
     // ============================================
-    // Contact Form Handling (Using same code as test-form.html)
+    // Contact Form Handling — mesmo fluxo do Hero Form
     // ============================================
     const contactForm = document.getElementById('contactForm');
     const contactSuccessMessage = document.getElementById('contactSuccessMessage');
@@ -537,17 +549,35 @@
     if (contactForm) {
         const submitBtn = contactForm.querySelector('button[type="submit"]');
         
-        // Hide messages initially
-        if (contactSuccessMessage) contactSuccessMessage.classList.remove('show');
-        if (contactErrorMessage) contactErrorMessage.classList.remove('show');
+        // Hide messages initially (igual ao Hero)
+        if (contactSuccessMessage) {
+            contactSuccessMessage.classList.remove('show');
+            contactSuccessMessage.style.display = 'none';
+        }
+        if (contactErrorMessage) {
+            contactErrorMessage.classList.remove('show');
+            contactErrorMessage.style.display = 'none';
+        }
         
-        // Hide all error messages on page load
+        // Hide all error messages on page load (igual ao Hero)
         const contactErrorMessages = contactForm.querySelectorAll('.error-message');
         contactErrorMessages.forEach(errorMsg => {
             errorMsg.classList.remove('show');
+            errorMsg.style.display = 'none';
+            errorMsg.style.visibility = 'hidden';
+            errorMsg.style.opacity = '0';
+        });
+        ['nameError', 'phoneError', 'emailError', 'zipcodeError'].forEach(function(id) {
+            var errorDiv = document.getElementById(id);
+            if (errorDiv) {
+                errorDiv.classList.remove('show');
+                errorDiv.style.display = 'none';
+                errorDiv.style.visibility = 'hidden';
+                errorDiv.style.opacity = '0';
+            }
         });
         
-        // Remove error styling on input
+        // Remove error styling on input (igual ao Hero)
         const inputs = contactForm.querySelectorAll('input, textarea');
         inputs.forEach(input => {
             input.addEventListener('input', () => {
@@ -558,16 +588,25 @@
                 }
             });
         });
+        // Zip code: aceitar apenas 5 dígitos (EUA)
+        const contactZipInput = document.getElementById('zipcode');
+        if (contactZipInput) {
+            contactZipInput.addEventListener('input', function() {
+                var v = this.value.replace(/\D/g, '').slice(0, 5);
+                if (this.value !== v) this.value = v;
+            });
+        }
 
-        // Handle contact form submission - support both click and touch events
+        // Handle contact form submission — idêntico ao Hero: sempre delega para submitLPForm com o form correto
         const handleContactFormSubmit = async (e) => {
             if (e) {
                 e.preventDefault();
                 e.stopPropagation();
             }
-            // Mesma lógica do curl: delega para submitLPForm (mesmo URL e body)
             if (typeof window.submitLPForm === 'function') {
-                window.submitLPForm(e || { target: contactForm, preventDefault: function() {} });
+                var formEl = (e && e.target && e.target.tagName === 'FORM') ? e.target : (submitBtn && submitBtn.form) || contactForm;
+                if (!formEl || formEl.tagName !== 'FORM') return;
+                window.submitLPForm({ target: formEl, preventDefault: function() {} });
                 return;
             }
             const nameInput = document.getElementById('name');
@@ -612,9 +651,9 @@
                 hasErrors = true;
             }
 
-            // Zipcode validation - more flexible for mobile
-            const zipcodeClean = zipcode.replace(/\D/g, ''); // Remove all non-digits
-            if (!zipcodeClean || zipcodeClean.length < 5 || zipcodeClean.length > 9) {
+            // Zipcode validation - US 5-digit only
+            const zipcodeClean = zipcode.replace(/\D/g, '');
+            if (!zipcodeClean || zipcodeClean.length !== 5) {
                 if (zipcodeInput) zipcodeInput.classList.add('error');
                 const errorDiv = document.getElementById('zipcodeError');
                 if (errorDiv) errorDiv.classList.add('show');
@@ -702,7 +741,10 @@
                     }
                     contactForm.reset();
                     contactForm.style.display = 'none';
-                    
+                    // Fallback: se send-lead não salvou no banco, reenviar direto para receive-lead (mesmo caminho do teste curl)
+                    if (data.system_database_saved === false && typeof window.SENIOR_FLOORS_RECEIVE_LEAD_URL === 'string' && window.SENIOR_FLOORS_RECEIVE_LEAD_URL) {
+                        fetch(window.SENIOR_FLOORS_RECEIVE_LEAD_URL, { method: 'POST', body: contactParams.toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' } }).catch(function() {});
+                    }
                     // Scroll to show success message - better mobile handling
                     if (/Mobile|Android|iPhone|iPad/.test(navigator.userAgent)) {
                         // On mobile, scroll to success message after a delay to let keyboard close
@@ -818,9 +860,10 @@
             isValid = false;
         }
 
-        // Validate zipcode
-        const zipcodeRegex = /^\d{5}(-\d{4})?$/;
-        if (!data.zipcode || !zipcodeRegex.test(data.zipcode)) {
+        // Validate zipcode (US 5-digit only)
+        const zipcodeRegex = /^\d{5}$/;
+        const zipDigits = String(data.zipcode || '').replace(/\D/g, '');
+        if (!zipDigits || !zipcodeRegex.test(zipDigits)) {
             // Try to find the zipcode field (could be hero-zipcode or zipcode)
             const zipcodeField = document.getElementById('hero-zipcode') || document.getElementById('zipcode');
             if (zipcodeField) {
@@ -854,8 +897,8 @@
                 errorMessage = 'Please enter a valid phone number';
             }
         } else if (field.name === 'zipcode' && value) {
-            const zipcodeRegex = /^\d{5}(-\d{4})?$/;
-            if (!zipcodeRegex.test(value)) {
+            const zipcodeRegex = /^\d{5}$/;
+            if (!zipcodeRegex.test(String(value).replace(/\D/g, ''))) {
                 isValid = false;
                 errorMessage = 'Please enter a valid zip code (5 digits)';
             }

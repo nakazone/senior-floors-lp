@@ -23,6 +23,19 @@ try {
     if (!empty($_GET['customer_id'])) { $sql .= " AND q.customer_id = :customer_id"; $params[':customer_id'] = (int)$_GET['customer_id']; }
     if (!empty($_GET['project_id'])) { $sql .= " AND q.project_id = :project_id"; $params[':project_id'] = (int)$_GET['project_id']; }
     if (!empty($_GET['status'])) { $sql .= " AND q.status = :status"; $params[':status'] = $_GET['status']; }
+    if (!empty($_GET['search'])) {
+        $search = '%' . trim($_GET['search']) . '%';
+        if ($pdo->query("SHOW COLUMNS FROM quotes LIKE 'quote_number'")->rowCount() > 0) {
+            $sql .= " AND (q.quote_number LIKE :search OR l.name LIKE :search2)";
+            $params[':search'] = $search;
+            $params[':search2'] = $search;
+        } else {
+            $sql .= " AND l.name LIKE :search";
+            $params[':search'] = $search;
+        }
+    }
+    if (!empty($_GET['date_from'])) { $sql .= " AND q.created_at >= :date_from"; $params[':date_from'] = $_GET['date_from'] . ' 00:00:00'; }
+    if (!empty($_GET['date_to'])) { $sql .= " AND q.created_at <= :date_to"; $params[':date_to'] = $_GET['date_to'] . ' 23:59:59'; }
     $sql .= " ORDER BY q.created_at DESC";
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);

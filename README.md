@@ -10,6 +10,8 @@ Sistema completo de gestão de leads para Senior Floors, empresa de flooring nos
 - ✅ CRM integrado
 - ✅ Banco de dados MySQL
 - ✅ Deploy automático via GitHub Actions
+- ✅ LP hospedável no **Netlify** (backend no Hostinger) — ver [NETLIFY.md](NETLIFY.md)
+- ✅ LP em **Node.js** na **Vercel** (serverless: `/api/send-lead`, `/api/receive-lead`) — ver [VERCEL.md](VERCEL.md)
 
 ## 📁 Estrutura do Projeto
 
@@ -29,10 +31,14 @@ public_html/
 ## 🛠️ Tecnologias
 
 - **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
-- **Backend**: PHP 7.4+
+- **Backend**: PHP 7.4+ **ou Node.js 18+** (ver pasta `server/`)
 - **Database**: MySQL 5.7+
-- **Email**: PHPMailer
+- **Email**: PHPMailer (PHP) ou Nodemailer (Node)
 - **Deploy**: GitHub Actions → Hostinger
+
+### Backend em Node.js (opcional)
+
+O projeto inclui uma versão do backend em **Node.js** na pasta `server/`, que substitui o fluxo PHP de recebimento de leads (`send-lead.php`, `system.php?api=receive-lead`). Use o mesmo banco MySQL. Instruções: **[server/README.md](server/README.md)**.
 
 ## 📋 Requisitos
 

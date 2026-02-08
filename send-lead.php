@@ -103,8 +103,9 @@ if (empty($phone)) {
 if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     $errors[] = 'Valid email address is required';
 }
-if (empty($zipcode) || !preg_match('/^\d{5}(-\d{4})?$/', $zipcode)) {
-    $errors[] = 'Valid zip code is required';
+$zip_digits = preg_replace('/\D/', '', $zipcode ?? '');
+if (empty($zip_digits) || strlen($zip_digits) < 5) {
+    $errors[] = 'Valid 5-digit US zip code is required';
 }
 
 if (!empty($errors)) {
@@ -114,11 +115,11 @@ if (!empty($errors)) {
     exit;
 }
 
-// Sanitize inputs
+// Sanitize inputs (zipcode: only 5 digits, US format)
 $name = htmlspecialchars($name ?? '', ENT_QUOTES, 'UTF-8');
 $phone = htmlspecialchars($phone ?? '', ENT_QUOTES, 'UTF-8');
 $email = filter_var($email ?? '', FILTER_SANITIZE_EMAIL);
-$zipcode = htmlspecialchars($zipcode ?? '', ENT_QUOTES, 'UTF-8');
+$zipcode = substr(preg_replace('/\D/', '', $zipcode ?? ''), 0, 5);
 $message = htmlspecialchars($message ?? '', ENT_QUOTES, 'UTF-8');
 
 // Log que a LP enviou dados (validação passou)
@@ -746,6 +747,9 @@ if ($system_http_code >= 200 && $system_http_code < 300) {
         }
         if (isset($sys_json['api_version'])) {
             $system_api_version = $sys_json['api_version'];
+        }
+        if (isset($sys_json['inserted_new'])) {
+            $system_inserted_new = $sys_json['inserted_new'];
         }
         if ($system_database_saved && !empty($sys_json['lead_id'])) {
             if (!$db_saved) {

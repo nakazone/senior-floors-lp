@@ -33,6 +33,11 @@ $is_decision_maker = isset($_POST['is_decision_maker']) ? (int)$_POST['is_decisi
 $payment_type = isset($_POST['payment_type']) ? trim($_POST['payment_type']) : null;
 $has_competition = isset($_POST['has_competition']) ? (int)$_POST['has_competition'] : null;
 $owner_id = isset($_POST['owner_id']) ? (int)$_POST['owner_id'] : null;
+$next_follow_up_at = isset($_POST['next_follow_up_at']) ? trim($_POST['next_follow_up_at']) : null;
+$property_type = isset($_POST['property_type']) ? trim($_POST['property_type']) : null;
+$service_type = isset($_POST['service_type']) ? trim($_POST['service_type']) : null;
+$estimated_area = isset($_POST['estimated_area']) ? trim($_POST['estimated_area']) : null;
+$disqualification_reason = isset($_POST['disqualification_reason']) ? trim($_POST['disqualification_reason']) : null;
 
 // Validação
 if ($lead_id <= 0) {
@@ -57,6 +62,13 @@ $valid_urgency = ['imediato', '30_dias', '60_mais'];
 if ($urgency !== null && $urgency !== '' && !in_array($urgency, $valid_urgency)) $urgency = null;
 $valid_payment = ['cash', 'financing'];
 if ($payment_type !== null && $payment_type !== '' && !in_array($payment_type, $valid_payment)) $payment_type = null;
+$valid_property = ['casa', 'apartamento', 'comercial'];
+if ($property_type !== null && $property_type !== '' && !in_array($property_type, $valid_property)) $property_type = null;
+if (!empty($status) && $status === 'closed_lost' && ($disqualification_reason === null || $disqualification_reason === '')) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Motivo da desqualificação é obrigatório']);
+    exit;
+}
 
 // Atualizar no banco de dados
 if (!isDatabaseConfigured()) {
@@ -91,6 +103,39 @@ try {
             }
         } catch (Exception $e) { /* ignore */ }
     }
+    if ($next_follow_up_at !== null && $pdo->query("SHOW COLUMNS FROM leads LIKE 'next_follow_up_at'")->rowCount() > 0) {
+        $val = null;
+        if ($next_follow_up_at !== '') {
+            $ts = strtotime($next_follow_up_at);
+            $val = $ts ? date('Y-m-d H:i:s', $ts) : null;
+        }
+        $updates[] = 'next_follow_up_at = :next_follow_up_at';
+        $params[':next_follow_up_at'] = $val;
+    }
+    if ($property_type !== null) {
+        try {
+            if ($pdo->query("SHOW COLUMNS FROM leads LIKE 'property_type'")->rowCount() > 0) {
+                $updates[] = 'property_type = :property_type';
+                $params[':property_type'] = $property_type !== '' ? $property_type : null;
+            }
+        } catch (Exception $e) { /* ignore */ }
+    }
+    if ($service_type !== null) {
+        try {
+            if ($pdo->query("SHOW COLUMNS FROM leads LIKE 'service_type'")->rowCount() > 0) {
+                $updates[] = 'service_type = :service_type';
+                $params[':service_type'] = $service_type !== '' ? $service_type : null;
+            }
+        } catch (Exception $e) { /* ignore */ }
+    }
+    if ($estimated_area !== null && $pdo->query("SHOW COLUMNS FROM leads LIKE 'estimated_area'")->rowCount() > 0) {
+        $updates[] = 'estimated_area = :estimated_area';
+        $params[':estimated_area'] = $estimated_area !== '' ? $estimated_area : null;
+    }
+    if ($disqualification_reason !== null && $pdo->query("SHOW COLUMNS FROM leads LIKE 'disqualification_reason'")->rowCount() > 0) {
+        $updates[] = 'disqualification_reason = :disqualification_reason';
+        $params[':disqualification_reason'] = $disqualification_reason !== '' ? $disqualification_reason : null;
+    }
 
     if (empty($updates)) {
         http_response_code(400);
@@ -104,7 +149,7 @@ try {
 
     if ($stmt->rowCount() > 0 && file_exists(__DIR__ . '/../../config/lead-logic.php')) {
         require_once __DIR__ . '/../../config/lead-logic.php';
-        $fetch = $pdo->prepare("SELECT budget_estimated, urgency, is_decision_maker, payment_type, has_competition, property_type FROM leads WHERE id = :id");
+        $fetch = $pdo->prepare("SELECT budget_estimated, urgency, is_decision_maker, payment_type, has_competition, property_type, service_type, estimated_area FROM leads WHERE id = :id");
         $fetch->execute([':id' => $lead_id]);
         $row = $fetch->fetch(PDO::FETCH_ASSOC);
         if ($row && function_exists('calculateLeadScore')) {

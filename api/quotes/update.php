@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
 $status = isset($_POST['status']) ? trim($_POST['status']) : '';
-$valid = ['draft','sent','viewed','approved','rejected'];
+$valid = ['draft','sent','viewed','approved','rejected','accepted','declined','expired'];
 if ($id <= 0 || !in_array($status, $valid)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'id and status (draft|sent|viewed|approved|rejected) required']);

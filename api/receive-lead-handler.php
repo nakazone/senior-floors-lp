@@ -18,39 +18,37 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 header('Content-Type: application/json; charset=UTF-8');
 
-$form_name = isset($_POST['form-name']) ? trim($_POST['form-name']) : 'contact-form';
-$name = isset($_POST['name']) ? trim($_POST['name']) : '';
-$phone = isset($_POST['phone']) ? trim($_POST['phone']) : '';
-$email = isset($_POST['email']) ? trim($_POST['email']) : '';
-$zipcode = isset($_POST['zipcode']) ? trim($_POST['zipcode']) : '';
-$message = isset($_POST['message']) ? trim($_POST['message']) : '';
-if (empty($name) && empty($email) && ($raw = @file_get_contents('php://input'))) {
-    $json = @json_decode($raw, true);
-    if (is_array($json)) {
-        $form_name = isset($json['form-name']) ? trim($json['form-name']) : $form_name;
-        $name = isset($json['name']) ? trim($json['name']) : '';
-        $phone = isset($json['phone']) ? trim($json['phone']) : '';
-        $email = isset($json['email']) ? trim($json['email']) : '';
-        $zipcode = isset($json['zipcode']) ? trim($json['zipcode']) : '';
-        $message = isset($json['message']) ? trim($json['message']) : $message;
+// Fonte única do body: em requisições cURL (send-lead → system) muitos servidores NÃO preenchem $_POST.
+// Ler sempre php://input para application/x-www-form-urlencoded e usar como fonte principal.
+$post = [];
+$ct = isset($_SERVER['CONTENT_TYPE']) ? (string) $_SERVER['CONTENT_TYPE'] : '';
+$raw = @file_get_contents('php://input');
+if (!empty($raw)) {
+    if (strpos($ct, 'application/json') !== false) {
+        $dec = @json_decode($raw, true);
+        if (is_array($dec)) $post = $dec;
     } else {
         parse_str($raw, $parsed);
-        if (!empty($parsed)) {
-            $form_name = isset($parsed['form-name']) ? trim($parsed['form-name']) : $form_name;
-            $name = isset($parsed['name']) ? trim($parsed['name']) : '';
-            $phone = isset($parsed['phone']) ? trim($parsed['phone']) : '';
-            $email = isset($parsed['email']) ? trim($parsed['email']) : '';
-            $zipcode = isset($parsed['zipcode']) ? trim($parsed['zipcode']) : '';
-            $message = isset($parsed['message']) ? trim($parsed['message']) : $message;
-        }
+        if (!empty($parsed)) $post = $parsed;
     }
 }
+if (empty($post) || (empty($post['name']) && empty($post['email']))) {
+    $post = $_POST;
+}
+
+$form_name = isset($post['form-name']) ? trim($post['form-name']) : 'contact-form';
+$name = isset($post['name']) ? trim($post['name']) : '';
+$phone = isset($post['phone']) ? trim($post['phone']) : '';
+$email = isset($post['email']) ? trim($post['email']) : '';
+$zipcode = isset($post['zipcode']) ? trim($post['zipcode']) : '';
+$message = isset($post['message']) ? trim($post['message']) : '';
 
 $errors = [];
 if (empty($name) || strlen($name) < 2) $errors[] = 'Name is required';
 if (empty($phone)) $errors[] = 'Phone is required';
 if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email is required';
-if (empty($zipcode) || !preg_match('/^\d{5}(-\d{4})?$/', $zipcode)) $errors[] = 'Valid zip code is required';
+$zip_clean = preg_replace('/\D/', '', $zipcode ?? '');
+if (empty($zip_clean) || strlen($zip_clean) < 5) $errors[] = 'Valid 5-digit US zip code is required';
 if (!empty($errors)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'errors' => $errors, 'api_version' => 'receive-lead-v2-early']);
@@ -60,7 +58,7 @@ if (!empty($errors)) {
 $name = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
 $phone = htmlspecialchars($phone, ENT_QUOTES, 'UTF-8');
 $email = filter_var($email, FILTER_SANITIZE_EMAIL);
-$zipcode = htmlspecialchars($zipcode, ENT_QUOTES, 'UTF-8');
+$zipcode = substr(preg_replace('/\D/', '', $zipcode ?? ''), 0, 5);
 $message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
 
 $log_file = $SYSTEM_ROOT . '/system-api.log';

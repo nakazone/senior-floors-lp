@@ -18,9 +18,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Form envia para send-lead.php em senior-floors.com (LP está em lp.senior-floors.com). -->
+    <!-- Form URL: on Vercel use /api/send-lead (same origin); otherwise use Hostinger backend. -->
     <script>
-    window.SENIOR_FLOORS_FORM_URL = 'https://senior-floors.com/send-lead.php';
+    (function() {
+      var h = window.location.hostname || '';
+      if (h.includes('vercel.app') || h.includes('vercel.sh')) {
+        window.SENIOR_FLOORS_FORM_URL = '/api/send-lead';
+        window.SENIOR_FLOORS_RECEIVE_LEAD_URL = '/api/receive-lead';
+      } else {
+        window.SENIOR_FLOORS_FORM_URL = 'https://senior-floors.com/send-lead.php';
+        window.SENIOR_FLOORS_RECEIVE_LEAD_URL = 'https://senior-floors.com/system.php?api=receive-lead';
+      }
+    })();
     </script>
 </head>
 <body>
@@ -94,7 +103,7 @@
                 <!-- Hero Form -->
                 <div class="hero-form-wrapper">
                     <div class="success-message" id="heroSuccessMessage" style="display: none;">
-                        <strong>Enviado com sucesso!</strong> Obrigado. Entraremos em contato em até 24 horas.
+                        <strong>Submitted successfully!</strong> Thank you. We'll contact you within 24 hours.
                     </div>
                     <div class="error-message-general" id="heroErrorMessage"></div>
                     <form class="hero-form" id="heroForm" name="hero-form" method="POST" action="https://senior-floors.com/send-lead.php" novalidate aria-label="Quick estimate form" onsubmit="if(window.submitLPForm){window.submitLPForm(event);} return false;">
@@ -119,8 +128,8 @@
                         </div>
                         <div class="form-group">
                             <label for="hero-zipcode">Zip Code *</label>
-                            <input type="text" id="hero-zipcode" name="zipcode" aria-required="true" autocomplete="postal-code" pattern="[0-9]{5}(-[0-9]{4})?" placeholder="12345" maxlength="10">
-                            <div class="error-message" id="hero-zipcodeError">Valid zip code is required</div>
+                            <input type="text" id="hero-zipcode" name="zipcode" aria-required="true" autocomplete="postal-code" pattern="[0-9]{5}" placeholder="12345" maxlength="5" inputmode="numeric">
+                            <div class="error-message" id="hero-zipcodeError">Please enter a valid 5-digit US zip code</div>
                         </div>
                         <button type="submit" class="btn btn-primary btn-block">Get My Free Estimate</button>
                         <p class="form-disclaimer">✓ No obligation · ✓ Free in-home consultation · ✓ Clear pricing, no hidden fees</p>
@@ -345,7 +354,7 @@
                 <!-- Contact Form -->
                 <div class="contact-form-wrapper">
                     <div class="success-message" id="contactSuccessMessage" style="display: none;">
-                        <strong>Enviado com sucesso!</strong> Obrigado. Entraremos em contato em até 24 horas.
+                        <strong>Submitted successfully!</strong> Thank you. We'll contact you within 24 hours.
                     </div>
                     <div class="error-message-general" id="contactErrorMessage"></div>
                     <form class="contact-form" id="contactForm" name="contact-form" method="POST" action="https://senior-floors.com/send-lead.php" novalidate aria-label="Contact form" onsubmit="if(window.submitLPForm){window.submitLPForm(event);} return false;">
@@ -370,8 +379,8 @@
                         </div>
                         <div class="form-group">
                             <label for="zipcode">Zip Code *</label>
-                            <input type="text" id="zipcode" name="zipcode" aria-required="true" autocomplete="postal-code" pattern="[0-9]{5}(-[0-9]{4})?" placeholder="12345" maxlength="10">
-                            <div class="error-message" id="zipcodeError">Valid zip code is required</div>
+                            <input type="text" id="zipcode" name="zipcode" aria-required="true" autocomplete="postal-code" pattern="[0-9]{5}" placeholder="12345" maxlength="5" inputmode="numeric">
+                            <div class="error-message" id="zipcodeError">Please enter a valid 5-digit US zip code</div>
                         </div>
                         <div class="form-group">
                             <label for="message">Message (Optional)</label>

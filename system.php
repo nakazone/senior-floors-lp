@@ -5,15 +5,18 @@
  */
 
 // ========== API FIRST: run BEFORE session/includes so response is always pure JSON ==========
-if (isset($_GET['api']) && ($_GET['api'] === 'receive-lead' || $_GET['api'] === 'db-check')) {
+if (isset($_GET['api']) && in_array($_GET['api'], ['receive-lead', 'db-check', 'db-write-test'], true)) {
     $SYSTEM_ROOT = __DIR__;
     $config_db_path = __DIR__ . '/config/database.php';
     $config_db_alt = dirname(__DIR__) . '/config/database.php';
+    $config_file_used = null;
     if (is_file($config_db_path)) {
         require_once $config_db_path;
+        $config_file_used = $config_db_path;
     } elseif (is_file($config_db_alt)) {
         $SYSTEM_ROOT = dirname(__DIR__);
         require_once $config_db_alt;
+        $config_file_used = $config_db_alt;
     } else {
         // config/database.php não existe no servidor (não vai no deploy por .gitignore) — stubs para não dar fatal
         if (!function_exists('isDatabaseConfigured')) {
@@ -26,9 +29,11 @@ if (isset($_GET['api']) && ($_GET['api'] === 'receive-lead' || $_GET['api'] === 
     if ($_GET['api'] === 'db-check') {
         header('Content-Type: application/json; charset=UTF-8');
         header('Access-Control-Allow-Origin: *');
-        $config_loaded = is_file($config_db_path) || is_file($config_db_alt);
+        $config_loaded = ($config_file_used !== null);
         $out = [
             'config_loaded' => $config_loaded,
+            'config_file_used' => $config_file_used,
+            'db_name' => defined('DB_NAME') ? DB_NAME : null,
             'database_configured' => $config_loaded && isDatabaseConfigured(),
             'connection_ok' => false,
             'table_leads_exists' => false,
@@ -60,6 +65,65 @@ if (isset($_GET['api']) && ($_GET['api'] === 'receive-lead' || $_GET['api'] === 
         echo json_encode($out);
         exit;
     }
+    if ($_GET['api'] === 'db-write-test') {
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Access-Control-Allow-Origin: *');
+        $result = [
+            'ok' => false,
+            'config_file_used' => $config_file_used,
+            'db_name' => defined('DB_NAME') ? DB_NAME : null,
+            'write_ok' => false,
+            'read_ok' => false,
+            'lead_id' => null,
+            'error' => null,
+            'api_version' => 'db-write-test-v1'
+        ];
+        if (!$config_file_used || !isDatabaseConfigured()) {
+            $result['error'] = 'config/database.php não carregado ou não configurado';
+            echo json_encode($result);
+            exit;
+        }
+        try {
+            $pdo = getDBConnection();
+            if (!$pdo) {
+                $result['error'] = 'getDBConnection() retornou null';
+                echo json_encode($result);
+                exit;
+            }
+            $t = $pdo->query("SHOW TABLES LIKE 'leads'");
+            if (!$t || $t->rowCount() === 0) {
+                $result['error'] = "Tabela 'leads' não existe";
+                echo json_encode($result);
+                exit;
+            }
+            $test_email = 'db-write-test-' . date('YmdHis') . '@test.local';
+            $stmt = $pdo->prepare("INSERT INTO leads (name, email, phone, zipcode, message, source, form_type, status, priority, ip_address) VALUES (:name, :email, :phone, :zipcode, :message, :source, :form_type, 'new', 'medium', :ip)");
+            $stmt->execute([
+                ':name' => 'Teste Escrita Banco',
+                ':email' => $test_email,
+                ':phone' => '5550000000',
+                ':zipcode' => '00000',
+                ':message' => 'Teste db-write-test',
+                ':source' => 'LP-Contact',
+                ':form_type' => 'contact-form',
+                ':ip' => '127.0.0.1'
+            ]);
+            $lead_id = (int) $pdo->lastInsertId();
+            $result['write_ok'] = ($lead_id > 0);
+            $result['lead_id'] = $lead_id;
+            $read = $pdo->prepare("SELECT id, name, email FROM leads WHERE id = ?");
+            $read->execute([$lead_id]);
+            $row = $read->fetch(PDO::FETCH_ASSOC);
+            $result['read_ok'] = ($row && ($row['email'] ?? '') === $test_email);
+            $result['ok'] = $result['write_ok'] && $result['read_ok'];
+            echo json_encode($result);
+            exit;
+        } catch (Throwable $e) {
+            $result['error'] = $e->getMessage();
+            echo json_encode($result);
+            exit;
+        }
+    }
     if ($_GET['api'] === 'receive-lead') {
         $api_handler = $SYSTEM_ROOT . '/api/receive-lead-handler.php';
         if (is_file($api_handler)) {
@@ -75,38 +139,34 @@ if (isset($_GET['api']) && ($_GET['api'] === 'receive-lead' || $_GET['api'] === 
             echo json_encode(['success' => false, 'message' => 'Method not allowed', 'api_version' => 'receive-lead-fallback']);
             exit;
         }
-        $form_name = isset($_POST['form-name']) ? trim($_POST['form-name']) : 'contact-form';
-        $name = isset($_POST['name']) ? trim($_POST['name']) : '';
-        $phone = isset($_POST['phone']) ? trim($_POST['phone']) : '';
-        $email = isset($_POST['email']) ? trim($_POST['email']) : '';
-        $zipcode = isset($_POST['zipcode']) ? trim($_POST['zipcode']) : '';
-        $message = isset($_POST['message']) ? trim($_POST['message']) : '';
-        if (empty($name) && empty($email) && ($raw = @file_get_contents('php://input'))) {
-            $dec = @json_decode($raw, true);
-            if (is_array($dec)) {
-                $form_name = $dec['form-name'] ?? $form_name;
-                $name = trim($dec['name'] ?? '');
-                $phone = trim($dec['phone'] ?? $phone);
-                $email = trim($dec['email'] ?? '');
-                $zipcode = trim($dec['zipcode'] ?? $zipcode);
-                $message = trim($dec['message'] ?? $message);
+        // Mesma lógica do handler: ler body (php://input) primeiro; cURL interno pode não preencher $_POST
+        $post = [];
+        $ct = isset($_SERVER['CONTENT_TYPE']) ? (string) $_SERVER['CONTENT_TYPE'] : '';
+        $raw = @file_get_contents('php://input');
+        if (!empty($raw)) {
+            if (strpos($ct, 'application/json') !== false) {
+                $dec = @json_decode($raw, true);
+                if (is_array($dec)) $post = $dec;
             } else {
                 parse_str($raw, $parsed);
-                if (!empty($parsed)) {
-                    $form_name = trim($parsed['form-name'] ?? $form_name);
-                    $name = trim($parsed['name'] ?? '');
-                    $phone = trim($parsed['phone'] ?? $phone);
-                    $email = trim($parsed['email'] ?? '');
-                    $zipcode = trim($parsed['zipcode'] ?? $zipcode);
-                    $message = trim($parsed['message'] ?? $message);
-                }
+                if (!empty($parsed)) $post = $parsed;
             }
         }
+        if (empty($post) || (empty($post['name']) && empty($post['email']))) {
+            $post = $_POST;
+        }
+        $form_name = isset($post['form-name']) ? trim($post['form-name']) : 'contact-form';
+        $name = isset($post['name']) ? trim($post['name']) : '';
+        $phone = isset($post['phone']) ? trim($post['phone']) : '';
+        $email = isset($post['email']) ? trim($post['email']) : '';
+        $zipcode = isset($post['zipcode']) ? trim($post['zipcode']) : '';
+        $message = isset($post['message']) ? trim($post['message']) : '';
         $errors = [];
         if (empty($name) || strlen($name) < 2) $errors[] = 'Name is required';
         if (empty($phone)) $errors[] = 'Phone is required';
         if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email is required';
-        if (empty($zipcode) || !preg_match('/^\d{5}(-\d{4})?$/', $zipcode)) $errors[] = 'Valid zip code is required';
+        $zip_clean = preg_replace('/\D/', '', $zipcode ?? '');
+        if (empty($zip_clean) || strlen($zip_clean) < 5) $errors[] = 'Valid 5-digit US zip code is required';
         if (!empty($errors)) {
             http_response_code(400);
             echo json_encode(['success' => false, 'errors' => $errors, 'api_version' => 'receive-lead-fallback']);
@@ -115,7 +175,7 @@ if (isset($_GET['api']) && ($_GET['api'] === 'receive-lead' || $_GET['api'] === 
         $name = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
         $phone = htmlspecialchars($phone, ENT_QUOTES, 'UTF-8');
         $email = filter_var($email, FILTER_SANITIZE_EMAIL);
-        $zipcode = htmlspecialchars($zipcode, ENT_QUOTES, 'UTF-8');
+        $zipcode = substr(preg_replace('/\D/', '', $zipcode), 0, 5);
         $message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
         $lead_id = null;
         $db_saved = false;
@@ -153,7 +213,7 @@ if (isset($_GET['api']) && ($_GET['api'] === 'receive-lead' || $_GET['api'] === 
 }
 
 // API responses must be pure JSON; capture any accidental output from session/includes
-if (isset($_GET['api']) && ($_GET['api'] === 'receive-lead' || $_GET['api'] === 'db-check')) {
+if (isset($_GET['api']) && in_array($_GET['api'], ['receive-lead', 'db-check', 'db-write-test'], true)) {
     ob_start();
 }
 session_start();
@@ -424,7 +484,8 @@ if (isset($_GET['api']) && $_GET['api'] === 'receive-lead') {
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errors[] = 'Valid email is required';
     }
-    if (empty($zipcode) || !preg_match('/^\d{5}(-\d{4})?$/', $zipcode)) {
+    $zip_clean = preg_replace('/\D/', '', $zipcode ?? '');
+    if (empty($zip_clean) || strlen($zip_clean) < 5) {
         $errors[] = 'Valid zip code is required';
     }
     
@@ -438,7 +499,7 @@ if (isset($_GET['api']) && $_GET['api'] === 'receive-lead') {
     $name = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
     $phone = htmlspecialchars($phone, ENT_QUOTES, 'UTF-8');
     $email = filter_var($email, FILTER_SANITIZE_EMAIL);
-    $zipcode = htmlspecialchars($zipcode, ENT_QUOTES, 'UTF-8');
+    $zipcode = substr(preg_replace('/\D/', '', $zipcode), 0, 5);
     $message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
     
     $log_file = __DIR__ . '/system-api.log';

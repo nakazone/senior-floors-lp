@@ -1,16 +1,16 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "**",
-      "use": "@vercel/static"
-    }
+  "buildCommand": "echo 'No build'",
+  "outputDirectory": ".",
+  "installCommand": "npm install",
+  "framework": null,
+  "rewrites": [
+    { "source": "/send-lead", "destination": "/api/send-lead" },
+    { "source": "/send-lead.php", "destination": "/api/send-lead" }
   ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
-  ]
+  "functions": {
+    "api/send-lead.js": { "runtime": "@vercel/node@3" },
+    "api/receive-lead.js": { "runtime": "@vercel/node@3" },
+    "api/db-check.js": { "runtime": "@vercel/node@3" }
+  }
 }
-

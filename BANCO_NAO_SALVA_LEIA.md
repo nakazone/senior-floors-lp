@@ -24,10 +24,27 @@ No navegador, abra:
 A resposta é um JSON com:
 
 - **config_loaded** — `true` se o arquivo `config/database.php` existe no servidor.
+- **config_file_used** — caminho do arquivo de config carregado (para conferir se é o mesmo que o CRM usa).
+- **db_name** — nome do banco (DB_NAME) usado.
 - **database_configured** — `true` se as credenciais não são placeholders (SEU_USUARIO, SUA_SENHA_AQUI, etc.).
 - **connection_ok** — `true` se a conexão MySQL funcionou.
 - **table_leads_exists** — `true` se a tabela `leads` existe.
 - **hint** — texto explicando o que fazer quando algo estiver `false`.
+
+## 2b. Teste de escrita no banco (db-write-test)
+
+Abra no navegador:
+
+**https://senior-floors.com/system.php?api=db-write-test**
+
+Esse endpoint **insere um lead de teste** no banco e **lê de volta**. A resposta mostra:
+
+- **write_ok** — `true` se o INSERT funcionou.
+- **read_ok** — `true` se o SELECT encontrou o lead.
+- **lead_id** — ID do lead inserido.
+- **config_file_used** e **db_name** — mesmo config que o receive-lead usa.
+
+Se **write_ok** e **read_ok** forem `true`, o mesmo sistema que o CRM usa está gravando e lendo. Depois confira no CRM se aparece o lead "Teste Escrita Banco". Se não aparecer, o CRM pode estar usando outro config (outra pasta ou outro domínio).
 
 Corrija conforme o **hint**:
 

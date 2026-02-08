@@ -2,6 +2,8 @@
 
 Este projeto está configurado para fazer deploy automático para o Hostinger sempre que você fizer push para a branch `main` no GitHub.
 
+> **Netlify:** Se você usar o **Netlify** para hospedar a LP (Landing Page), veja **[NETLIFY.md](NETLIFY.md)**. O backend (PHP/Node) continua no Hostinger; a LP no Netlify envia os formulários para a URL do Hostinger (raiz ou `/newSFSystemJS`).
+
 > **Deploy das novas funcionalidades (Responsável, Histórico, Pipeline drag-drop):** veja **[DEPLOY_NOVAS_FUNCIONALIDADES.md](DEPLOY_NOVAS_FUNCIONALIDADES.md)** para lista de arquivos e migrations a executar no servidor.
 
 ## 📋 Pré-requisitos

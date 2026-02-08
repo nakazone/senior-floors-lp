@@ -36,9 +36,11 @@ if ($use_database && isDatabaseConfigured()) {
                 error_log("CRM: " . $db_error_message);
             } else {
                 $cols = "id, name as Name, email as Email, phone as Phone, zipcode as ZipCode, message as Message, form_type as Form, source, status, priority, created_at as Date, ip_address";
+                $has_followup_col = false;
                 try {
                     if ($pdo->query("SHOW COLUMNS FROM leads LIKE 'pipeline_stage_id'")->rowCount() > 0) $cols .= ", pipeline_stage_id";
                     if ($pdo->query("SHOW COLUMNS FROM leads LIKE 'owner_id'")->rowCount() > 0) $cols .= ", owner_id";
+                    if ($pdo->query("SHOW COLUMNS FROM leads LIKE 'next_follow_up_at'")->rowCount() > 0) { $cols .= ", next_follow_up_at"; $has_followup_col = true; }
                 } catch (Throwable $e) { /* colunas opcionais */ }
                 $stmt = $pdo->query("SELECT $cols FROM leads ORDER BY created_at DESC");
                 $db_leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -101,6 +103,10 @@ $owner_filter = isset($_GET['owner']) ? (int)$_GET['owner'] : 0;
 $source_filter = isset($_GET['source']) ? trim($_GET['source']) : '';
 $date_from = isset($_GET['date_from']) ? $_GET['date_from'] : '';
 $date_to = isset($_GET['date_to']) ? $_GET['date_to'] : '';
+$filter_30min = isset($_GET['filter_30min']) && $_GET['filter_30min'] === '1';
+$filter_followup_today = isset($_GET['filter_followup']) && $_GET['filter_followup'] === 'today';
+$thirty_min_ago_ts = time() - (30 * 60);
+if (!isset($has_followup_col)) $has_followup_col = false;
 
 $filtered_leads = $leads;
 
@@ -118,6 +124,17 @@ if ($form_filter) {
     $filtered_leads = array_filter($filtered_leads, function($lead) use ($form_filter) {
         return ($lead['Form'] ?? '') === $form_filter;
     });
+}
+
+// Filter: only leads that need to be contacted within 30 minutes
+if ($filter_30min) {
+    $thirty_min_ago_filter = time() - (30 * 60);
+    $filtered_leads = array_filter($filtered_leads, function($l) use ($thirty_min_ago_filter) {
+        $status = strtolower(trim($l['status'] ?? 'new'));
+        $created = strtotime($l['Date'] ?? '0');
+        return ($status === 'new' || $status === '') && $created >= $thirty_min_ago_filter;
+    });
+    $filtered_leads = array_values($filtered_leads);
 }
 
 if ($stage_filter > 0) {
@@ -171,6 +188,12 @@ if (isDatabaseConfigured()) {
         }
     } catch (Exception $e) {}
 }
+$has_stage_col = !empty($pipeline_stages);
+$has_owner_col = !empty($list_users);
+$stage_name_by_id = [];
+foreach ($pipeline_stages as $s) { $stage_name_by_id[(int)$s['id']] = $s['name']; }
+$user_name_by_id = [];
+foreach ($list_users as $u) { $user_name_by_id[(int)$u['id']] = $u['name']; }
 
 // Pagination
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
@@ -190,6 +213,29 @@ $week_count = count(array_filter($leads, function($l) {
     $lead_date = strtotime($l['Date'] ?? '');
     return $lead_date >= strtotime('-7 days');
 }));
+
+// Leads que precisam ser contactados em até 30 minutos (status new + criados há menos de 30 min)
+$contact_within_30_leads = array_filter($leads, function($l) use ($thirty_min_ago_ts) {
+    $status = strtolower(trim($l['status'] ?? 'new'));
+    $created = strtotime($l['Date'] ?? '0');
+    return ($status === 'new' || $status === '') && $created >= $thirty_min_ago_ts;
+});
+$contact_within_30_count = count($contact_within_30_leads);
+
+// Follow-up hoje: next_follow_up_at definido e <= fim de hoje, status não fechado
+$followup_today_leads = [];
+if ($has_followup_col) {
+    $end_today = strtotime(date('Y-m-d') . ' 23:59:59');
+    $closed = ['closed_won', 'closed_lost'];
+    $followup_today_leads = array_filter($leads, function($l) use ($end_today, $closed) {
+        $next = trim($l['next_follow_up_at'] ?? '');
+        if ($next === '') return false;
+        $ts = strtotime($next);
+        $status = strtolower(trim($l['status'] ?? ''));
+        return $ts <= $end_today && !in_array($status, $closed);
+    });
+}
+$followup_today_count = count($followup_today_leads);
 
 // Export CSV
 if (isset($_GET['export'])) {
@@ -279,6 +325,16 @@ if (isset($_GET['export'])) {
         outline: none;
         border-color: #1a2036;
     }
+    .filter-group-checkbox { justify-content: flex-end; }
+    .filter-group-checkbox .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        color: #991b1b;
+        cursor: pointer;
+    }
+    .filter-group-checkbox input[type="checkbox"] { width: auto; }
     .filter-actions {
         display: flex;
         gap: 10px;
@@ -352,6 +408,44 @@ if (isset($_GET['export'])) {
     .badge-manual {
         background: #d1fae5;
         color: #047857;
+    }
+    .badge-30min {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 700;
+        background: #fef2f2;
+        color: #dc2626;
+        text-transform: uppercase;
+    }
+    tr.lead-row-urgent {
+        background: #fef2f2;
+        border-left: 3px solid #dc2626;
+    }
+    tr.lead-row-urgent:hover {
+        background: #fee2e2;
+    }
+    .crm-alert-30min {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 20px;
+        margin-bottom: 20px;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        color: #991b1b;
+        font-size: 14px;
+    }
+    .crm-alert-30min a {
+        color: #dc2626;
+        font-weight: 600;
+        text-decoration: underline;
+    }
+    .crm-alert-30min a:hover {
+        color: #b91c1c;
     }
     .link {
         color: #1a2036;
@@ -453,7 +547,7 @@ if (isset($_GET['export'])) {
         <?php endif; ?>
     </div>
     <?php
-$q = ['search'=>$search,'form'=>$form_filter,'stage'=>$stage_filter,'owner'=>$owner_filter,'source'=>$source_filter,'date_from'=>$date_from,'date_to'=>$date_to];
+$q = ['search'=>$search,'form'=>$form_filter,'stage'=>$stage_filter,'owner'=>$owner_filter,'source'=>$source_filter,'date_from'=>$date_from,'date_to'=>$date_to,'filter_30min'=>$filter_30min ? '1' : '','filter_followup'=>($filter_followup_today ? 'today' : '')];
 $qs = http_build_query(array_filter($q, fn($v) => $v !== '' && $v !== 0));
 ?>
     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
@@ -490,7 +584,21 @@ $qs = http_build_query(array_filter($q, fn($v) => $v !== '' && $v !== 0));
         <div class="stat-label">Filtered Results</div>
         <div class="stat-value"><?php echo number_format($total_leads); ?></div>
     </div>
+    <div class="stat-card stat-card-urgent" style="border-left-color: #dc2626;">
+        <div class="stat-label">Contact within 30 min</div>
+        <div class="stat-value" style="color: #dc2626;"><?php echo number_format($contact_within_30_count); ?></div>
+        <div class="stat-hint" style="font-size: 11px; color: #718096; margin-top: 4px;">New leads to contact ASAP</div>
+    </div>
 </div>
+
+<?php if ($contact_within_30_count > 0): 
+    $qs_urgent = (strpos($qs, 'filter_30min') !== false) ? $qs : ($qs ? 'filter_30min=1&' . $qs : 'filter_30min=1');
+?>
+<div class="crm-alert-30min" role="alert">
+    <strong>&#9888; <?php echo $contact_within_30_count; ?> lead(s)</strong> precisam ser contactados em até 30 minutos. 
+    <a href="?module=crm&<?php echo $qs_urgent; ?>">Ver e contactar agora</a>
+</div>
+<?php endif; ?>
 
 <!-- Filters -->
 <div class="filters">
@@ -551,9 +659,31 @@ $qs = http_build_query(array_filter($q, fn($v) => $v !== '' && $v !== 0));
                 <label>Date To</label>
                 <input type="date" name="date_to" value="<?php echo htmlspecialchars($date_to); ?>">
             </div>
+            <div class="filter-group filter-group-checkbox">
+                <label>&nbsp;</label>
+                <label class="checkbox-label">
+                    <input type="checkbox" name="filter_30min" value="1" <?php echo $filter_30min ? 'checked' : ''; ?>>
+                    Contato em até 30 min (novos sem contato)
+                </label>
+            </div>
+            <?php if ($has_followup_col): ?>
+            <div class="filter-group filter-group-checkbox">
+                <label>&nbsp;</label>
+                <label class="checkbox-label" style="color: #065f46;">
+                    <input type="checkbox" name="filter_followup" value="today" <?php echo $filter_followup_today ? 'checked' : ''; ?>>
+                    Follow-up hoje
+                </label>
+            </div>
+            <?php endif; ?>
         </div>
         <div class="filter-actions">
             <button type="submit" class="btn btn-primary">&#10003; Aplicar filtros</button>
+            <?php if ($contact_within_30_count > 0): ?>
+            <a href="?module=crm&filter_30min=1" class="btn btn-primary" style="background: #dc2626;">&#9888; Ver <?php echo $contact_within_30_count; ?> urgente(s)</a>
+            <?php endif; ?>
+            <?php if ($has_followup_col && $followup_today_count > 0): ?>
+            <a href="?module=crm&filter_followup=today" class="btn btn-primary" style="background: #059669;">&#128197; Ver <?php echo $followup_today_count; ?> follow-up(s)</a>
+            <?php endif; ?>
             <a href="?module=crm" class="btn btn-secondary">&#8634; Limpar</a>
         </div>
     </form>
@@ -590,14 +720,27 @@ $qs = http_build_query(array_filter($q, fn($v) => $v !== '' && $v !== 0));
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($paginated_leads as $lead): ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($lead['Date'] ?? ''); ?></td>
+                <?php foreach ($paginated_leads as $lead): 
+                    $lead_status = strtolower(trim($lead['status'] ?? 'new'));
+                    $lead_created = strtotime($lead['Date'] ?? '0');
+                    $is_urgent_30 = ($lead_status === 'new' || $lead_status === '') && $lead_created >= $thirty_min_ago_ts;
+                ?>
+                    <tr<?php echo $is_urgent_30 ? ' class="lead-row-urgent"' : ''; ?>>
+                        <td>
+                            <?php echo htmlspecialchars($lead['Date'] ?? ''); ?>
+                            <?php if ($is_urgent_30): ?><span class="badge-30min" title="Contact within 30 minutes">30 min</span><?php endif; ?>
+                        </td>
                         <?php if ($has_stage_col): ?>
                         <td><?php echo htmlspecialchars($stage_name_by_id[(int)($lead['pipeline_stage_id'] ?? 0)] ?? '—'); ?></td>
                         <?php endif; ?>
                         <?php if ($has_owner_col): ?>
                         <td><?php echo htmlspecialchars($user_name_by_id[(int)($lead['owner_id'] ?? 0)] ?? '—'); ?></td>
+                        <?php endif; ?>
+                        <?php if ($has_followup_col): ?>
+                        <td><?php 
+                            $next_fu = trim($lead['next_follow_up_at'] ?? '');
+                            echo $next_fu ? date('d/m/Y H:i', strtotime($next_fu)) : '—'; 
+                        ?></td>
                         <?php endif; ?>
                         <td>
                             <?php $form_type = $lead['Form'] ?? ''; ?>

@@ -1,0 +1,95 @@
+# Deploy para o path /newSFSystemJS no Hostinger (ex.: site.com/newSFSystemJS/)
+# Dispara em push na main ou manualmente. Usa os mesmos secrets do deploy principal.
+name: Deploy to /newSFSystemJS (Hostinger)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      deploy_path:
+        description: 'Subpath under public_html (default: newSFSystemJS)'
+        required: false
+        default: 'newSFSystemJS'
+
+env:
+  DEPLOY_SUBPATH: newSFSystemJS
+
+jobs:
+  deploy:
+    name: Deploy to public_html/newSFSystemJS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Validate Secrets
+        run: |
+          if [ -z "${{ secrets.HOSTINGER_SSH_HOST }}" ]; then
+            echo "❌ HOSTINGER_SSH_HOST not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.HOSTINGER_SSH_USER }}" ]; then
+            echo "❌ HOSTINGER_SSH_USER not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.HOSTINGER_SSH_KEY }}" ]; then
+            echo "❌ HOSTINGER_SSH_KEY not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.HOSTINGER_DOMAIN }}" ]; then
+            echo "❌ HOSTINGER_DOMAIN not set"
+            exit 1
+          fi
+          echo "✅ Secrets OK. Deploy path: ${{ env.DEPLOY_SUBPATH }}"
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.HOSTINGER_SSH_KEY }}" | sed 's/\\n/\n/g' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.HOSTINGER_SSH_HOST }} -p ${{ secrets.HOSTINGER_SSH_PORT || 22 }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          grep -q "BEGIN.*PRIVATE KEY" ~/.ssh/id_rsa || { echo "❌ Invalid SSH key"; exit 1; }
+          echo "✅ SSH key ready"
+
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts \
+            -p ${{ secrets.HOSTINGER_SSH_PORT || 22 }} \
+            ${{ secrets.HOSTINGER_SSH_USER }}@${{ secrets.HOSTINGER_SSH_HOST }} \
+            "echo 'SSH OK'" || { echo "❌ SSH failed"; exit 1; }
+
+      - name: Create remote directory newSFSystemJS
+        run: |
+          REMOTE_BASE="/home/${{ secrets.HOSTINGER_SSH_USER }}/domains/${{ secrets.HOSTINGER_DOMAIN }}/public_html"
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts \
+            -p ${{ secrets.HOSTINGER_SSH_PORT || 22 }} \
+            ${{ secrets.HOSTINGER_SSH_USER }}@${{ secrets.HOSTINGER_SSH_HOST }} \
+            "mkdir -p ${REMOTE_BASE}/${{ env.DEPLOY_SUBPATH }}"
+          echo "✅ Directory ${REMOTE_BASE}/${{ env.DEPLOY_SUBPATH }} ready"
+
+      - name: Remove files that should not be deployed
+        run: |
+          rm -rf .git .github
+          rm -rf node_modules server/node_modules
+          rm -f .DS_Store *.log leads.csv
+          rm -f test-*.html test-*.php debug-*.html
+          echo "✅ Cleaned"
+
+      - name: Deploy via SCP to /newSFSystemJS
+        run: |
+          REMOTE="/home/${{ secrets.HOSTINGER_SSH_USER }}/domains/${{ secrets.HOSTINGER_DOMAIN }}/public_html/${{ env.DEPLOY_SUBPATH }}/"
+          scp -r -i ~/.ssh/id_rsa \
+            -P ${{ secrets.HOSTINGER_SSH_PORT || 22 }} \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            ./* ${{ secrets.HOSTINGER_SSH_USER }}@${{ secrets.HOSTINGER_SSH_HOST }}:"${REMOTE}"
+          echo "✅ Deployed to $REMOTE"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/id_rsa ~/.ssh/known_hosts

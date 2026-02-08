@@ -24,7 +24,10 @@ $tags = [];
 $users = [];
 $owner_name = null;
 $has_owner_col = false;
+$has_followup_col = false;
 $activities = [];
+$lead_visits = [];
+$has_visits_table = false;
 $error = null;
 
 if (isDatabaseConfigured()) {
@@ -36,6 +39,7 @@ if (isDatabaseConfigured()) {
             $stmt = $pdo->prepare("SELECT * FROM leads WHERE id = :id");
             $stmt->execute([':id' => $lead_id]);
             $lead = $stmt->fetch(PDO::FETCH_ASSOC);
+            $has_followup_col = $lead && array_key_exists('next_follow_up_at', $lead);
             
             if ($lead) {
                 // Buscar observações (se a tabela existir)
@@ -95,6 +99,17 @@ if (isDatabaseConfigured()) {
                 } catch (Exception $e) {
                     error_log("Lead detail load activities: " . $e->getMessage());
                 }
+                // Visitas agendadas para este lead
+                $lead_visits = [];
+                $has_visits_table = false;
+                try {
+                    if ($pdo->query("SHOW TABLES LIKE 'visits'")->rowCount() > 0) {
+                        $has_visits_table = true;
+                        $stmt = $pdo->prepare("SELECT id, lead_id, scheduled_at, seller_id, technician_id, address, notes, status, created_at FROM visits WHERE lead_id = ? ORDER BY scheduled_at DESC");
+                        $stmt->execute([$lead_id]);
+                        $lead_visits = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    }
+                } catch (Exception $e) {}
             } else {
                 $error = "Lead não encontrado";
             }
@@ -153,7 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 error_log("Lead detail add_note: " . $e->getMessage());
             }
         }
-        header('Location: ?module=lead-detail&id=' . $lead_id);
+        header('Location: ?module=lead-detail&id=' . $lead_id . '#interacoes');
         exit;
     }
 
@@ -180,6 +195,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $activity_type = trim($_POST['activity_type']);
         $subject = isset($_POST['activity_subject']) ? trim($_POST['activity_subject']) : null;
         $description = isset($_POST['activity_description']) ? trim($_POST['activity_description']) : null;
+        // Data/hora do contato: usar o enviado ou agora
+        $activity_date = null;
+        if (!empty(trim($_POST['activity_datetime'] ?? ''))) {
+            $ts = strtotime(trim($_POST['activity_datetime']));
+            $activity_date = $ts ? date('Y-m-d H:i:s', $ts) : null;
+        }
+        if (!$activity_date) {
+            $activity_date = date('Y-m-d H:i:s');
+        }
         $valid_types = ['email_sent', 'whatsapp_message', 'phone_call', 'meeting_scheduled', 'site_visit', 'proposal_sent', 'note', 'status_change', 'assignment', 'other'];
         $type_labels_short = ['phone_call' => 'Ligação', 'email_sent' => 'E-mail', 'whatsapp_message' => 'WhatsApp', 'meeting_scheduled' => 'Reunião', 'note' => 'Observação', 'other' => 'Contato'];
         $saved = false;
@@ -189,9 +213,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 if ($pdo_act && $pdo_act->query("SHOW TABLES LIKE 'activities'")->rowCount() > 0) {
                     $stmt = $pdo_act->prepare("
                         INSERT INTO activities (lead_id, activity_type, subject, description, activity_date, user_id, related_to)
-                        VALUES (?, ?, ?, ?, NOW(), ?, 'lead')
+                        VALUES (?, ?, ?, ?, ?, ?, 'lead')
                     ");
-                    $stmt->execute([$lead_id, $activity_type, $subject ?: null, $description ?: null, $_SESSION['admin_user_id'] ?? null]);
+                    $stmt->execute([$lead_id, $activity_type, $subject ?: null, $description ?: null, $activity_date, $_SESSION['admin_user_id'] ?? null]);
                     $saved = true;
                 }
                 if (!$saved && $pdo_act && $pdo_act->query("SHOW TABLES LIKE 'lead_notes'")->rowCount() > 0) {
@@ -206,6 +230,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 error_log("Lead detail add_activity: " . $e->getMessage());
             }
         }
+        header('Location: ?module=lead-detail&id=' . $lead_id . '#interacoes');
+        exit;
+    }
+    
+    if ($_POST['action'] === 'set_follow_up' && isDatabaseConfigured()) {
+        $next_at = null;
+        if (!empty(trim($_POST['next_follow_up_at'] ?? ''))) {
+            $ts = strtotime(trim($_POST['next_follow_up_at']));
+            $next_at = $ts ? date('Y-m-d H:i:s', $ts) : null;
+        }
+        try {
+            $pdo_fu = getDBConnection();
+            if ($pdo_fu && $pdo_fu->query("SHOW COLUMNS FROM leads LIKE 'next_follow_up_at'")->rowCount() > 0) {
+                $pdo_fu->prepare("UPDATE leads SET next_follow_up_at = ? WHERE id = ?")->execute([$next_at, $lead_id]);
+                $lead['next_follow_up_at'] = $next_at;
+            }
+        } catch (Exception $e) {
+            error_log("Lead detail set_follow_up: " . $e->getMessage());
+        }
         header('Location: ?module=lead-detail&id=' . $lead_id);
         exit;
     }
@@ -214,12 +257,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $api_url = '../api/leads/update.php';
         $post_data = [
             'lead_id' => $lead_id,
+            'property_type' => isset($_POST['property_type']) ? trim($_POST['property_type']) : '',
+            'estimated_area' => isset($_POST['estimated_area']) ? trim($_POST['estimated_area']) : '',
+            'service_type' => isset($_POST['service_type']) ? trim($_POST['service_type']) : '',
             'budget_estimated' => isset($_POST['budget_estimated']) ? $_POST['budget_estimated'] : '',
             'urgency' => isset($_POST['urgency']) ? $_POST['urgency'] : '',
             'is_decision_maker' => isset($_POST['is_decision_maker']) ? $_POST['is_decision_maker'] : '',
             'payment_type' => isset($_POST['payment_type']) ? $_POST['payment_type'] : '',
             'has_competition' => isset($_POST['has_competition']) ? $_POST['has_competition'] : ''
         ];
+        if (isset($_POST['status']) && $_POST['status'] !== '') {
+            $post_data['status'] = trim($_POST['status']);
+            if ($post_data['status'] === 'closed_lost' && isset($_POST['disqualification_reason'])) {
+                $post_data['disqualification_reason'] = trim($_POST['disqualification_reason']);
+            }
+        }
         $ch = curl_init($api_url);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post_data));
@@ -227,7 +279,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
         curl_exec($ch);
         curl_close($ch);
-        header('Location: ?module=lead-detail&id=' . $lead_id);
+        header('Location: ?module=lead-detail&id=' . $lead_id . '#qualificacao');
+        exit;
+    }
+    
+    if ($_POST['action'] === 'schedule_visit' && isDatabaseConfigured()) {
+        $scheduled_at = isset($_POST['scheduled_at']) ? trim($_POST['scheduled_at']) : '';
+        if ($scheduled_at) {
+            $ts = strtotime($scheduled_at);
+            $scheduled_at_sql = $ts ? date('Y-m-d H:i:s', $ts) : null;
+            if ($scheduled_at_sql) {
+                try {
+                    $pdo_v = getDBConnection();
+                    if ($pdo_v && $pdo_v->query("SHOW TABLES LIKE 'visits'")->rowCount() > 0) {
+                        $seller_id = !empty($_POST['seller_id']) ? (int)$_POST['seller_id'] : null;
+                        $address = isset($_POST['address']) ? trim($_POST['address']) : null;
+                        $notes = isset($_POST['notes']) ? trim($_POST['notes']) : null;
+                        $pdo_v->prepare("INSERT INTO visits (lead_id, scheduled_at, seller_id, address, notes, status) VALUES (?, ?, ?, ?, ?, 'scheduled')")
+                            ->execute([$lead_id, $scheduled_at_sql, $seller_id, $address ?: null, $notes ?: null]);
+                        header('Location: ?module=lead-detail&id=' . $lead_id . '#visitas');
+                        exit;
+                    }
+                } catch (Exception $e) {
+                    error_log("Lead detail schedule_visit: " . $e->getMessage());
+                    header('Location: ?module=lead-detail&id=' . $lead_id . '&visit_error=1#visitas');
+                    exit;
+                }
+            }
+        }
+        header('Location: ?module=lead-detail&id=' . $lead_id . '#visitas');
         exit;
     }
 }
@@ -563,6 +643,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 </div>
             </form>
             
+            <?php if ($has_followup_col): 
+                $next_fu = $lead['next_follow_up_at'] ?? null;
+                $next_fu_display = $next_fu ? date('d/m/Y H:i', strtotime($next_fu)) : null;
+                $next_fu_value = $next_fu ? date('Y-m-d\TH:i', strtotime($next_fu)) : '';
+            ?>
+            <div class="follow-up-block" style="margin-bottom: 20px; padding: 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+                <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #166534;">&#128197; Próximo follow-up</h3>
+                <?php if ($next_fu_display): ?>
+                <p style="margin: 0 0 10px 0; font-size: 14px; color: #166534;"><strong><?php echo $next_fu_display; ?></strong></p>
+                <?php endif; ?>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
+                    <form method="POST" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; flex: 1; min-width: 200px;">
+                        <input type="hidden" name="action" value="set_follow_up">
+                        <div class="form-group" style="margin: 0; flex: 1; min-width: 160px;">
+                            <label style="font-size: 12px;">Data e hora:</label>
+                            <input type="datetime-local" name="next_follow_up_at" value="<?php echo htmlspecialchars($next_fu_value); ?>" style="width: 100%; padding: 8px 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="padding: 8px 16px;"><?php echo $next_fu ? 'Atualizar' : 'Agendar'; ?></button>
+                    </form>
+                    <?php if ($next_fu): ?>
+                    <form method="POST" style="display: inline;">
+                        <input type="hidden" name="action" value="set_follow_up">
+                        <input type="hidden" name="next_follow_up_at" value="">
+                        <button type="submit" class="btn btn-secondary" style="padding: 8px 16px;">Limpar</button>
+                    </form>
+                    <?php endif; ?>
+                </div>
+                <p style="margin: 8px 0 0 0; font-size: 11px; color: #64748b;">O lead aparecerá em &quot;Follow-up hoje&quot; no CRM e no Dashboard na data escolhida.</p>
+            </div>
+            <?php endif; ?>
+            
             <div class="info-row">
                 <div class="info-label">Status Atual:</div>
                 <div class="info-value">
@@ -634,99 +745,217 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     
     <!-- Painel Qualificação -->
     <div class="tab-panel" id="panel-qualificacao" role="tabpanel" aria-labelledby="tab-qualificacao" aria-hidden="true">
-        <div class="lead-info-grid">
-        <div class="info-card">
-            <h2>Dados de qualificação</h2>
-            <?php if (!empty($lead['message'])): ?>
-            <div class="info-row">
-                <div class="info-label">Mensagem:</div>
-                <div class="info-value"><?php echo nl2br(htmlspecialchars($lead['message'])); ?></div>
+        <div class="qualificacao-layout">
+        <!-- Coluna esquerda: Dados atuais + Automação -->
+        <div class="qual-col-left">
+            <div class="info-card">
+                <h2>Dados de qualificação</h2>
+                <?php if (!empty($lead['message'])): ?>
+                <div class="info-row">
+                    <div class="info-label">Mensagem:</div>
+                    <div class="info-value"><?php echo nl2br(htmlspecialchars($lead['message'])); ?></div>
+                </div>
+                <?php endif; ?>
+                <?php if (!empty($lead['address'])): ?>
+                <div class="info-row">
+                    <div class="info-label">Endereço:</div>
+                    <div class="info-value"><?php echo htmlspecialchars($lead['address']); ?></div>
+                </div>
+                <?php endif; ?>
+                <?php 
+                $pt = $lead['property_type'] ?? '';
+                $pt_label = $pt === 'casa' ? 'Residencial (Casa)' : ($pt === 'apartamento' ? 'Residencial (Apartamento)' : ($pt === 'comercial' ? 'Comercial' : '—'));
+                if ($pt): ?>
+                <div class="info-row">
+                    <div class="info-label">Tipo de imóvel:</div>
+                    <div class="info-value"><?php echo $pt_label; ?></div>
+                </div>
+                <?php endif; ?>
+                <?php if (!empty($lead['estimated_area'])): ?>
+                <div class="info-row">
+                    <div class="info-label">Metragem estimada:</div>
+                    <div class="info-value"><?php echo htmlspecialchars($lead['estimated_area']); ?></div>
+                </div>
+                <?php endif; ?>
+                <?php if (!empty($lead['service_type'])): ?>
+                <div class="info-row">
+                    <div class="info-label">Tipo de serviço / piso:</div>
+                    <div class="info-value"><?php echo htmlspecialchars($lead['service_type']); ?></div>
+                </div>
+                <?php endif; ?>
+                <?php if (!empty($lead['main_interest'])): ?>
+                <div class="info-row">
+                    <div class="info-label">Interesse principal:</div>
+                    <div class="info-value"><?php echo htmlspecialchars($lead['main_interest']); ?></div>
+                </div>
+                <?php endif; ?>
+                <?php 
+                $urg = $lead['urgency'] ?? '';
+                $urg_label = $urg === 'imediato' ? 'Imediato' : ($urg === '30_dias' ? '30 dias' : ($urg === '60_mais' ? '60+ dias' : '—'));
+                if ($urg): ?>
+                <div class="info-row">
+                    <div class="info-label">Prazo / Urgência:</div>
+                    <div class="info-value"><?php echo $urg_label; ?></div>
+                </div>
+                <?php endif; ?>
+                <?php if (isset($lead['budget_estimated']) && $lead['budget_estimated'] !== '' && $lead['budget_estimated'] !== null): ?>
+                <div class="info-row">
+                    <div class="info-label">Orçamento estimado:</div>
+                    <div class="info-value"><?php echo htmlspecialchars(is_numeric($lead['budget_estimated']) ? number_format((float)$lead['budget_estimated'], 0, ',', '.') : $lead['budget_estimated']); ?></div>
+                </div>
+                <?php endif; ?>
+                <?php if (isset($lead['is_decision_maker']) && $lead['is_decision_maker'] !== '' && $lead['is_decision_maker'] !== null): ?>
+                <div class="info-row">
+                    <div class="info-label">Decisor:</div>
+                    <div class="info-value"><?php echo $lead['is_decision_maker'] ? 'Sim' : 'Não'; ?></div>
+                </div>
+                <?php endif; ?>
+                <?php if (!empty($lead['payment_type'])): ?>
+                <div class="info-row">
+                    <div class="info-label">Forma de pagamento:</div>
+                    <div class="info-value"><?php echo $lead['payment_type'] === 'cash' ? 'À vista' : 'Financiamento'; ?></div>
+                </div>
+                <?php endif; ?>
+                <?php if (!empty($lead['disqualification_reason'])): ?>
+                <div class="info-row" style="background: #fef2f2; padding: 10px; border-radius: 6px;">
+                    <div class="info-label">Motivo desqualificação:</div>
+                    <div class="info-value"><?php echo nl2br(htmlspecialchars($lead['disqualification_reason'])); ?></div>
+                </div>
+                <?php endif; ?>
+                <div class="info-row">
+                    <div class="info-label">IP:</div>
+                    <div class="info-value"><?php echo htmlspecialchars($lead['ip_address'] ?? '—'); ?></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Atualizado em:</div>
+                    <div class="info-value"><?php echo date('d/m/Y H:i', strtotime($lead['updated_at'])); ?></div>
+                </div>
             </div>
-            <?php endif; ?>
-            <?php if (!empty($lead['address'])): ?>
-            <div class="info-row">
-                <div class="info-label">Endereço:</div>
-                <div class="info-value"><?php echo htmlspecialchars($lead['address']); ?></div>
-            </div>
-            <?php endif; ?>
-            <?php if (!empty($lead['property_type'])): ?>
-            <div class="info-row">
-                <div class="info-label">Tipo imóvel:</div>
-                <div class="info-value"><?php echo $lead['property_type'] === 'casa' ? 'Casa' : ($lead['property_type'] === 'apartamento' ? 'Apartamento' : 'Comercial'); ?></div>
-            </div>
-            <?php endif; ?>
-            <?php if (!empty($lead['service_type'])): ?>
-            <div class="info-row">
-                <div class="info-label">Tipo serviço:</div>
-                <div class="info-value"><?php echo htmlspecialchars($lead['service_type']); ?></div>
-            </div>
-            <?php endif; ?>
-            <?php if (!empty($lead['main_interest'])): ?>
-            <div class="info-row">
-                <div class="info-label">Interesse principal:</div>
-                <div class="info-value"><?php echo htmlspecialchars($lead['main_interest']); ?></div>
-            </div>
-            <?php endif; ?>
-            <?php if (isset($lead['lead_score']) && $lead['lead_score'] > 0): ?>
-            <div class="info-row">
-                <div class="info-label">Score:</div>
-                <div class="info-value"><strong><?php echo (int)$lead['lead_score']; ?></strong> / 100</div>
-            </div>
-            <?php endif; ?>
-            <div class="info-row">
-                <div class="info-label">IP:</div>
-                <div class="info-value"><?php echo htmlspecialchars($lead['ip_address'] ?? '—'); ?></div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Atualizado em:</div>
-                <div class="info-value"><?php echo date('d/m/Y H:i', strtotime($lead['updated_at'])); ?></div>
+            <div class="info-card" style="background: #f8fafc; border-left: 4px solid #6366f1;">
+                <h2>⚙️ Automação</h2>
+                <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Ao salvar a qualificação, o lead recebe:</p>
+                <ul style="margin: 0 0 12px 0; padding-left: 20px; font-size: 13px; color: #475569;">
+                    <li><strong>Score</strong> (calculado pelos dados)</li>
+                    <li><strong>Tags automáticas</strong> (se config/lead-logic.php existir)</li>
+                </ul>
+                <?php if (isset($lead['lead_score']) && $lead['lead_score'] !== ''): ?>
+                <div class="info-row">
+                    <div class="info-label">Score atual:</div>
+                    <div class="info-value"><strong><?php echo (int)$lead['lead_score']; ?></strong> / 100</div>
+                </div>
+                <?php endif; ?>
+                <p style="font-size: 12px; color: #64748b; margin: 12px 0 0 0;">Status pode mudar para <strong>Qualificado</strong> ou <strong>Desqualificado</strong> (com motivo obrigatório). Se desqualificado, lead entra em nutrição/arquivamento.</p>
             </div>
         </div>
-        <div class="info-card">
-            <h2>Qualificação (atualizar)</h2>
-            <form method="POST" action="?module=lead-detail&id=<?php echo $lead_id; ?>">
-                <input type="hidden" name="action" value="update_qualification">
-                <div class="form-group">
-                    <label>Orçamento estimado ($)</label>
-                    <input type="text" name="budget_estimated" value="<?php echo htmlspecialchars($lead['budget_estimated'] ?? ''); ?>" placeholder="Ex: 5000">
+        <!-- Coluna direita: Formulário -->
+        <div class="qual-col-right">
+            <div class="info-card">
+                <h2>🧾 Perguntas-chave / Registro obrigatório</h2>
+                <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">Preencha os dados da qualificação. Depois marque como Qualificado ou Desqualificado.</p>
+                <form method="POST" action="?module=lead-detail&id=<?php echo $lead_id; ?>#qualificacao" id="form-qualificacao">
+                    <input type="hidden" name="action" value="update_qualification">
+                    <div class="qual-grid">
+                        <div class="form-group">
+                            <label>Tipo de imóvel</label>
+                            <select name="property_type">
+                                <option value="">— Selecione —</option>
+                                <option value="casa" <?php echo ($lead['property_type'] ?? '') === 'casa' ? 'selected' : ''; ?>>Residencial (Casa)</option>
+                                <option value="apartamento" <?php echo ($lead['property_type'] ?? '') === 'apartamento' ? 'selected' : ''; ?>>Residencial (Apartamento)</option>
+                                <option value="comercial" <?php echo ($lead['property_type'] ?? '') === 'comercial' ? 'selected' : ''; ?>>Comercial</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Metragem estimada</label>
+                            <input type="text" name="estimated_area" value="<?php echo htmlspecialchars($lead['estimated_area'] ?? ''); ?>" placeholder="Ex: 50 m²">
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo de serviço / piso desejado</label>
+                            <select name="service_type">
+                                <option value="">— Selecione —</option>
+                                <option value="Instalação" <?php echo ($lead['service_type'] ?? '') === 'Instalação' ? 'selected' : ''; ?>>Instalação</option>
+                                <option value="Refinishing" <?php echo ($lead['service_type'] ?? '') === 'Refinishing' ? 'selected' : ''; ?>>Refinishing</option>
+                                <option value="Reparo" <?php echo ($lead['service_type'] ?? '') === 'Reparo' ? 'selected' : ''; ?>>Reparo</option>
+                                <option value="Vinyl" <?php echo ($lead['service_type'] ?? '') === 'Vinyl' ? 'selected' : ''; ?>>Vinyl</option>
+                                <option value="Hardwood" <?php echo ($lead['service_type'] ?? '') === 'Hardwood' ? 'selected' : ''; ?>>Hardwood</option>
+                                <option value="Tile" <?php echo ($lead['service_type'] ?? '') === 'Tile' ? 'selected' : ''; ?>>Tile</option>
+                                <option value="Carpet" <?php echo ($lead['service_type'] ?? '') === 'Carpet' ? 'selected' : ''; ?>>Carpet</option>
+                                <option value="Laminate" <?php echo ($lead['service_type'] ?? '') === 'Laminate' ? 'selected' : ''; ?>>Laminate</option>
+                                <option value="Outro" <?php echo (!empty($lead['service_type']) && !in_array($lead['service_type'], ['Instalação','Refinishing','Reparo','Vinyl','Hardwood','Tile','Carpet','Laminate'])) ? 'selected' : ''; ?>>Outro</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Prazo / Urgência</label>
+                            <select name="urgency">
+                                <option value="">— Selecione —</option>
+                                <option value="imediato" <?php echo ($lead['urgency'] ?? '') === 'imediato' ? 'selected' : ''; ?>>Imediato</option>
+                                <option value="30_dias" <?php echo ($lead['urgency'] ?? '') === '30_dias' ? 'selected' : ''; ?>>30 dias</option>
+                                <option value="60_mais" <?php echo ($lead['urgency'] ?? '') === '60_mais' ? 'selected' : ''; ?>>60+ dias</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Orçamento estimado</label>
+                            <input type="text" name="budget_estimated" value="<?php echo htmlspecialchars($lead['budget_estimated'] ?? ''); ?>" placeholder="Ex: 5000">
+                        </div>
+                        <div class="form-group">
+                            <label>Decisor (Sim / Não)</label>
+                            <select name="is_decision_maker">
+                                <option value="">— Selecione —</option>
+                                <option value="1" <?php echo isset($lead['is_decision_maker']) && $lead['is_decision_maker'] ? 'selected' : ''; ?>>Sim</option>
+                                <option value="0" <?php echo isset($lead['is_decision_maker']) && $lead['is_decision_maker'] === '0' ? 'selected' : ''; ?>>Não</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Forma de pagamento</label>
+                            <select name="payment_type">
+                                <option value="">— Selecione —</option>
+                                <option value="cash" <?php echo ($lead['payment_type'] ?? '') === 'cash' ? 'selected' : ''; ?>>À vista</option>
+                                <option value="financing" <?php echo ($lead['payment_type'] ?? '') === 'financing' ? 'selected' : ''; ?>>Financiamento</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Concorrência?</label>
+                            <select name="has_competition">
+                                <option value="">—</option>
+                                <option value="1" <?php echo isset($lead['has_competition']) && $lead['has_competition'] ? 'selected' : ''; ?>>Sim</option>
+                                <option value="0" <?php echo isset($lead['has_competition']) && $lead['has_competition'] === '0' ? 'selected' : ''; ?>>Não</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="qual-actions" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+                        <button type="submit" class="btn btn-primary">Salvar qualificação</button>
+                    </div>
+                </form>
+                <h3 style="margin-top: 24px; margin-bottom: 12px; font-size: 15px;">❌ Definir resultado</h3>
+                <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Após preencher os dados, marque o lead como <strong>Qualificado</strong> ou <strong>Desqualificado</strong>. Se desqualificado, o motivo é obrigatório (lead entra em nutrição/arquivamento).</p>
+                <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start;">
+                    <form method="POST" action="?module=lead-detail&id=<?php echo $lead_id; ?>#qualificacao" style="display: inline;">
+                        <input type="hidden" name="action" value="update_qualification">
+                        <input type="hidden" name="status" value="qualified">
+                        <button type="submit" class="btn btn-primary" style="background: #059669;">✓ Marcar como Qualificado</button>
+                    </form>
+                    <form method="POST" action="?module=lead-detail&id=<?php echo $lead_id; ?>#qualificacao" style="display: inline;" id="form-desqualificar" onsubmit="return !!document.getElementById('motivo-desqualificar').value.trim();">
+                        <input type="hidden" name="action" value="update_qualification">
+                        <input type="hidden" name="status" value="closed_lost">
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end;">
+                            <div class="form-group" style="margin: 0; min-width: 220px;">
+                                <label>Motivo da desqualificação (obrigatório)</label>
+                                <input type="text" name="disqualification_reason" id="motivo-desqualificar" placeholder="Ex: Orçamento incompatível, sem interesse" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px;">
+                            </div>
+                            <button type="submit" class="btn btn-secondary" style="background: #dc2626; color: #fff; border: none;">✕ Marcar como Desqualificado</button>
+                        </div>
+                    </form>
                 </div>
-                <div class="form-group">
-                    <label>Urgência</label>
-                    <select name="urgency">
-                        <option value="">—</option>
-                        <option value="imediato" <?php echo ($lead['urgency'] ?? '') === 'imediato' ? 'selected' : ''; ?>>Imediato</option>
-                        <option value="30_dias" <?php echo ($lead['urgency'] ?? '') === '30_dias' ? 'selected' : ''; ?>>30 dias</option>
-                        <option value="60_mais" <?php echo ($lead['urgency'] ?? '') === '60_mais' ? 'selected' : ''; ?>>60+ dias</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Decisor?</label>
-                    <select name="is_decision_maker">
-                        <option value="">—</option>
-                        <option value="1" <?php echo isset($lead['is_decision_maker']) && $lead['is_decision_maker'] ? 'selected' : ''; ?>>Sim</option>
-                        <option value="0" <?php echo isset($lead['is_decision_maker']) && $lead['is_decision_maker'] === '0' ? 'selected' : ''; ?>>Não</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Tipo pagamento</label>
-                    <select name="payment_type">
-                        <option value="">—</option>
-                        <option value="cash" <?php echo ($lead['payment_type'] ?? '') === 'cash' ? 'selected' : ''; ?>>À vista (Cash)</option>
-                        <option value="financing" <?php echo ($lead['payment_type'] ?? '') === 'financing' ? 'selected' : ''; ?>>Financiamento</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Concorrência?</label>
-                    <select name="has_competition">
-                        <option value="">—</option>
-                        <option value="1" <?php echo isset($lead['has_competition']) && $lead['has_competition'] ? 'selected' : ''; ?>>Sim</option>
-                        <option value="0" <?php echo isset($lead['has_competition']) && $lead['has_competition'] === '0' ? 'selected' : ''; ?>>Não</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary">Salvar qualificação</button>
-            </form>
+            </div>
         </div>
         </div>
+        <style>
+        .qualificacao-layout { display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; }
+        @media (max-width: 900px) { .qualificacao-layout { grid-template-columns: 1fr; } }
+        .qual-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+        @media (max-width: 600px) { .qual-grid { grid-template-columns: 1fr; } }
+        .qual-grid .form-group label { font-size: 12px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px; }
+        .qual-grid .form-group input, .qual-grid .form-group select { width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+        </style>
     </div>
     <!-- Fim painel Qualificação -->
     
@@ -751,20 +980,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         ?>
         
         <?php if ($can_log_contact): ?>
-        <form method="POST" action="?module=lead-detail&id=<?php echo $lead_id; ?>" style="margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <form method="POST" action="?module=lead-detail&id=<?php echo $lead_id; ?>#interacoes" style="margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
             <input type="hidden" name="action" value="add_activity">
             <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 16px;">Registrar contato</h3>
-            <div class="form-group">
-                <label>Tipo de contato:</label>
-                <select name="activity_type" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px;">
-                    <option value="phone_call">Ligação</option>
-                    <option value="email_sent">E-mail enviado</option>
-                    <option value="whatsapp_message">WhatsApp</option>
-                    <option value="meeting_scheduled">Reunião agendada / realizada</option>
-                    <option value="note">Observação / anotação</option>
-                    <option value="other">Outro</option>
-                </select>
+            <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                    <label>Data e hora do contato:</label>
+                    <input type="datetime-local" name="activity_datetime" value="<?php echo date('Y-m-d\TH:i'); ?>" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+                </div>
+                <div>
+                    <label>Tipo de contato:</label>
+                    <select name="activity_type" required style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px;">
+                        <option value="phone_call">Ligação</option>
+                        <option value="email_sent">E-mail enviado</option>
+                        <option value="whatsapp_message">WhatsApp</option>
+                        <option value="meeting_scheduled">Reunião agendada / realizada</option>
+                        <option value="note">Observação / anotação</option>
+                        <option value="other">Outro</option>
+                    </select>
+                </div>
             </div>
+            <style>.form-row-datetime-type{display:grid;grid-template-columns:1fr 1fr;gap:12px;}@media(max-width:600px){.form-row-datetime-type{grid-template-columns:1fr;}}</style>
             <div class="form-group">
                 <label>Assunto / resumo (opcional):</label>
                 <input type="text" name="activity_subject" placeholder="Ex: Retorno da ligação" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px;">
@@ -782,7 +1018,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <?php endif; ?>
         
         <h3 style="margin-bottom: 12px; font-size: 16px;">Adicionar observação interna</h3>
-        <form method="POST" action="?module=lead-detail&id=<?php echo (int)$lead_id; ?>" style="margin-bottom: 24px;">
+        <form method="POST" action="?module=lead-detail&id=<?php echo (int)$lead_id; ?>#interacoes" style="margin-bottom: 24px;">
             <input type="hidden" name="action" value="add_note">
             <div class="form-group">
                 <textarea name="note" class="textarea" placeholder="Digite uma observação sobre este lead..." required></textarea>
@@ -881,10 +1117,100 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     <!-- Fim painel Interações -->
 
     <div class="tab-panel" id="panel-visitas" role="tabpanel" aria-labelledby="tab-visitas" aria-hidden="true">
+    <div class="tab-panel-inner" style="padding-top: 0;">
+    <h2 class="panel-title" style="margin: 0 0 20px 0; font-size: 20px; color: #1a2036; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0;">Visitas — Lead #<?php echo (int)$lead_id; ?> <?php echo htmlspecialchars($lead['name'] ?? ''); ?></h2>
+    <?php
+    // Garantir detecção da tabela visits (re-check na aba caso carregamento inicial não tenha rodado)
+    if (!$has_visits_table && isDatabaseConfigured()) {
+        try {
+            $pdo_visits = getDBConnection();
+            if ($pdo_visits && $pdo_visits->query("SHOW TABLES LIKE 'visits'")->rowCount() > 0) {
+                $has_visits_table = true;
+                $stmt_v = $pdo_visits->prepare("SELECT id, lead_id, scheduled_at, seller_id, technician_id, address, notes, status, created_at FROM visits WHERE lead_id = ? ORDER BY scheduled_at DESC");
+                $stmt_v->execute([$lead_id]);
+                $lead_visits = $stmt_v->fetchAll(PDO::FETCH_ASSOC);
+            }
+        } catch (Exception $e) {}
+    }
+    $visit_user_names = [];
+    foreach ($users as $u) { $visit_user_names[(int)$u['id']] = $u['name']; }
+    $visit_status_labels = ['scheduled' => 'Agendada', 'completed' => 'Realizada', 'cancelled' => 'Cancelada', 'no_show' => 'Não compareceu'];
+    ?>
+    <?php if (!$has_visits_table): ?>
+    <div class="info-card" style="margin-bottom: 20px; background: #fffbeb; border: 1px solid #fcd34d;">
+        <p style="margin: 0 0 8px 0; font-weight: 600; color: #92400e;">Para agendar visitas, crie a tabela <strong>visits</strong> no banco.</p>
+        <p style="margin: 0; font-size: 13px; color: #92400e;">No phpMyAdmin execute <strong>database/migration-visits-only.sql</strong> (ou a seção &quot;4. VISITAS&quot; de migration-crm-completo.sql). Depois <a href="?module=lead-detail&id=<?php echo (int)$lead_id; ?>#visitas">atualize esta página</a>.</p>
+    </div>
+    <?php endif; ?>
+    <?php if (!empty($_GET['visit_error'])): ?>
+    <div class="info-card" style="margin-bottom: 16px; background: #fef2f2; border: 1px solid #fecaca;">
+        <p style="margin: 0; color: #991b1b; font-size: 14px;">Erro ao agendar. Verifique se a tabela <strong>visits</strong> existe. Execute <strong>database/migration-visits-only.sql</strong> no phpMyAdmin.</p>
+    </div>
+    <?php endif; ?>
+    <div class="info-card" style="margin-bottom: 24px;">
+        <h2>Agendar visita (neste lead)</h2>
+        <p style="color: #64748b; margin-bottom: 16px; font-size: 14px;">Escolha a data/hora e o usuário que fará a visita. A visita será adicionada à agenda.</p>
+        <form method="POST" action="?module=lead-detail&id=<?php echo (int)$lead_id; ?>#visitas"<?php if (!$has_visits_table): ?> style="opacity: 0.85;"<?php endif; ?>>
+            <input type="hidden" name="action" value="schedule_visit">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label>Data e hora</label>
+                    <input type="datetime-local" name="scheduled_at" required value="<?php echo date('Y-m-d\TH:i', strtotime('+1 day')); ?>" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px;"<?php if (!$has_visits_table): ?> disabled<?php endif; ?>>
+                </div>
+                <div class="form-group">
+                    <label>Quem fará a visita</label>
+                    <select name="seller_id" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px;"<?php if (!$has_visits_table): ?> disabled<?php endif; ?>>
+                        <option value="">— Selecione o usuário —</option>
+                        <?php foreach ($users as $u): ?>
+                        <option value="<?php echo (int)$u['id']; ?>"><?php echo htmlspecialchars($u['name']); ?><?php echo !empty($u['email']) ? ' (' . htmlspecialchars($u['email']) . ')' : ''; ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            <?php if (empty($users) && $has_visits_table): ?>
+            <p style="font-size: 13px; color: #dc2626; margin-bottom: 12px;">Cadastre usuários em <strong>Users</strong> para atribuir quem fará a visita.</p>
+            <?php endif; ?>
+            <div class="form-group" style="margin-top: 12px;">
+                <label>Endereço (opcional)</label>
+                <input type="text" name="address" placeholder="Endereço da visita" value="<?php echo htmlspecialchars($lead['address'] ?? ''); ?>" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px;"<?php if (!$has_visits_table): ?> disabled<?php endif; ?>>
+            </div>
+            <div class="form-group">
+                <label>Observações (opcional)</label>
+                <textarea name="notes" rows="2" placeholder="Checklist, observações" style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px; box-sizing: border-box;"<?php if (!$has_visits_table): ?> disabled<?php endif; ?>></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary"<?php if (!$has_visits_table): ?> disabled title="Crie a tabela visits no banco para habilitar"<?php endif; ?>>Adicionar à agenda</button>
+        </form>
+    </div>
     <div class="info-card">
-        <h2>Visitas / Medições</h2>
-        <p style="color: #64748b; margin-bottom: 12px;">Agende visitas e registre medições para este lead.</p>
-        <a href="?module=visits&lead_id=<?php echo (int)$lead_id; ?>" class="btn btn-primary">Ver agenda de visitas</a>
+        <h2>Visitas deste lead</h2>
+        <?php if (empty($lead_visits)): ?>
+        <p style="color: #64748b;"><?php echo $has_visits_table ? 'Nenhuma visita agendada ainda. Use o formulário acima para agendar.' : 'Nenhuma visita (crie a tabela visits no banco para habilitar o agendamento).'; ?></p>
+        <?php else: ?>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f7f8fc; border-bottom: 2px solid #e2e8f0;">
+                    <th style="padding: 10px 12px; text-align: left; font-size: 12px; color: #4a5568;">Data / Hora</th>
+                    <th style="padding: 10px 12px; text-align: left; font-size: 12px; color: #4a5568;">Responsável</th>
+                    <th style="padding: 10px 12px; text-align: left; font-size: 12px; color: #4a5568;">Status</th>
+                    <th style="padding: 10px 12px; text-align: left; font-size: 12px; color: #4a5568;">Endereço</th>
+                    <th style="padding: 10px 12px; text-align: left; font-size: 12px; color: #4a5568;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($lead_visits as $v): ?>
+                <tr style="border-bottom: 1px solid #f0f0f0;">
+                    <td style="padding: 12px;"><?php echo date('d/m/Y H:i', strtotime($v['scheduled_at'])); ?></td>
+                    <td style="padding: 12px;"><?php echo htmlspecialchars($visit_user_names[(int)($v['seller_id'] ?? 0)] ?? '—'); ?></td>
+                    <td style="padding: 12px;"><span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: <?php echo ($v['status'] ?? '') === 'completed' ? '#dcfce7' : (($v['status'] ?? '') === 'cancelled' ? '#fee2e2' : '#dbeafe'); ?>; color: <?php echo ($v['status'] ?? '') === 'completed' ? '#166534' : (($v['status'] ?? '') === 'cancelled' ? '#991b1b' : '#1d4ed8'); ?>;"><?php echo $visit_status_labels[$v['status'] ?? 'scheduled'] ?? $v['status']; ?></span></td>
+                    <td style="padding: 12px;"><?php echo htmlspecialchars(mb_substr($v['address'] ?? '', 0, 50)); ?><?php echo mb_strlen($v['address'] ?? '') > 50 ? '…' : ''; ?></td>
+                    <td style="padding: 12px;"><a href="?module=visit-detail&id=<?php echo (int)$v['id']; ?>" class="link" style="font-size: 13px;">Ver / Medição</a></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php endif; ?>
+        <p style="margin-top: 16px; font-size: 12px; color: #64748b;"><a href="?module=visits&lead_id=<?php echo (int)$lead_id; ?>" class="link">Ver agenda completa de visitas →</a></p>
+    </div>
     </div>
     </div>
 
@@ -915,13 +1241,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 <script>
 (function() {
-    var container = document.getElementById('lead-detail-tabs-root');
-    if (!container) return;
-    var hash = (location.hash || '').replace('#', '');
-    if (hash && container.querySelector('#panel-' + hash)) {
-        window.leadDetailShowPanel(hash);
-    } else {
-        window.leadDetailShowPanel('resumo');
+    function openTabFromHash() {
+        var container = document.getElementById('lead-detail-tabs-root');
+        if (!container) return;
+        var hash = (location.hash || '').replace(/^#/, '').trim();
+        if (hash && container.querySelector('#panel-' + hash)) {
+            if (typeof window.leadDetailShowPanel === 'function') {
+                window.leadDetailShowPanel(hash);
+                try {
+                    var panel = container.querySelector('#panel-' + hash);
+                    if (panel && panel.classList.contains('active') && panel.scrollIntoView) {
+                        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                } catch (e) {}
+            }
+        } else if (typeof window.leadDetailShowPanel === 'function') {
+            window.leadDetailShowPanel('resumo');
+        }
     }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() { openTabFromHash(); setTimeout(openTabFromHash, 50); });
+    } else {
+        openTabFromHash();
+        setTimeout(openTabFromHash, 50);
+    }
+    window.addEventListener('load', function() { openTabFromHash(); });
+    window.addEventListener('hashchange', openTabFromHash);
 })();
 </script>
