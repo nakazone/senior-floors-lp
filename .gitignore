@@ -23,6 +23,7 @@ package-lock.json
 # IDE
 .vscode/
 .idea/
+.cursor/
 
 # Build
 dist/
