@@ -134,27 +134,64 @@ export async function createLead(req, res) {
 }
 
 export async function updateLead(req, res) {
-  if (!isDatabaseConfigured()) return res.status(503).json({ error: 'Database not configured' });
+  if (!isDatabaseConfigured()) return res.status(503).json({ success: false, error: 'Database not configured' });
   const id = parseInt(req.params.id, 10);
-  if (!id) return res.status(400).json({ error: 'Invalid id' });
+  if (!id) return res.status(400).json({ success: false, error: 'Invalid id' });
   const body = req.body || {};
   const allowed = ['name', 'email', 'phone', 'zipcode', 'message', 'status', 'priority', 'owner_id', 'pipeline_stage_id', 'estimated_value', 'notes'];
   const set = [];
   const values = [];
-  for (const key of allowed) {
-    if (body[key] !== undefined) {
-      set.push(`\`${key}\` = ?`);
-      values.push(body[key]);
-    }
-  }
-  if (set.length === 0) return res.status(400).json({ error: 'No fields to update' });
-  values.push(id);
+  
   try {
     const pool = await getDBConnection();
-    await pool.execute(`UPDATE leads SET ${set.join(', ')} WHERE id = ?`, values);
-    const [rows] = await pool.query('SELECT * FROM leads WHERE id = ?', [id]);
-    res.json({ success: true, data: rows[0] });
+    
+    // If status is updated but pipeline_stage_id is not, try to find matching stage
+    if (body.status && !body.pipeline_stage_id) {
+      const [stages] = await pool.execute(
+        'SELECT id FROM pipeline_stages WHERE slug = ? LIMIT 1',
+        [body.status]
+      );
+      if (stages.length > 0) {
+        body.pipeline_stage_id = stages[0].id;
+      }
+    }
+    
+    // If pipeline_stage_id is updated but status is not, get the slug
+    if (body.pipeline_stage_id && !body.status) {
+      const [stages] = await pool.execute(
+        'SELECT slug FROM pipeline_stages WHERE id = ? LIMIT 1',
+        [body.pipeline_stage_id]
+      );
+      if (stages.length > 0) {
+        body.status = stages[0].slug;
+      }
+    }
+    
+    for (const key of allowed) {
+      if (body[key] !== undefined) {
+        set.push(`\`${key}\` = ?`);
+        values.push(body[key]);
+      }
+    }
+    
+    if (set.length === 0) return res.status(400).json({ success: false, error: 'No fields to update' });
+    
+    values.push(id);
+    await pool.execute(`UPDATE leads SET ${set.join(', ')}, updated_at = NOW() WHERE id = ?`, values);
+    
+    // Get updated lead with joins
+    const [rows] = await pool.query(
+      `SELECT l.*, u.name as owner_name, ps.name as pipeline_stage_name, ps.slug as pipeline_stage_slug, ps.color as pipeline_stage_color
+       FROM leads l
+       LEFT JOIN users u ON l.owner_id = u.id
+       LEFT JOIN pipeline_stages ps ON l.pipeline_stage_id = ps.id
+       WHERE l.id = ?`,
+      [id]
+    );
+    
+    return res.json({ success: true, data: rows[0] });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error('Update lead error:', e);
+    return res.status(500).json({ success: false, error: e.message });
   }
 }

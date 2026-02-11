@@ -459,6 +459,9 @@ function viewLead(id) {
     window.location.href = `lead-detail.html?id=${id}`;
 }
 
+// Make functions globally available
+window.viewLead = viewLead;
+
 // Customers
 let customersPage = 1;
 async function loadCustomers() {
