@@ -119,7 +119,14 @@ function showPage(pageName) {
                 loadVisits(); // Fallback to old visits
             }
         }
-        else if (pageName === 'financeiro') { currentPage = 1; loadContracts(); }
+        else if (pageName === 'financeiro') { 
+            currentPage = 1; 
+            if (typeof showFinancialView === 'function') {
+                showFinancialView('dashboard');
+            } else {
+                loadContracts(); // Fallback
+            }
+        }
         else if (pageName === 'activities') { currentPage = 1; loadActivities(); }
         else if (pageName === 'users') { currentPage = 1; loadUsers(); }
     }

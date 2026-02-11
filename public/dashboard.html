@@ -497,8 +497,269 @@
                     </div>
                 </div>
                 
-                <!-- Financeiro Page -->
+                <!-- Financeiro Page (Financial Management) -->
                 <div id="financeiroPage" class="page-content" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);">
+                        <h2 class="page-title">Financial Management</h2>
+                        <div style="display: flex; gap: var(--spacing-sm);">
+                            <button class="btn btn-secondary" onclick="showFinancialView('dashboard')">📊 Dashboard</button>
+                            <button class="btn btn-secondary" onclick="showFinancialView('expenses')">💰 Expenses</button>
+                            <button class="btn btn-secondary" onclick="showFinancialView('payroll')">👥 Payroll</button>
+                            <button class="btn btn-primary" onclick="showNewExpenseModal()">+ New Expense</button>
+                            <button class="btn btn-primary" onclick="showNewPayrollModal()">+ Payroll Entry</button>
+                            <button class="btn btn-secondary" onclick="loadFinancialDashboard()">🔄 Refresh</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Financial Dashboard View -->
+                    <div id="financialDashboardView" class="financial-view">
+                        <div class="stats-grid" style="margin-bottom: var(--spacing-md);">
+                            <div class="stat-card">
+                                <h3>Total Revenue</h3>
+                                <div class="stat-value" id="totalRevenue">$0</div>
+                                <div class="stat-details">
+                                    <span id="revenueVariance">Est: $0</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Total Cost</h3>
+                                <div class="stat-value" id="totalCost">$0</div>
+                                <div class="stat-details">
+                                    <span id="costVariance">Est: $0</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Total Profit</h3>
+                                <div class="stat-value" id="totalProfit">$0</div>
+                                <div class="stat-details">
+                                    <span id="profitVariance">Est: $0</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Profit Margin</h3>
+                                <div class="stat-value" id="profitMargin">0%</div>
+                                <div class="stat-details">
+                                    <span id="marginVariance">Est: 0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: var(--spacing-md);">
+                            <div class="chart-card">
+                                <h3>Revenue vs Cost</h3>
+                                <div class="chart-container">
+                                    <canvas id="revenueCostChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                <h3>Expense Breakdown</h3>
+                                <div class="chart-container">
+                                    <canvas id="expenseBreakdownChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                <h3>Monthly Cash Flow</h3>
+                                <div class="chart-container">
+                                    <canvas id="cashFlowChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                <h3>Crew Cost Analysis</h3>
+                                <div class="chart-container">
+                                    <canvas id="crewCostChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-card" style="margin-top: var(--spacing-md);">
+                            <h3>Project Profitability Ranking</h3>
+                            <div id="profitabilityRanking" style="max-height: 400px; overflow-y: auto;"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Expenses View -->
+                    <div id="financialExpensesView" class="financial-view" style="display: none;">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Category</th>
+                                        <th>Vendor</th>
+                                        <th>Description</th>
+                                        <th>Amount</th>
+                                        <th>Project</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expensesTableBody">
+                                    <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Payroll View -->
+                    <div id="financialPayrollView" class="financial-view" style="display: none;">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Employee</th>
+                                        <th>Hours</th>
+                                        <th>Rate</th>
+                                        <th>Total</th>
+                                        <th>Project</th>
+                                        <th>Crew</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="payrollTableBody">
+                                    <tr><td colspan="9" class="text-center">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Financial Modals -->
+                <!-- New Expense Modal -->
+                <div id="newExpenseModal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>New Expense</h3>
+                            <button class="modal-close" onclick="closeModal('newExpenseModal')">&times;</button>
+                        </div>
+                        <form id="newExpenseForm" onsubmit="createExpense(event)">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Category *</label>
+                                    <select name="category" required>
+                                        <option value="material">Material</option>
+                                        <option value="labor">Labor</option>
+                                        <option value="equipment">Equipment</option>
+                                        <option value="travel">Travel</option>
+                                        <option value="office">Office</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Project</label>
+                                    <select name="project_id" id="expenseProjectSelect">
+                                        <option value="">General Overhead</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Vendor</label>
+                                    <input type="text" name="vendor">
+                                </div>
+                                <div class="form-group">
+                                    <label>Expense Date *</label>
+                                    <input type="date" name="expense_date" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Description *</label>
+                                <textarea name="description" rows="3" required></textarea>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Amount *</label>
+                                    <input type="number" name="amount" step="0.01" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Tax Amount</label>
+                                    <input type="number" name="tax_amount" step="0.01" value="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Payment Method</label>
+                                    <select name="payment_method">
+                                        <option value="cash">Cash</option>
+                                        <option value="check">Check</option>
+                                        <option value="credit_card">Credit Card</option>
+                                        <option value="bank_transfer">Bank Transfer</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Receipt (URL)</label>
+                                <input type="url" name="receipt_url" placeholder="https://...">
+                            </div>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-secondary" onclick="closeModal('newExpenseModal')">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Create Expense</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- New Payroll Modal -->
+                <div id="newPayrollModal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>New Payroll Entry</h3>
+                            <button class="modal-close" onclick="closeModal('newPayrollModal')">&times;</button>
+                        </div>
+                        <form id="newPayrollForm" onsubmit="createPayrollEntry(event)">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Employee *</label>
+                                    <select name="employee_id" id="payrollEmployeeSelect" required>
+                                        <option value="">Select employee...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Date *</label>
+                                    <input type="date" name="date" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Project</label>
+                                    <select name="project_id" id="payrollProjectSelect">
+                                        <option value="">General Overhead</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Crew</label>
+                                    <select name="crew_id" id="payrollCrewSelect">
+                                        <option value="">Select crew...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Hours Worked *</label>
+                                    <input type="number" name="hours_worked" step="0.25" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Hourly Rate *</label>
+                                    <input type="number" name="hourly_rate" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Overtime Hours</label>
+                                    <input type="number" name="overtime_hours" step="0.25" value="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Overtime Rate</label>
+                                    <input type="number" name="overtime_rate" step="0.01" placeholder="Auto (1.5x)">
+                                </div>
+                            </div>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-secondary" onclick="closeModal('newPayrollModal')">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Create Entry</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
                     <div class="page-header">
                         <h2>Financeiro / Contracts</h2>
                         <button class="btn btn-primary" onclick="showNewContractModal()">+ New Contract</button>
@@ -604,5 +865,6 @@
     <script src="dashboard.js"></script>
     <script src="leads-kanban.js"></script>
     <script src="schedule-engine.js"></script>
+    <script src="financial-engine.js"></script>
 </body>
 </html>
