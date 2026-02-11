@@ -41,18 +41,22 @@ export async function createOrUpdateQualification(req, res) {
     return res.status(400).json({ success: false, error: 'Invalid lead ID' });
   }
 
-  const {
-    property_type,
-    service_type,
-    estimated_area,
-    estimated_budget,
-    urgency,
-    decision_maker,
-    decision_timeline,
-    payment_type,
-    score,
-    qualification_notes
-  } = req.body;
+  const body = req.body || {};
+  const str = (v) => (v === undefined || v === null ? null : String(v));
+  const num = (v) => (v === undefined || v === null || v === '' ? null : (parseFloat(v) || null));
+  const int = (v) => (v === undefined || v === null || v === '' ? null : (parseInt(v, 10) || null));
+
+  const property_type = str(body.property_type);
+  const service_type = str(body.service_type);
+  const estimated_area = num(body.estimated_area);
+  const estimated_budget = num(body.estimated_budget);
+  const urgency = str(body.urgency);
+  const decision_maker = str(body.decision_maker);
+  const decision_timeline = str(body.decision_timeline);
+  const payment_type = str(body.payment_type);
+  const score = int(body.score);
+  const qualification_notes = str(body.qualification_notes);
+  const qualified_by = userId === undefined || userId === null ? null : userId;
 
   try {
     const pool = await getDBConnection();
@@ -76,7 +80,7 @@ export async function createOrUpdateQualification(req, res) {
           property_type, service_type, estimated_area,
           estimated_budget, urgency, decision_maker,
           decision_timeline, payment_type, score,
-          qualification_notes, userId, leadId
+          qualification_notes, qualified_by, leadId
         ]
       );
     } else {
@@ -90,7 +94,7 @@ export async function createOrUpdateQualification(req, res) {
         [
           leadId, property_type, service_type, estimated_area,
           estimated_budget, urgency, decision_maker, decision_timeline,
-          payment_type, score, qualification_notes, userId
+          payment_type, score, qualification_notes, qualified_by
         ]
       );
     }
