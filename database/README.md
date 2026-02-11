@@ -2,13 +2,35 @@
 
 ## Como executar o schema
 
-### Opção 1: Via Railway MySQL Console
+### ⚡ Opção 1: Via Script Node.js (Mais Fácil - Railway)
 
-1. No Railway, vá no serviço MySQL → **"Data"** ou **"Query"**
-2. Cole o conteúdo de `schema.sql`
-3. Execute
+Se você tem Railway CLI instalado:
 
-### Opção 2: Via phpMyAdmin (Hostinger)
+```bash
+# No diretório do projeto
+railway run node database/run-schema.js
+```
+
+O script detecta automaticamente as variáveis do Railway MySQL (`MYSQLHOST`, `MYSQLDATABASE`, etc.) e executa o schema.
+
+**Sem Railway CLI?** Veja outras opções abaixo ou instale: `npm install -g @railway/cli`
+
+### Opção 2: Via MySQL CLI
+
+1. No Railway MySQL → **"Data"** → copie as credenciais (`MYSQLHOST`, `MYSQLUSER`, etc.)
+2. Execute:
+
+```bash
+mysql -h MYSQLHOST -P MYSQLPORT -u MYSQLUSER -pMYSQLPASSWORD MYSQLDATABASE < database/schema.sql
+```
+
+### Opção 3: Via Ferramenta GUI (MySQL Workbench, DBeaver, TablePlus)
+
+1. No Railway MySQL → **"Data"** → **"Connect"** → copie a connection string
+2. Conecte com MySQL Workbench/DBeaver/TablePlus
+3. Execute o conteúdo de `schema.sql`
+
+### Opção 4: Via phpMyAdmin (Hostinger)
 
 1. Acesse phpMyAdmin no Hostinger
 2. Selecione seu banco de dados
