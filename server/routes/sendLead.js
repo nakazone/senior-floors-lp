@@ -164,18 +164,24 @@ export async function handleSendLead(req, res) {
 
   // 4) Optional: email via Nodemailer
   let mail_sent = false;
-  const smtpPass = process.env.SMTP_PASS;
-  const smtpUser = process.env.SMTP_USER;
-  const smtpHost = process.env.SMTP_HOST;
+  const smtpPass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, ''); // Remove espaços
+  const smtpUser = (process.env.SMTP_USER || '').trim();
+  const smtpHost = (process.env.SMTP_HOST || '').trim();
   
-  if (smtpPass && smtpPass !== 'YOUR_APP_PASSWORD_HERE' && smtpUser && smtpHost) {
+  if (smtpPass && smtpPass !== 'YOUR_APP_PASSWORD_HERE' && smtpPass.length >= 10 && smtpUser && smtpHost) {
     try {
-      writeLeadLog(`Attempting to send email via ${smtpHost}`);
+      writeLeadLog(`Attempting to send email via ${smtpHost} to ${smtpUser.substring(0, 3)}***`);
+      // Log parcial da senha para debug (apenas primeiros 4 chars)
+      writeLeadLog(`SMTP_PASS length: ${smtpPass.length} chars (starts with: ${smtpPass.substring(0, 4)}...)`);
+      
       const transport = nodemailer.createTransport({
         host: smtpHost,
         port: Number(process.env.SMTP_PORT) || 587,
         secure: false,
-        auth: { user: smtpUser, pass: smtpPass },
+        auth: { 
+          user: smtpUser, 
+          pass: smtpPass // Já sem espaços
+        },
       });
       
       const mailOptions = {
@@ -199,13 +205,26 @@ export async function handleSendLead(req, res) {
       
       await transport.sendMail(mailOptions);
       mail_sent = true;
-      writeLeadLog(`Email sent successfully to ${mailOptions.to}`);
+      writeLeadLog(`✅ Email sent successfully to ${mailOptions.to}`);
     } catch (e) {
-      writeLeadLog(`Email failed: ${e.message}`);
+      writeLeadLog(`❌ Email failed: ${e.message}`);
+      // Log mais detalhado para debug
+      if (e.code === 'EAUTH') {
+        writeLeadLog(`⚠️ Authentication error - verify App Password is correct (16 chars, no spaces)`);
+        writeLeadLog(`⚠️ SMTP_USER: ${smtpUser}, SMTP_PASS length: ${smtpPass.length}`);
+      }
       console.error('Email error:', e);
     }
   } else {
-    writeLeadLog('Email not configured (SMTP_PASS, SMTP_USER, or SMTP_HOST missing)');
+    if (!smtpPass || smtpPass === 'YOUR_APP_PASSWORD_HERE') {
+      writeLeadLog('⚠️ Email not configured: SMTP_PASS missing or not set');
+    } else if (smtpPass.length < 10) {
+      writeLeadLog(`⚠️ Email not configured: SMTP_PASS too short (${smtpPass.length} chars, expected 16)`);
+    } else if (!smtpUser) {
+      writeLeadLog('⚠️ Email not configured: SMTP_USER missing');
+    } else if (!smtpHost) {
+      writeLeadLog('⚠️ Email not configured: SMTP_HOST missing');
+    }
   }
 
   const response = {
