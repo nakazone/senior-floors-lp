@@ -132,8 +132,11 @@ body {
     display: flex;
     align-items: center;
     padding: 120px 0 80px;
-    background: var(--primary-color) url('assets/background.jpg') center/cover no-repeat;
     background-color: var(--primary-color);
+    background-image: url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 .hero-overlay {
     position: absolute;
@@ -318,8 +321,10 @@ section {
     transition: var(--transition);
 }
 .service-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
-.service-icon { margin-bottom: 16px; }
+.service-icon { margin-bottom: 16px; min-height: 56px; display: flex; align-items: center; }
 .service-icon img { width: 56px; height: 56px; object-fit: contain; }
+.service-icon-svg { color: var(--primary-color); }
+.service-icon-svg svg { width: 56px; height: 56px; flex-shrink: 0; }
 .service-title { font-size: 1.15rem; color: var(--primary-color); margin-bottom: 10px; }
 .service-description { color: var(--text-light); font-size: 0.95rem; line-height: 1.6; }
 .services-cta { text-align: center; }
