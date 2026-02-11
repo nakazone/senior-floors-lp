@@ -39,33 +39,46 @@ async function loadUsers() {
 // Load pipeline stages
 async function loadPipelineStages() {
     try {
-        const pool = await getDBConnection();
-        // We'll fetch via API instead
         const response = await fetch('/api/pipeline-stages', { credentials: 'include' }).catch(() => null);
         
         if (response && response.ok) {
             const data = await response.json();
             if (data.success) {
                 pipelineStages = data.data.sort((a, b) => (a.order_num || 0) - (b.order_num || 0));
+                return;
             }
-        } else {
-            // Fallback: default stages
-            pipelineStages = [
-                { id: 1, name: 'Lead Recebido', slug: 'lead_received', color: '#3498db', order_num: 1 },
-                { id: 2, name: 'Contato Realizado', slug: 'contact_made', color: '#f39c12', order_num: 2 },
-                { id: 3, name: 'Qualificado', slug: 'qualified', color: '#9b59b6', order_num: 3 },
-                { id: 4, name: 'Visita Agendada', slug: 'visit_scheduled', color: '#e67e22', order_num: 4 },
-                { id: 5, name: 'Medição Realizada', slug: 'measurement_done', color: '#16a085', order_num: 5 },
-                { id: 6, name: 'Proposta Criada', slug: 'proposal_created', color: '#34495e', order_num: 6 },
-                { id: 7, name: 'Proposta Enviada', slug: 'proposal_sent', color: '#95a5a6', order_num: 7 },
-                { id: 8, name: 'Em Negociação', slug: 'negotiation', color: '#e74c3c', order_num: 8 },
-                { id: 9, name: 'Fechado - Ganhou', slug: 'closed_won', color: '#27ae60', order_num: 9 },
-                { id: 10, name: 'Fechado - Perdido', slug: 'closed_lost', color: '#c0392b', order_num: 10 },
-                { id: 11, name: 'Produção / Obra', slug: 'production', color: '#8e44ad', order_num: 11 }
-            ];
         }
+        
+        // Fallback: default stages
+        pipelineStages = [
+            { id: 1, name: 'Lead Recebido', slug: 'lead_received', color: '#3498db', order_num: 1 },
+            { id: 2, name: 'Contato Realizado', slug: 'contact_made', color: '#f39c12', order_num: 2 },
+            { id: 3, name: 'Qualificado', slug: 'qualified', color: '#9b59b6', order_num: 3 },
+            { id: 4, name: 'Visita Agendada', slug: 'visit_scheduled', color: '#e67e22', order_num: 4 },
+            { id: 5, name: 'Medição Realizada', slug: 'measurement_done', color: '#16a085', order_num: 5 },
+            { id: 6, name: 'Proposta Criada', slug: 'proposal_created', color: '#34495e', order_num: 6 },
+            { id: 7, name: 'Proposta Enviada', slug: 'proposal_sent', color: '#95a5a6', order_num: 7 },
+            { id: 8, name: 'Em Negociação', slug: 'negotiation', color: '#e74c3c', order_num: 8 },
+            { id: 9, name: 'Fechado - Ganhou', slug: 'closed_won', color: '#27ae60', order_num: 9 },
+            { id: 10, name: 'Fechado - Perdido', slug: 'closed_lost', color: '#c0392b', order_num: 10 },
+            { id: 11, name: 'Produção / Obra', slug: 'production', color: '#8e44ad', order_num: 11 }
+        ];
     } catch (error) {
         console.error('Error loading pipeline stages:', error);
+        // Use fallback
+        pipelineStages = [
+            { id: 1, name: 'Lead Recebido', slug: 'lead_received', color: '#3498db', order_num: 1 },
+            { id: 2, name: 'Contato Realizado', slug: 'contact_made', color: '#f39c12', order_num: 2 },
+            { id: 3, name: 'Qualificado', slug: 'qualified', color: '#9b59b6', order_num: 3 },
+            { id: 4, name: 'Visita Agendada', slug: 'visit_scheduled', color: '#e67e22', order_num: 4 },
+            { id: 5, name: 'Medição Realizada', slug: 'measurement_done', color: '#16a085', order_num: 5 },
+            { id: 6, name: 'Proposta Criada', slug: 'proposal_created', color: '#34495e', order_num: 6 },
+            { id: 7, name: 'Proposta Enviada', slug: 'proposal_sent', color: '#95a5a6', order_num: 7 },
+            { id: 8, name: 'Em Negociação', slug: 'negotiation', color: '#e74c3c', order_num: 8 },
+            { id: 9, name: 'Fechado - Ganhou', slug: 'closed_won', color: '#27ae60', order_num: 9 },
+            { id: 10, name: 'Fechado - Perdido', slug: 'closed_lost', color: '#c0392b', order_num: 10 },
+            { id: 11, name: 'Produção / Obra', slug: 'production', color: '#8e44ad', order_num: 11 }
+        ];
     }
 }
 

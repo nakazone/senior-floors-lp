@@ -91,7 +91,13 @@ function showPage(pageName) {
         
         // Load page data
         if (pageName === 'dashboard') loadDashboard();
-        else if (pageName === 'leads') { currentPage = 1; loadLeads(); }
+        else if (pageName === 'leads') { 
+            currentPage = 1; 
+            loadLeads(); 
+            // Load kanban data
+            if (typeof loadUsers === 'function') loadUsers();
+            if (typeof loadPipelineStages === 'function') loadPipelineStages();
+        }
         else if (pageName === 'customers') { currentPage = 1; loadCustomers(); }
         else if (pageName === 'quotes') { currentPage = 1; loadQuotes(); }
         else if (pageName === 'projects') { currentPage = 1; loadProjects(); }
@@ -390,38 +396,51 @@ function renderCharts(stats) {
 let leadsPage = 1;
 async function loadLeads() {
     const tbody = document.getElementById('leadsTableBody');
-    tbody.innerHTML = '<tr><td colspan="9" class="text-center">Loading...</td></tr>';
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">Loading...</td></tr>';
+    }
     
     try {
         const response = await fetch(`/api/leads?page=${leadsPage}&limit=20`, { credentials: 'include' });
         const data = await response.json();
         
         if (data.success && data.data) {
-            if (data.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="text-center">No leads found</td></tr>';
-            } else {
-                tbody.innerHTML = data.data.map(lead => `
-                    <tr>
-                        <td>${lead.id}</td>
-                        <td>${lead.name || '-'}</td>
-                        <td>${lead.email || '-'}</td>
-                        <td>${lead.phone || '-'}</td>
-                        <td>${lead.zipcode || '-'}</td>
-                        <td><span class="badge badge-${lead.status || 'new'}">${lead.status || 'new'}</span></td>
-                        <td>${lead.source || '-'}</td>
-                        <td>${lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '-'}</td>
-                        <td><button class="btn btn-sm" onclick="viewLead(${lead.id})">View</button></td>
-                    </tr>
-                `).join('');
+            if (tbody) {
+                if (data.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center">No leads found</td></tr>';
+                } else {
+                    tbody.innerHTML = data.data.map(lead => `
+                        <tr>
+                            <td>${lead.id}</td>
+                            <td>${lead.name || '-'}</td>
+                            <td>${lead.email || '-'}</td>
+                            <td>${lead.phone || '-'}</td>
+                            <td>${lead.zipcode || '-'}</td>
+                            <td><span class="badge badge-${lead.status || 'new'}">${lead.status || 'new'}</span></td>
+                            <td>${lead.source || '-'}</td>
+                            <td>${lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '-'}</td>
+                            <td>
+                                <button class="btn btn-sm" onclick="viewLead(${lead.id})" title="Ver">👁️</button>
+                                <button class="btn btn-sm" onclick="showAssignLeadModal(${lead.id})" title="Designar">👤</button>
+                                <button class="btn btn-sm" onclick="showFollowupModal(${lead.id})" title="Follow-up">📅</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
             }
             
             const totalPages = Math.ceil(data.total / 20);
-            document.getElementById('pageInfoLeads').textContent = `Page ${leadsPage} of ${totalPages || 1}`;
-            document.getElementById('prevPageLeads').disabled = leadsPage <= 1;
-            document.getElementById('nextPageLeads').disabled = leadsPage >= totalPages;
+            const pageInfo = document.getElementById('pageInfoLeads');
+            if (pageInfo) pageInfo.textContent = `Page ${leadsPage} of ${totalPages || 1}`;
+            const prevBtn = document.getElementById('prevPageLeads');
+            if (prevBtn) prevBtn.disabled = leadsPage <= 1;
+            const nextBtn = document.getElementById('nextPageLeads');
+            if (nextBtn) nextBtn.disabled = leadsPage >= totalPages;
         }
     } catch (error) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center">Error: ' + error.message + '</td></tr>';
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center">Error: ' + error.message + '</td></tr>';
+        }
     }
 }
 
