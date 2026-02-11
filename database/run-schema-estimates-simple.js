@@ -82,8 +82,11 @@ async function runSchema() {
     connection = await mysql.createConnection(config);
     console.log('✅ Conectado ao MySQL\n');
     
-    // Ler arquivo SQL
-    const sqlFile = path.join(__dirname, 'schema-estimates.sql');
+    // Ler arquivo SQL (tentar versão simplificada primeiro)
+    let sqlFile = path.join(__dirname, 'schema-estimates-simple.sql');
+    if (!fs.existsSync(sqlFile)) {
+      sqlFile = path.join(__dirname, 'schema-estimates.sql');
+    }
     console.log(`📖 Lendo arquivo: ${sqlFile}...`);
     
     if (!fs.existsSync(sqlFile)) {
