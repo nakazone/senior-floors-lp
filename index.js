@@ -41,7 +41,7 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true, service: 'senior-floors-system', time: new Date().toISOString() });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Senior Floors System running on port ${PORT}`);
   console.log('  POST /api/receive-lead — receive lead from LP');
   console.log('  GET  /api/db-check, /api/leads, /api/leads/:id');
