@@ -7,23 +7,120 @@
 -- 1. PROJECTS (Estendendo a tabela existente)
 -- ============================================
 -- Se a tabela projects já existe, adicionar colunas se não existirem
-ALTER TABLE `projects` 
-ADD COLUMN IF NOT EXISTS `client_id` int(11) DEFAULT NULL COMMENT 'FK customers',
-ADD COLUMN IF NOT EXISTS `project_type` varchar(50) DEFAULT 'residential' COMMENT 'residential | commercial',
-ADD COLUMN IF NOT EXISTS `service_type` varchar(50) DEFAULT 'installation' COMMENT 'installation | replacement | repair | refinish',
-ADD COLUMN IF NOT EXISTS `flooring_type` varchar(50) DEFAULT NULL COMMENT 'hardwood | engineered | lvp | laminate | tile',
-ADD COLUMN IF NOT EXISTS `total_sqft` decimal(10,2) DEFAULT NULL COMMENT 'Metragem total',
-ADD COLUMN IF NOT EXISTS `waste_percentage` decimal(5,2) DEFAULT NULL COMMENT 'Percentual de desperdício',
-ADD COLUMN IF NOT EXISTS `adjusted_sqft` decimal(10,2) DEFAULT NULL COMMENT 'Metragem ajustada com desperdício',
-ADD COLUMN IF NOT EXISTS `subfloor_type` varchar(50) DEFAULT NULL COMMENT 'concrete | plywood | existing',
-ADD COLUMN IF NOT EXISTS `level_condition` varchar(50) DEFAULT NULL COMMENT 'good | minor | major',
-ADD COLUMN IF NOT EXISTS `stairs_count` int(11) DEFAULT 0 COMMENT 'Número de degraus',
-ADD COLUMN IF NOT EXISTS `rooms_count` int(11) DEFAULT 0 COMMENT 'Número de cômodos';
+-- MySQL não suporta IF NOT EXISTS em ALTER TABLE, então vamos usar uma abordagem diferente
 
--- Adicionar índices se não existirem
-CREATE INDEX IF NOT EXISTS `idx_client_id` ON `projects` (`client_id`);
-CREATE INDEX IF NOT EXISTS `idx_flooring_type` ON `projects` (`flooring_type`);
-CREATE INDEX IF NOT EXISTS `idx_project_type` ON `projects` (`project_type`);
+-- Verificar e adicionar colunas uma por uma (ignorar erros se já existirem)
+SET @dbname = DATABASE();
+SET @tablename = 'projects';
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+   WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = 'client_id') = 0,
+  'ALTER TABLE `projects` ADD COLUMN `client_id` int(11) DEFAULT NULL COMMENT ''FK customers''',
+  'SELECT 1'
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+   WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = 'project_type') = 0,
+  'ALTER TABLE `projects` ADD COLUMN `project_type` varchar(50) DEFAULT ''residential'' COMMENT ''residential | commercial''',
+  'SELECT 1'
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+   WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = 'service_type') = 0,
+  'ALTER TABLE `projects` ADD COLUMN `service_type` varchar(50) DEFAULT ''installation'' COMMENT ''installation | replacement | repair | refinish''',
+  'SELECT 1'
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+   WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = 'flooring_type') = 0,
+  'ALTER TABLE `projects` ADD COLUMN `flooring_type` varchar(50) DEFAULT NULL COMMENT ''hardwood | engineered | lvp | laminate | tile''',
+  'SELECT 1'
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+   WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = 'total_sqft') = 0,
+  'ALTER TABLE `projects` ADD COLUMN `total_sqft` decimal(10,2) DEFAULT NULL COMMENT ''Metragem total''',
+  'SELECT 1'
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+   WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = 'waste_percentage') = 0,
+  'ALTER TABLE `projects` ADD COLUMN `waste_percentage` decimal(5,2) DEFAULT NULL COMMENT ''Percentual de desperdício''',
+  'SELECT 1'
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+   WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = 'adjusted_sqft') = 0,
+  'ALTER TABLE `projects` ADD COLUMN `adjusted_sqft` decimal(10,2) DEFAULT NULL COMMENT ''Metragem ajustada com desperdício''',
+  'SELECT 1'
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+   WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = 'subfloor_type') = 0,
+  'ALTER TABLE `projects` ADD COLUMN `subfloor_type` varchar(50) DEFAULT NULL COMMENT ''concrete | plywood | existing''',
+  'SELECT 1'
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+   WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = 'level_condition') = 0,
+  'ALTER TABLE `projects` ADD COLUMN `level_condition` varchar(50) DEFAULT NULL COMMENT ''good | minor | major''',
+  'SELECT 1'
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+   WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = 'stairs_count') = 0,
+  'ALTER TABLE `projects` ADD COLUMN `stairs_count` int(11) DEFAULT 0 COMMENT ''Número de degraus''',
+  'SELECT 1'
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+   WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = 'rooms_count') = 0,
+  'ALTER TABLE `projects` ADD COLUMN `rooms_count` int(11) DEFAULT 0 COMMENT ''Número de cômodos''',
+  'SELECT 1'
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
 
 -- ============================================
 -- 2. ESTIMATES (Tabela principal de estimativas)
