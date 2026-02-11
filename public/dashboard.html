@@ -41,6 +41,9 @@
                     <a href="#" class="nav-item" data-page="leads">
                         <span>📋</span> Leads
                     </a>
+                    <a href="#" class="nav-item" data-page="crm">
+                        <span>🎯</span> CRM
+                    </a>
                     <a href="#" class="nav-item" data-page="customers">
                         <span>👥</span> Customers
                     </a>
@@ -124,16 +127,9 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);">
                         <h2 class="page-title">Leads</h2>
                         <div style="display: flex; gap: var(--spacing-sm);">
-                            <button class="btn btn-primary" onclick="showKanbanView()">📋 Kanban</button>
-                            <button class="btn btn-primary" onclick="showListView()">📊 Lista</button>
                             <button class="btn btn-secondary" onclick="showNewLeadModal()">+ Novo Lead</button>
                             <button class="btn btn-secondary" onclick="refreshLeads()">🔄 Refresh</button>
                         </div>
-                    </div>
-                    
-                    <!-- Kanban View -->
-                    <div id="kanbanView" style="display: none;">
-                        <div id="kanbanBoard" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--spacing-md);"></div>
                     </div>
                     
                     <!-- List View -->
@@ -165,6 +161,21 @@
                         <span id="pageInfoLeads">Page 1</span>
                         <button id="nextPageLeads" class="btn btn-secondary" onclick="changePageLeads(1)">Next</button>
                     </div>
+                    </div>
+                </div>
+                
+                <!-- CRM Page (Kanban) -->
+                <div id="crmPage" class="page-content" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);">
+                        <h2 class="page-title">CRM - Kanban Board</h2>
+                        <div style="display: flex; gap: var(--spacing-sm);">
+                            <button class="btn btn-secondary" onclick="showNewLeadModal()">+ Novo Lead</button>
+                            <button class="btn btn-secondary" onclick="loadKanbanBoard()">🔄 Refresh</button>
+                        </div>
+                    </div>
+                    
+                    <div id="kanbanView">
+                        <div id="kanbanBoard" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--spacing-md);"></div>
                     </div>
                 </div>
                 

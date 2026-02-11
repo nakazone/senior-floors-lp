@@ -94,9 +94,19 @@ function showPage(pageName) {
         else if (pageName === 'leads') { 
             currentPage = 1; 
             loadLeads(); 
-            // Load kanban data
-            if (typeof loadUsers === 'function') loadUsers();
-            if (typeof loadPipelineStages === 'function') loadPipelineStages();
+        }
+        else if (pageName === 'crm') { 
+            currentPage = 1; 
+            if (typeof loadCRMKanban === 'function') {
+                loadCRMKanban();
+            } else {
+                // Fallback: load kanban directly
+                setTimeout(() => {
+                    if (typeof loadKanbanBoard === 'function') {
+                        loadKanbanBoard();
+                    }
+                }, 100);
+            }
         }
         else if (pageName === 'customers') { currentPage = 1; loadCustomers(); }
         else if (pageName === 'quotes') { currentPage = 1; loadQuotes(); }

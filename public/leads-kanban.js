@@ -82,19 +82,29 @@ async function loadPipelineStages() {
     }
 }
 
-// Show Kanban View
-function showKanbanView() {
+// Load CRM Kanban (called from dashboard)
+function loadCRMKanban() {
     currentView = 'kanban';
-    document.getElementById('kanbanView').style.display = 'block';
-    document.getElementById('listView').style.display = 'none';
     loadKanbanBoard();
 }
 
-// Show List View
+// Show Kanban View (deprecated - kept for compatibility)
+function showKanbanView() {
+    currentView = 'kanban';
+    const kanbanView = document.getElementById('kanbanView');
+    const listView = document.getElementById('listView');
+    if (kanbanView) kanbanView.style.display = 'block';
+    if (listView) listView.style.display = 'none';
+    loadKanbanBoard();
+}
+
+// Show List View (deprecated - kept for compatibility)
 function showListView() {
     currentView = 'list';
-    document.getElementById('kanbanView').style.display = 'none';
-    document.getElementById('listView').style.display = 'block';
+    const kanbanView = document.getElementById('kanbanView');
+    const listView = document.getElementById('listView');
+    if (kanbanView) kanbanView.style.display = 'none';
+    if (listView) listView.style.display = 'block';
 }
 
 // Load Kanban Board
@@ -413,6 +423,7 @@ document.addEventListener('click', (e) => {
 if (typeof window !== 'undefined') {
     window.showKanbanView = showKanbanView;
     window.showListView = showListView;
+    window.loadCRMKanban = loadCRMKanban;
     window.showNewLeadModal = showNewLeadModal;
     window.showAssignLeadModal = showAssignLeadModal;
     window.showFollowupModal = showFollowupModal;
@@ -420,6 +431,14 @@ if (typeof window !== 'undefined') {
     window.assignLead = assignLead;
     window.createFollowup = createFollowup;
     window.closeModal = closeModal;
+    window.loadKanbanBoard = loadKanbanBoard;
+    
+    // Load data when CRM page is shown
+    window.loadCRMKanban = async function() {
+        await loadUsers();
+        await loadPipelineStages();
+        loadKanbanBoard();
+    };
     
     // Load data when leads page is shown
     const originalLoadLeads = window.loadLeads;
