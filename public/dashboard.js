@@ -28,34 +28,48 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
     window.location.href = '/login.html';
 });
 
-// Mobile menu toggle
+// Mobile menu toggle (only on mobile)
 const mobileMenuToggle = document.getElementById('mobileMenuToggle');
 const dashboardSidebar = document.getElementById('dashboardSidebar');
 const mobileOverlay = document.getElementById('mobileOverlay');
 
-if (mobileMenuToggle) {
+function isMobile() {
+    return window.innerWidth <= 768;
+}
+
+if (mobileMenuToggle && dashboardSidebar && mobileOverlay) {
     mobileMenuToggle.addEventListener('click', () => {
-        dashboardSidebar.classList.toggle('mobile-open');
-        mobileOverlay.classList.toggle('active');
+        if (isMobile()) {
+            dashboardSidebar.classList.toggle('mobile-open');
+            mobileOverlay.classList.toggle('active');
+        }
     });
-}
 
-if (mobileOverlay) {
     mobileOverlay.addEventListener('click', () => {
-        dashboardSidebar.classList.remove('mobile-open');
-        mobileOverlay.classList.remove('active');
-    });
-}
-
-// Close mobile menu when clicking nav item
-document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => {
-        if (window.innerWidth <= 768) {
+        if (isMobile()) {
             dashboardSidebar.classList.remove('mobile-open');
             mobileOverlay.classList.remove('active');
         }
     });
-});
+
+    // Close mobile menu when clicking nav item (only on mobile)
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            if (isMobile()) {
+                dashboardSidebar.classList.remove('mobile-open');
+                mobileOverlay.classList.remove('active');
+            }
+        });
+    });
+
+    // Handle window resize - ensure sidebar is visible on desktop
+    window.addEventListener('resize', () => {
+        if (!isMobile()) {
+            dashboardSidebar.classList.remove('mobile-open');
+            mobileOverlay.classList.remove('active');
+        }
+    });
+}
 
 // Navigation
 document.querySelectorAll('.nav-item').forEach(item => {
