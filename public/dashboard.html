@@ -15,21 +15,25 @@
     <div class="dashboard-container">
         <header class="dashboard-header">
             <div class="header-content">
+                <button class="mobile-menu-toggle" id="mobileMenuToggle">☰</button>
                 <h1>
                     <a href="dashboard.html">
                         <img src="https://senior-floors.com/assets/SeniorFloors.png" alt="Senior Floors" class="logo-image" onerror="this.style.display='none'">
-                        Senior Floors CRM
+                        <span style="display: none;" class="mobile-hidden">Senior Floors CRM</span>
+                        <span class="mobile-only">CRM</span>
                     </a>
                 </h1>
                 <div class="header-actions">
-                    <span id="userName" class="user-name"></span>
+                    <span id="userName" class="user-name mobile-hidden"></span>
                     <button id="logoutBtn" class="btn btn-secondary">Logout</button>
                 </div>
             </div>
         </header>
         
+        <div class="mobile-overlay" id="mobileOverlay"></div>
+        
         <main class="dashboard-main">
-            <div class="dashboard-sidebar">
+            <div class="dashboard-sidebar" id="dashboardSidebar">
                 <nav class="sidebar-nav">
                     <a href="#" class="nav-item active" data-page="dashboard">
                         <span>📊</span> Dashboard

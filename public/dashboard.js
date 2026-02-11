@@ -28,6 +28,35 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
     window.location.href = '/login.html';
 });
 
+// Mobile menu toggle
+const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+const dashboardSidebar = document.getElementById('dashboardSidebar');
+const mobileOverlay = document.getElementById('mobileOverlay');
+
+if (mobileMenuToggle) {
+    mobileMenuToggle.addEventListener('click', () => {
+        dashboardSidebar.classList.toggle('mobile-open');
+        mobileOverlay.classList.toggle('active');
+    });
+}
+
+if (mobileOverlay) {
+    mobileOverlay.addEventListener('click', () => {
+        dashboardSidebar.classList.remove('mobile-open');
+        mobileOverlay.classList.remove('active');
+    });
+}
+
+// Close mobile menu when clicking nav item
+document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            dashboardSidebar.classList.remove('mobile-open');
+            mobileOverlay.classList.remove('active');
+        }
+    });
+});
+
 // Navigation
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
