@@ -94,6 +94,18 @@ body {
 .btn-call { color: #fff; }
 .btn-block { width: 100%; display: block; }
 .btn-large { padding: 16px 32px; font-size: 16px; }
+.loading {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(26, 32, 54, 0.3);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 .mobile-menu-toggle {
     display: none;
     flex-direction: column;
@@ -120,14 +132,13 @@ body {
     display: flex;
     align-items: center;
     padding: 120px 0 80px;
-    background: linear-gradient(135deg, var(--primary-color) 0%, #252b47 50%, #1a2036 100%);
-    background-size: cover;
-    background-position: center;
+    background: var(--primary-color) url('assets/background.jpg') center/cover no-repeat;
+    background-color: var(--primary-color);
 }
 .hero-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(26, 32, 54, 0.75);
+    background: rgba(26, 32, 54, 0.82);
 }
 .hero .container { position: relative; z-index: 1; }
 .hero-content {
@@ -402,7 +413,14 @@ section {
     display: none;
 }
 .gallery-item.active { display: block; }
-.gallery-item img { width: 100%; height: 280px; object-fit: cover; display: block; }
+.gallery-item img {
+    width: 100%;
+    height: 280px;
+    min-height: 200px;
+    object-fit: cover;
+    display: block;
+    background: linear-gradient(135deg, #2a3150 0%, #1a2036 100%);
+}
 .gallery-description {
     padding: 12px;
     background: #fff;

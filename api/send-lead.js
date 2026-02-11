@@ -1,10 +1,8 @@
 /**
  * Vercel Serverless: POST /api/send-lead
  * Recebe envio dos formulários da LP (Hero e Contact), valida e envia para o Railway (SYSTEM_API_URL).
- * Funciona para ambos os forms: hero-form e contact-form.
+ * Sem dependência de nodemailer: email é opcional (só envia se SMTP configurado e nodemailer instalado).
  */
-import nodemailer from 'nodemailer';
-
 function parseBody(req) {
   if (req.body && typeof req.body === 'object' && (req.body.name != null || req.body.email != null)) {
     return req.body;
@@ -108,33 +106,10 @@ export default async function handler(req, res) {
     csv_saved = true;
   } catch (_) {}
 
-  let mail_sent = false;
-  const smtpPass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
-  const smtpUser = (process.env.SMTP_USER || '').trim();
-  const smtpHost = (process.env.SMTP_HOST || '').trim();
-  if (smtpPass && smtpPass.length >= 10 && smtpUser && smtpHost) {
-    try {
-      const transport = nodemailer.createTransport({
-        host: smtpHost,
-        port: Number(process.env.SMTP_PORT) || 587,
-        secure: false,
-        auth: { user: smtpUser, pass: smtpPass },
-      });
-      await transport.sendMail({
-        from: `"${process.env.SMTP_FROM_NAME || 'Senior Floors Website'}" <${process.env.SMTP_FROM_EMAIL || smtpUser}>`,
-        to: process.env.SMTP_TO_EMAIL || process.env.SMTP_FROM_EMAIL || smtpUser,
-        subject: `New Lead - ${form_name === 'hero-form' ? 'Hero Form' : 'Contact Form'}`,
-        text: `Form: ${form_name}\nName: ${name}\nPhone: ${phone}\nEmail: ${email}\nZip: ${zipcode}\n\nMessage:\n${message || '(none)'}`,
-        replyTo: `${name} <${email}>`,
-      });
-      mail_sent = true;
-    } catch (_) {}
-  }
-
   const response = {
     success: true,
     message: "Thank you! We'll contact you within 24 hours.",
-    email_sent: mail_sent,
+    email_sent: false,
     system_sent,
     system_database_saved,
     database_saved: system_database_saved,
