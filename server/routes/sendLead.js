@@ -55,6 +55,14 @@ export async function handleSendLead(req, res) {
   let system_sent = false;
   let system_database_saved = null;
   let system_error = '';
+  
+  // Log para debug
+  const systemUrl = process.env.SYSTEM_API_URL;
+  if (systemUrl) {
+    writeLeadLog(`✅ SYSTEM_API_URL configured: ${systemUrl.substring(0, 30)}...`);
+  } else {
+    writeLeadLog(`❌ SYSTEM_API_URL NOT configured - leads will NOT be sent to Railway!`);
+  }
 
   // 1) Try local DB save (same as receive-lead logic inline, or call receive-lead internally)
   if (isDatabaseConfigured()) {
