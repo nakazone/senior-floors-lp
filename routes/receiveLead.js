@@ -6,8 +6,35 @@ import { checkDuplicateLead, getNextOwnerRoundRobin } from '../lib/leadLogic.js'
 
 function parseBody(req) {
   const ct = (req.headers['content-type'] || '').toLowerCase();
-  if (ct.includes('application/json') && typeof req.body === 'object' && req.body !== null) return req.body;
-  if (typeof req.body === 'object' && req.body !== null && Object.keys(req.body).length > 0) return req.body;
+  
+  // Se já foi parseado pelo Express middleware
+  if (typeof req.body === 'object' && req.body !== null && Object.keys(req.body).length > 0) {
+    return req.body;
+  }
+  
+  // Se for JSON
+  if (ct.includes('application/json')) {
+    try {
+      return JSON.parse(req.body || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+  
+  // Se for URL-encoded (application/x-www-form-urlencoded)
+  if (ct.includes('application/x-www-form-urlencoded')) {
+    // Express.urlencoded() já deve ter parseado, mas se não, tentar manualmente
+    if (typeof req.body === 'string') {
+      const params = new URLSearchParams(req.body);
+      const result = {};
+      for (const [key, value] of params.entries()) {
+        result[key] = value;
+      }
+      return result;
+    }
+    return req.body || {};
+  }
+  
   return {};
 }
 
