@@ -732,3 +732,215 @@ tr:hover {
 .mb-1 { margin-bottom: var(--spacing-xs); }
 .mb-2 { margin-bottom: var(--spacing-sm); }
 .mb-3 { margin-bottom: var(--spacing-md); }
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-md);
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--bg-white);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--text-dark);
+    font-size: 1.25rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: var(--transition);
+}
+
+.modal-close:hover {
+    background: var(--bg-light);
+    color: var(--text-dark);
+}
+
+.modal-content form {
+    padding: var(--spacing-md);
+}
+
+/* Kanban Styles */
+.kanban-column {
+    background: var(--bg-light);
+    border-radius: 8px;
+    padding: var(--spacing-sm);
+    min-height: 400px;
+}
+
+.kanban-column-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    border-radius: 6px;
+    font-weight: 600;
+    color: var(--bg-white);
+}
+
+.kanban-column-title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.kanban-column-count {
+    background: rgba(255, 255, 255, 0.3);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+}
+
+.kanban-card {
+    background: var(--bg-white);
+    border-radius: 6px;
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    box-shadow: var(--shadow);
+    cursor: move;
+    transition: var(--transition);
+    border-left: 3px solid var(--primary-color);
+}
+
+.kanban-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.kanban-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: var(--spacing-xs);
+}
+
+.kanban-card-title {
+    font-weight: 600;
+    color: var(--text-dark);
+    font-size: 0.95rem;
+}
+
+.kanban-card-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.kanban-card-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    border-radius: 4px;
+    transition: var(--transition);
+}
+
+.kanban-card-actions button:hover {
+    background: var(--bg-light);
+    color: var(--text-dark);
+}
+
+.kanban-card-body {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin-bottom: var(--spacing-xs);
+}
+
+.kanban-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--spacing-xs);
+    padding-top: var(--spacing-xs);
+    border-top: 1px solid var(--border-color);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.kanban-card-priority {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.kanban-card-priority.high {
+    background: #fed7d7;
+    color: #742a2a;
+}
+
+.kanban-card-priority.medium {
+    background: #feebc8;
+    color: #7c2d12;
+}
+
+.kanban-card-priority.low {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+/* Mobile Modal */
+@media (max-width: 768px) {
+    .modal-content {
+        max-width: 100%;
+        margin: var(--spacing-sm);
+        max-height: 95vh;
+    }
+    
+    .modal-header {
+        padding: var(--spacing-sm);
+    }
+    
+    .modal-content form {
+        padding: var(--spacing-sm);
+    }
+    
+    .kanban-column {
+        min-height: 300px;
+    }
+}

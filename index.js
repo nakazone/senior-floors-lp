@@ -11,7 +11,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { handleReceiveLead } from './routes/receiveLead.js';
 import { handleDbCheck } from './routes/dbCheck.js';
-import { listLeads, getLead, updateLead } from './routes/leads.js';
+import { listLeads, getLead, createLead, updateLead } from './routes/leads.js';
 import { login, logout, checkSession } from './routes/auth.js';
 import { requireAuth } from './middleware/auth.js';
 import { listCustomers, getCustomer, createCustomer, updateCustomer } from './routes/customers.js';
@@ -26,6 +26,7 @@ import { getQualification, createOrUpdateQualification } from './routes/qualific
 import { listInteractions, createInteraction } from './routes/interactions.js';
 import { getMeasurement, createOrUpdateMeasurement } from './routes/measurements.js';
 import { listProposals, getProposal, createProposal, updateProposal } from './routes/proposals.js';
+import { listFollowups, createFollowup, updateFollowup, deleteFollowup } from './routes/followups.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -89,6 +90,7 @@ app.get('/api/dashboard/stats', requireAuth, getDashboardStats);
 // Leads
 app.get('/api/leads', requireAuth, listLeads);
 app.get('/api/leads/:id', requireAuth, getLead);
+app.post('/api/leads', requireAuth, createLead);
 app.put('/api/leads/:id', requireAuth, updateLead);
 
 // Lead Qualification
@@ -99,6 +101,12 @@ app.put('/api/leads/:leadId/qualification', requireAuth, createOrUpdateQualifica
 // Lead Interactions
 app.get('/api/leads/:leadId/interactions', requireAuth, listInteractions);
 app.post('/api/leads/:leadId/interactions', requireAuth, createInteraction);
+
+// Follow-ups
+app.get('/api/leads/:leadId/followups', requireAuth, listFollowups);
+app.post('/api/leads/:leadId/followups', requireAuth, createFollowup);
+app.put('/api/followups/:followupId', requireAuth, updateFollowup);
+app.delete('/api/followups/:followupId', requireAuth, deleteFollowup);
 
 // Proposals
 app.get('/api/leads/:leadId/proposals', requireAuth, listProposals);

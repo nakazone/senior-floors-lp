@@ -121,10 +121,23 @@
                 
                 <!-- Leads Page -->
                 <div id="leadsPage" class="page-content" style="display: none;">
-                    <div class="page-header">
-                        <h2>Leads</h2>
-                        <button class="btn btn-primary" onclick="refreshLeads()">Refresh</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);">
+                        <h2 class="page-title">Leads</h2>
+                        <div style="display: flex; gap: var(--spacing-sm);">
+                            <button class="btn btn-primary" onclick="showKanbanView()">📋 Kanban</button>
+                            <button class="btn btn-primary" onclick="showListView()">📊 Lista</button>
+                            <button class="btn btn-secondary" onclick="showNewLeadModal()">+ Novo Lead</button>
+                            <button class="btn btn-secondary" onclick="refreshLeads()">🔄 Refresh</button>
+                        </div>
                     </div>
+                    
+                    <!-- Kanban View -->
+                    <div id="kanbanView" style="display: none;">
+                        <div id="kanbanBoard" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--spacing-md);"></div>
+                    </div>
+                    
+                    <!-- List View -->
+                    <div id="listView">
                     
                     <div class="table-container">
                         <table class="data-table">
@@ -151,6 +164,152 @@
                         <button id="prevPageLeads" class="btn btn-secondary" onclick="changePageLeads(-1)">Previous</button>
                         <span id="pageInfoLeads">Page 1</span>
                         <button id="nextPageLeads" class="btn btn-secondary" onclick="changePageLeads(1)">Next</button>
+                    </div>
+                    </div>
+                </div>
+                
+                <!-- Modals -->
+                <!-- New Lead Modal -->
+                <div id="newLeadModal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Novo Lead</h3>
+                            <button class="modal-close" onclick="closeModal('newLeadModal')">&times;</button>
+                        </div>
+                        <form id="newLeadForm" onsubmit="createLeadManual(event)">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Nome *</label>
+                                    <input type="text" name="name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Email *</label>
+                                    <input type="email" name="email" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Telefone *</label>
+                                    <input type="tel" name="phone" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>CEP *</label>
+                                    <input type="text" name="zipcode" pattern="[0-9]{5}" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Fonte</label>
+                                    <select name="source">
+                                        <option value="Manual">Manual</option>
+                                        <option value="Referral">Indicação</option>
+                                        <option value="Website">Website</option>
+                                        <option value="Social Media">Redes Sociais</option>
+                                        <option value="Other">Outro</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Designar para</label>
+                                    <select name="owner_id" id="newLeadOwnerSelect">
+                                        <option value="">Não designar</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Prioridade</label>
+                                    <select name="priority">
+                                        <option value="low">Baixa</option>
+                                        <option value="medium" selected>Média</option>
+                                        <option value="high">Alta</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Valor Estimado</label>
+                                    <input type="number" name="estimated_value" step="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Mensagem</label>
+                                <textarea name="message" rows="3"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Notas</label>
+                                <textarea name="notes" rows="2"></textarea>
+                            </div>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-secondary" onclick="closeModal('newLeadModal')">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Criar Lead</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Assign Lead Modal -->
+                <div id="assignLeadModal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Designar Lead</h3>
+                            <button class="modal-close" onclick="closeModal('assignLeadModal')">&times;</button>
+                        </div>
+                        <form id="assignLeadForm" onsubmit="assignLead(event)">
+                            <input type="hidden" id="assignLeadId" name="lead_id">
+                            <div class="form-group">
+                                <label>Designar para</label>
+                                <select name="owner_id" id="assignLeadOwnerSelect" required>
+                                    <option value="">Selecione um usuário...</option>
+                                </select>
+                            </div>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-secondary" onclick="closeModal('assignLeadModal')">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Designar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Follow-up Modal -->
+                <div id="followupModal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Novo Follow-up</h3>
+                            <button class="modal-close" onclick="closeModal('followupModal')">&times;</button>
+                        </div>
+                        <form id="followupForm" onsubmit="createFollowup(event)">
+                            <input type="hidden" id="followupLeadId" name="lead_id">
+                            <div class="form-group">
+                                <label>Título *</label>
+                                <input type="text" name="title" required placeholder="ex: Ligar para cliente">
+                            </div>
+                            <div class="form-group">
+                                <label>Descrição</label>
+                                <textarea name="description" rows="3"></textarea>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Data/Hora *</label>
+                                    <input type="datetime-local" name="due_date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Prioridade</label>
+                                    <select name="priority">
+                                        <option value="low">Baixa</option>
+                                        <option value="medium" selected>Média</option>
+                                        <option value="high">Alta</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Designar para</label>
+                                <select name="assigned_to" id="followupAssignedSelect">
+                                    <option value="">Eu mesmo</option>
+                                </select>
+                            </div>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-secondary" onclick="closeModal('followupModal')">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Criar Follow-up</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
                 
