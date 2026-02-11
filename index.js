@@ -22,6 +22,10 @@ import { listActivities, createActivity } from './routes/activities.js';
 import { listContracts, getContract, createContract, updateContract } from './routes/contracts.js';
 import { listUsers, getUser, createUser, updateUser } from './routes/users.js';
 import { getDashboardStats } from './routes/dashboard.js';
+import { getQualification, createOrUpdateQualification } from './routes/qualification.js';
+import { listInteractions, createInteraction } from './routes/interactions.js';
+import { getMeasurement, createOrUpdateMeasurement } from './routes/measurements.js';
+import { listProposals, getProposal, createProposal, updateProposal } from './routes/proposals.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -87,6 +91,21 @@ app.get('/api/leads', requireAuth, listLeads);
 app.get('/api/leads/:id', requireAuth, getLead);
 app.put('/api/leads/:id', requireAuth, updateLead);
 
+// Lead Qualification
+app.get('/api/leads/:leadId/qualification', requireAuth, getQualification);
+app.post('/api/leads/:leadId/qualification', requireAuth, createOrUpdateQualification);
+app.put('/api/leads/:leadId/qualification', requireAuth, createOrUpdateQualification);
+
+// Lead Interactions
+app.get('/api/leads/:leadId/interactions', requireAuth, listInteractions);
+app.post('/api/leads/:leadId/interactions', requireAuth, createInteraction);
+
+// Proposals
+app.get('/api/leads/:leadId/proposals', requireAuth, listProposals);
+app.get('/api/proposals/:proposalId', requireAuth, getProposal);
+app.post('/api/leads/:leadId/proposals', requireAuth, createProposal);
+app.put('/api/proposals/:proposalId', requireAuth, updateProposal);
+
 // Customers
 app.get('/api/customers', requireAuth, listCustomers);
 app.get('/api/customers/:id', requireAuth, getCustomer);
@@ -110,6 +129,11 @@ app.get('/api/visits', requireAuth, listVisits);
 app.get('/api/visits/:id', requireAuth, getVisit);
 app.post('/api/visits', requireAuth, createVisit);
 app.put('/api/visits/:id', requireAuth, updateVisit);
+
+// Measurements (from visits)
+app.get('/api/visits/:visitId/measurement', requireAuth, getMeasurement);
+app.post('/api/visits/:visitId/measurement', requireAuth, createOrUpdateMeasurement);
+app.put('/api/visits/:visitId/measurement', requireAuth, createOrUpdateMeasurement);
 
 // Activities
 app.get('/api/activities', requireAuth, listActivities);
