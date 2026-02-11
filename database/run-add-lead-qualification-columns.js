@@ -78,7 +78,8 @@ async function main() {
         await conn.execute(sql);
         console.log('Column', name, 'added.');
       } catch (err) {
-        if (err.code === 'ER_DUP_FIELD_NAME') {
+        const isDuplicate = err.code === 'ER_DUP_FIELD_NAME' || (err.message && err.message.includes('Duplicate column name'));
+        if (isDuplicate) {
           console.log('Column', name, 'already exists.');
         } else {
           console.error('Error adding', name + ':', err.message);
