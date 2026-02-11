@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Senior Floors - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <div class="header-content">
+                <h1>Senior Floors CRM</h1>
+                <div class="header-actions">
+                    <span id="userName" class="user-name"></span>
+                    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+                </div>
+            </div>
+        </header>
+        
+        <main class="dashboard-main">
+            <div class="dashboard-sidebar">
+                <nav class="sidebar-nav">
+                    <a href="#" class="nav-item active" data-page="leads">
+                        <span>📋</span> Leads
+                    </a>
+                    <a href="#" class="nav-item" data-page="customers">
+                        <span>👥</span> Customers
+                    </a>
+                    <a href="#" class="nav-item" data-page="activities">
+                        <span>📝</span> Activities
+                    </a>
+                    <a href="#" class="nav-item" data-page="settings">
+                        <span>⚙️</span> Settings
+                    </a>
+                </nav>
+            </div>
+            
+            <div class="dashboard-content">
+                <div id="loading" class="loading" style="display: none;">Loading...</div>
+                <div id="error" class="error-message" style="display: none;"></div>
+                
+                <!-- Leads Page -->
+                <div id="leadsPage" class="page-content">
+                    <div class="page-header">
+                        <h2>Leads</h2>
+                        <button class="btn btn-primary" onclick="refreshLeads()">Refresh</button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table id="leadsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Zipcode</th>
+                                    <th>Status</th>
+                                    <th>Source</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leadsTableBody">
+                                <tr><td colspan="9" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination">
+                        <button id="prevPage" class="btn btn-secondary" onclick="changePage(-1)">Previous</button>
+                        <span id="pageInfo">Page 1</span>
+                        <button id="nextPage" class="btn btn-secondary" onclick="changePage(1)">Next</button>
+                    </div>
+                </div>
+                
+                <!-- Other pages placeholder -->
+                <div id="customersPage" class="page-content" style="display: none;">
+                    <h2>Customers</h2>
+                    <p>Coming soon...</p>
+                </div>
+                
+                <div id="activitiesPage" class="page-content" style="display: none;">
+                    <h2>Activities</h2>
+                    <p>Coming soon...</p>
+                </div>
+                
+                <div id="settingsPage" class="page-content" style="display: none;">
+                    <h2>Settings</h2>
+                    <p>Coming soon...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        let currentPage = 1;
+        let currentPageName = 'leads';
+        
+        // Check authentication
+        fetch('/api/auth/session')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.authenticated) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                
+                document.getElementById('userName').textContent = data.user.name || data.user.email;
+                loadLeads();
+            });
+        
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/login.html';
+        });
+        
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = item.dataset.page;
+                showPage(page);
+            });
+        });
+        
+        function showPage(pageName) {
+            document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            document.getElementById(pageName + 'Page').style.display = 'block';
+            document.querySelector(`[data-page="${pageName}"]`).classList.add('active');
+            currentPageName = pageName;
+            
+            if (pageName === 'leads') {
+                loadLeads();
+            }
+        }
+        
+        async function loadLeads() {
+            const tbody = document.getElementById('leadsTableBody');
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center">Loading...</td></tr>';
+            
+            try {
+                const response = await fetch(`/api/leads?page=${currentPage}&limit=20`);
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    if (data.data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No leads found</td></tr>';
+                    } else {
+                        tbody.innerHTML = data.data.map(lead => `
+                            <tr>
+                                <td>${lead.id}</td>
+                                <td>${lead.name || '-'}</td>
+                                <td>${lead.email || '-'}</td>
+                                <td>${lead.phone || '-'}</td>
+                                <td>${lead.zipcode || '-'}</td>
+                                <td><span class="badge badge-${lead.status || 'new'}">${lead.status || 'new'}</span></td>
+                                <td>${lead.source || '-'}</td>
+                                <td>${lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '-'}</td>
+                                <td>
+                                    <button class="btn btn-sm" onclick="viewLead(${lead.id})">View</button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+                    
+                    // Update pagination
+                    const totalPages = Math.ceil(data.total / 20);
+                    document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages || 1}`;
+                    document.getElementById('prevPage').disabled = currentPage <= 1;
+                    document.getElementById('nextPage').disabled = currentPage >= totalPages;
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center">Error loading leads</td></tr>';
+                }
+            } catch (error) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center">Error: ' + error.message + '</td></tr>';
+            }
+        }
+        
+        function changePage(delta) {
+            currentPage += delta;
+            if (currentPage < 1) currentPage = 1;
+            loadLeads();
+        }
+        
+        function refreshLeads() {
+            currentPage = 1;
+            loadLeads();
+        }
+        
+        function viewLead(id) {
+            alert('View lead ' + id + ' - Feature coming soon!');
+        }
+    </script>
+</body>
+</html>
