@@ -71,17 +71,14 @@ if (mobileMenuToggle && dashboardSidebar && mobileOverlay) {
     });
     
     // Update on resize
-    window.addEventListener('resize', updateMobileMenuVisibility);
-    updateMobileMenuVisibility();
-}
-
-    // Handle window resize - ensure sidebar is visible on desktop
     window.addEventListener('resize', () => {
+        updateMobileMenuVisibility();
         if (!isMobile()) {
             dashboardSidebar.classList.remove('mobile-open');
             mobileOverlay.classList.remove('active');
         }
     });
+    updateMobileMenuVisibility();
 }
 
 // Navigation
