@@ -4,6 +4,7 @@
 let currentPage = 1;
 let currentPageName = 'dashboard';
 let dashboardStats = null;
+let chartInstances = {};
 
 // Check authentication
 fetch('/api/auth/session', { credentials: 'include' })
