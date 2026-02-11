@@ -83,8 +83,12 @@ async function loadPipelineStages() {
 }
 
 // Load CRM Kanban (called from dashboard)
-function loadCRMKanban() {
+async function loadCRMKanban() {
     currentView = 'kanban';
+    // Load required data first
+    await loadUsers();
+    await loadPipelineStages();
+    // Then load kanban board
     loadKanbanBoard();
 }
 
@@ -433,12 +437,7 @@ if (typeof window !== 'undefined') {
     window.closeModal = closeModal;
     window.loadKanbanBoard = loadKanbanBoard;
     
-    // Load data when CRM page is shown
-    window.loadCRMKanban = async function() {
-        await loadUsers();
-        await loadPipelineStages();
-        loadKanbanBoard();
-    };
+    // loadCRMKanban is already defined above
     
     // Load data when leads page is shown
     const originalLoadLeads = window.loadLeads;
