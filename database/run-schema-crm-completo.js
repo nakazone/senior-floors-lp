@@ -120,10 +120,17 @@ async function main() {
         }
       } catch (error) {
         errorCount++;
-        // Ignorar erros de "table already exists" e "duplicate key"
-        if (!error.message.includes('already exists') && 
-            !error.message.includes('Duplicate key') &&
-            !error.message.includes('Duplicate entry')) {
+        // Ignorar erros comuns de tabelas/colunas já existentes
+        const ignorableErrors = [
+          'already exists',
+          'Duplicate key',
+          'Duplicate entry',
+          'Unknown column', // Coluna pode não existir ainda, será criada pela migração
+        ];
+        
+        const shouldIgnore = ignorableErrors.some(err => error.message.includes(err));
+        
+        if (!shouldIgnore) {
           console.error(`\n⚠️  Erro no statement ${i + 1}:`, error.message);
           console.error(`   SQL: ${statement.substring(0, 100)}...`);
         }
