@@ -25,7 +25,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 window.location.href = '/login.html';
                 return;
             }
-            document.getElementById('userName').textContent = data.user.name || data.user.email;
+            const un = document.getElementById('userName');
+            if (un) un.textContent = data.user.name || data.user.email;
             loadLead();
         })
         .catch(err => {
@@ -47,8 +48,17 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Score automático da qualificação: atualiza ao mudar tipo, serviço, área, orçamento ou urgência
+    // Score automático da qualificação
     attachQualificationScoreListeners();
+
+    // Menu lateral fixo: toggle mobile
+    const sidebar = document.getElementById('dashboardSidebar');
+    const overlay = document.getElementById('mobileOverlay');
+    const menuBtn = document.getElementById('mobileMenuToggle');
+    if (menuBtn && sidebar && overlay) {
+        menuBtn.addEventListener('click', () => { sidebar.classList.toggle('mobile-open'); overlay.classList.toggle('active'); });
+        overlay.addEventListener('click', () => { sidebar.classList.remove('mobile-open'); overlay.classList.remove('active'); });
+    }
 });
 
 async function loadLead() {
@@ -82,17 +92,22 @@ function renderLead() {
     document.getElementById('leadPhone').textContent = currentLead.phone || '-';
     document.getElementById('leadSource').textContent = currentLead.source || '-';
     document.getElementById('leadCreated').textContent = currentLead.created_at ? new Date(currentLead.created_at).toLocaleDateString() : '-';
-    
-    // Status badge
-    const statusEl = document.getElementById('leadStatus');
-    statusEl.textContent = currentLead.status || 'new';
-    statusEl.className = 'status-badge';
-    statusEl.style.backgroundColor = getStatusColor(currentLead.status);
 
     // Form fields
     document.getElementById('leadNotes').value = currentLead.notes || '';
     document.getElementById('leadPriority').value = currentLead.priority || 'medium';
     document.getElementById('leadEstimatedValue').value = currentLead.estimated_value || '';
+    // Status select is filled by loadPipelineStages and synced here
+    const statusSelect = document.getElementById('leadStatusSelect');
+    if (statusSelect && statusSelect.options.length) {
+        const slug = currentLead.status || '';
+        for (let i = 0; i < statusSelect.options.length; i++) {
+            if (statusSelect.options[i].value === slug) {
+                statusSelect.selectedIndex = i;
+                break;
+            }
+        }
+    }
 }
 
 function getStatusColor(status) {
@@ -113,9 +128,16 @@ function getStatusColor(status) {
 }
 
 async function loadPipelineStages() {
+    let stages = [];
     try {
-        // Load stages from database or use default
-        const stages = [
+        const res = await fetch('/api/pipeline-stages', { credentials: 'include' });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data)) {
+            stages = data.data.map(s => ({ id: s.id, name: s.name, slug: s.slug || s.name }));
+        }
+    } catch (e) { /* ignore */ }
+    if (stages.length === 0) {
+        stages = [
             { id: 1, name: 'Lead Recebido', slug: 'lead_received' },
             { id: 2, name: 'Contato Realizado', slug: 'contact_made' },
             { id: 3, name: 'Qualificado', slug: 'qualified' },
@@ -128,7 +150,9 @@ async function loadPipelineStages() {
             { id: 10, name: 'Fechado - Perdido', slug: 'closed_lost' },
             { id: 11, name: 'Produção / Obra', slug: 'production' }
         ];
+    }
 
+    try {
         const select = document.getElementById('leadStatusSelect');
         select.innerHTML = '<option value="">Selecione...</option>';
         stages.forEach(stage => {
@@ -139,6 +163,19 @@ async function loadPipelineStages() {
                 option.selected = true;
             }
             select.appendChild(option);
+        });
+        // Save status when user changes dropdown (header)
+        select.addEventListener('change', function onStatusChange() {
+            const newStatus = select.value;
+            if (!newStatus || !currentLeadId) return;
+            fetch(`/api/leads/${currentLeadId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ status: newStatus })
+            }).then(r => r.json()).then(data => {
+                if (data.success) currentLead.status = newStatus;
+            }).catch(() => {});
         });
     } catch (error) {
         console.error('Error loading pipeline stages:', error);

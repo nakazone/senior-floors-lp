@@ -5,6 +5,9 @@ let currentPage = 1;
 let currentPageName = 'dashboard';
 let dashboardStats = null;
 let chartInstances = {};
+let lastLeadCount = null;
+const NEW_LEAD_POLL_INTERVAL_MS = 30000; // 30s
+let newLeadPollTimer = null;
 
 // Check authentication
 fetch('/api/auth/session', { credentials: 'include' })
@@ -14,13 +17,47 @@ fetch('/api/auth/session', { credentials: 'include' })
             window.location.href = '/login.html';
             return;
         }
-        // User name removed from sidebar footer
         loadDashboard();
+        startNewLeadPolling();
+        const pageParam = new URLSearchParams(window.location.search).get('page');
+        if (pageParam && document.querySelector(`[data-page="${pageParam}"]`)) {
+            showPage(pageParam);
+        }
     })
     .catch(err => {
         console.error('Session check error:', err);
         window.location.href = '/login.html';
     });
+
+// Auto-refresh: poll for new leads and show notification
+function startNewLeadPolling() {
+    if (newLeadPollTimer) return;
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+    function poll() {
+        fetch('/api/leads?limit=1&page=1', { credentials: 'include' })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success || typeof data.total !== 'number') return;
+                const total = data.total;
+                if (lastLeadCount !== null && total > lastLeadCount) {
+                    const n = total - lastLeadCount;
+                    const msg = n === 1 ? '1 novo lead recebido.' : n + ' novos leads recebidos.';
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('Senior Floors CRM – Novo lead', { body: msg });
+                    }
+                    if (currentPageName === 'dashboard') loadDashboard();
+                    if (currentPageName === 'leads' && typeof loadLeads === 'function') loadLeads();
+                    if (currentPageName === 'crm' && typeof loadCRMKanban === 'function') loadCRMKanban();
+                }
+                lastLeadCount = total;
+            })
+            .catch(() => {});
+    }
+    poll();
+    newLeadPollTimer = setInterval(poll, NEW_LEAD_POLL_INTERVAL_MS);
+}
 
 // Logout
 document.getElementById('logoutBtn').addEventListener('click', async () => {

@@ -522,6 +522,35 @@ input.score-auto {
     cursor: default;
 }
 
+.input-currency {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-white);
+}
+.input-currency-symbol {
+    padding: 10px 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+    border-right: 1px solid var(--border-color);
+}
+.input-currency input {
+    border: none;
+    border-radius: 0;
+    flex: 1;
+    min-width: 0;
+}
+
+.lead-status-select {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    font-size: 13px;
+    font-weight: 500;
+    min-width: 160px;
+}
+
 /* Pagination */
 .pagination {
     display: flex;

@@ -152,15 +152,29 @@
 </head>
 <body>
     <div class="dashboard-container">
-        <header class="dashboard-header">
-            <div class="header-content">
-                <h1><a href="dashboard.html" style="text-decoration: none; color: inherit;">Senior Floors CRM</a></h1>
-                <div class="header-actions">
-                    <span id="userName" class="user-name"></span>
-                    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
-                </div>
+        <button class="mobile-menu-toggle" id="mobileMenuToggle">☰</button>
+        <div class="mobile-overlay" id="mobileOverlay"></div>
+        <aside class="dashboard-sidebar" id="dashboardSidebar">
+            <div class="sidebar-header">
+                <img src="assets/SeniorFloors.png" alt="Senior Floors" class="logo-image" onerror="this.style.display='none'">
+                <h1><span class="mobile-hidden">Senior Floors CRM</span><span class="mobile-only">CRM</span></h1>
             </div>
-        </header>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item"><span>📊</span> Dashboard</a>
+                <a href="dashboard.html?page=leads" class="nav-item"><span>📋</span> Leads</a>
+                <a href="dashboard.html?page=crm" class="nav-item"><span>🎯</span> CRM</a>
+                <a href="dashboard.html?page=customers" class="nav-item"><span>👥</span> Customers</a>
+                <a href="dashboard.html?page=quotes" class="nav-item"><span>💰</span> Quotes</a>
+                <a href="dashboard.html?page=projects" class="nav-item"><span>🏗️</span> Projects</a>
+                <a href="dashboard.html?page=schedule" class="nav-item"><span>📅</span> Schedule</a>
+                <a href="dashboard.html?page=financeiro" class="nav-item"><span>💵</span> Financeiro</a>
+                <a href="dashboard.html?page=activities" class="nav-item"><span>📝</span> Activities</a>
+                <a href="dashboard.html?page=users" class="nav-item"><span>👤</span> Users</a>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="btn">Logout</button>
+            </div>
+        </aside>
 
         <main class="dashboard-main">
             <div class="lead-detail-container">
@@ -169,7 +183,7 @@
                     <div class="lead-meta">
                         <div class="lead-meta-item">
                             <strong>Status:</strong>
-                            <span id="leadStatus" class="status-badge">-</span>
+                            <select id="leadStatusSelect" class="lead-status-select"></select>
                         </div>
                         <div class="lead-meta-item">
                             <strong>Email:</strong>
@@ -209,10 +223,6 @@
                         <textarea id="leadNotes" placeholder="Adicione notas sobre este lead..."></textarea>
                     </div>
                     <div class="form-row">
-                        <div class="form-group">
-                            <label>Status</label>
-                            <select id="leadStatusSelect"></select>
-                        </div>
                         <div class="form-group">
                             <label>Prioridade</label>
                             <select id="leadPriority">
@@ -262,7 +272,10 @@
                             </div>
                             <div class="form-group">
                                 <label>Orçamento Estimado <span class="required">*</span></label>
-                                <input type="number" id="qualEstimatedBudget" step="0.01" min="0" required placeholder="ex: 15000">
+                                <div class="input-currency">
+                                    <span class="input-currency-symbol">$</span>
+                                    <input type="number" id="qualEstimatedBudget" step="0.01" min="0" required placeholder="15000">
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>Urgência <span class="required">*</span></label>
