@@ -565,6 +565,49 @@ tr:hover {
     opacity: 0.5;
 }
 
+/* Login Page */
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    padding: var(--spacing-sm);
+}
+
+.login-box {
+    background: var(--bg-white);
+    padding: var(--spacing-lg);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 400px;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.login-header h1 {
+    color: var(--primary-color);
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.login-header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.login-footer {
+    text-align: center;
+    margin-top: var(--spacing-md);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
 /* Utility Classes */
 .text-center {
     text-align: center;
