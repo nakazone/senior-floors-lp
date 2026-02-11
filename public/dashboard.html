@@ -21,17 +21,32 @@
         <main class="dashboard-main">
             <div class="dashboard-sidebar">
                 <nav class="sidebar-nav">
-                    <a href="#" class="nav-item active" data-page="leads">
+                    <a href="#" class="nav-item active" data-page="dashboard">
+                        <span>📊</span> Dashboard
+                    </a>
+                    <a href="#" class="nav-item" data-page="leads">
                         <span>📋</span> Leads
                     </a>
                     <a href="#" class="nav-item" data-page="customers">
                         <span>👥</span> Customers
                     </a>
+                    <a href="#" class="nav-item" data-page="quotes">
+                        <span>💰</span> Quotes
+                    </a>
+                    <a href="#" class="nav-item" data-page="projects">
+                        <span>🏗️</span> Projects
+                    </a>
+                    <a href="#" class="nav-item" data-page="schedule">
+                        <span>📅</span> Schedule
+                    </a>
+                    <a href="#" class="nav-item" data-page="financeiro">
+                        <span>💵</span> Financeiro
+                    </a>
                     <a href="#" class="nav-item" data-page="activities">
                         <span>📝</span> Activities
                     </a>
-                    <a href="#" class="nav-item" data-page="settings">
-                        <span>⚙️</span> Settings
+                    <a href="#" class="nav-item" data-page="users">
+                        <span>👤</span> Users
                     </a>
                 </nav>
             </div>
@@ -40,15 +55,38 @@
                 <div id="loading" class="loading" style="display: none;">Loading...</div>
                 <div id="error" class="error-message" style="display: none;"></div>
                 
+                <!-- Dashboard Page -->
+                <div id="dashboardPage" class="page-content">
+                    <div class="page-header">
+                        <h2>Dashboard</h2>
+                        <button class="btn btn-primary" onclick="loadDashboard()">Refresh</button>
+                    </div>
+                    
+                    <div id="dashboardStats" class="stats-grid">
+                        <!-- Stats serão carregadas aqui -->
+                    </div>
+                    
+                    <div class="dashboard-sections">
+                        <div class="dashboard-section">
+                            <h3>Recent Leads</h3>
+                            <div id="recentLeads" class="recent-list"></div>
+                        </div>
+                        <div class="dashboard-section">
+                            <h3>Upcoming Visits</h3>
+                            <div id="upcomingVisits" class="recent-list"></div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Leads Page -->
-                <div id="leadsPage" class="page-content">
+                <div id="leadsPage" class="page-content" style="display: none;">
                     <div class="page-header">
                         <h2>Leads</h2>
                         <button class="btn btn-primary" onclick="refreshLeads()">Refresh</button>
                     </div>
                     
                     <div class="table-container">
-                        <table id="leadsTable" class="data-table">
+                        <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -69,145 +107,250 @@
                     </div>
                     
                     <div class="pagination">
-                        <button id="prevPage" class="btn btn-secondary" onclick="changePage(-1)">Previous</button>
-                        <span id="pageInfo">Page 1</span>
-                        <button id="nextPage" class="btn btn-secondary" onclick="changePage(1)">Next</button>
+                        <button id="prevPageLeads" class="btn btn-secondary" onclick="changePageLeads(-1)">Previous</button>
+                        <span id="pageInfoLeads">Page 1</span>
+                        <button id="nextPageLeads" class="btn btn-secondary" onclick="changePageLeads(1)">Next</button>
                     </div>
                 </div>
                 
-                <!-- Other pages placeholder -->
+                <!-- Customers Page -->
                 <div id="customersPage" class="page-content" style="display: none;">
-                    <h2>Customers</h2>
-                    <p>Coming soon...</p>
+                    <div class="page-header">
+                        <h2>Customers</h2>
+                        <button class="btn btn-primary" onclick="showNewCustomerModal()">+ New Customer</button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>City</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customersTableBody">
+                                <tr><td colspan="9" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination">
+                        <button id="prevPageCustomers" class="btn btn-secondary" onclick="changePageCustomers(-1)">Previous</button>
+                        <span id="pageInfoCustomers">Page 1</span>
+                        <button id="nextPageCustomers" class="btn btn-secondary" onclick="changePageCustomers(1)">Next</button>
+                    </div>
                 </div>
                 
+                <!-- Quotes Page -->
+                <div id="quotesPage" class="page-content" style="display: none;">
+                    <div class="page-header">
+                        <h2>Quotes</h2>
+                        <button class="btn btn-primary" onclick="showNewQuoteModal()">+ New Quote</button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Quote #</th>
+                                    <th>Customer</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Expires</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quotesTableBody">
+                                <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination">
+                        <button id="prevPageQuotes" class="btn btn-secondary" onclick="changePageQuotes(-1)">Previous</button>
+                        <span id="pageInfoQuotes">Page 1</span>
+                        <button id="nextPageQuotes" class="btn btn-secondary" onclick="changePageQuotes(1)">Next</button>
+                    </div>
+                </div>
+                
+                <!-- Projects Page -->
+                <div id="projectsPage" class="page-content" style="display: none;">
+                    <div class="page-header">
+                        <h2>Projects</h2>
+                        <button class="btn btn-primary" onclick="showNewProjectModal()">+ New Project</button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Customer</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Est. Cost</th>
+                                    <th>Start Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="projectsTableBody">
+                                <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination">
+                        <button id="prevPageProjects" class="btn btn-secondary" onclick="changePageProjects(-1)">Previous</button>
+                        <span id="pageInfoProjects">Page 1</span>
+                        <button id="nextPageProjects" class="btn btn-secondary" onclick="changePageProjects(1)">Next</button>
+                    </div>
+                </div>
+                
+                <!-- Schedule Page -->
+                <div id="schedulePage" class="page-content" style="display: none;">
+                    <div class="page-header">
+                        <h2>Schedule / Visits</h2>
+                        <button class="btn btn-primary" onclick="showNewVisitModal()">+ Schedule Visit</button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Date/Time</th>
+                                    <th>Lead/Customer</th>
+                                    <th>Project</th>
+                                    <th>Seller</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="visitsTableBody">
+                                <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination">
+                        <button id="prevPageVisits" class="btn btn-secondary" onclick="changePageVisits(-1)">Previous</button>
+                        <span id="pageInfoVisits">Page 1</span>
+                        <button id="nextPageVisits" class="btn btn-secondary" onclick="changePageVisits(1)">Next</button>
+                    </div>
+                </div>
+                
+                <!-- Financeiro Page -->
+                <div id="financeiroPage" class="page-content" style="display: none;">
+                    <div class="page-header">
+                        <h2>Financeiro / Contracts</h2>
+                        <button class="btn btn-primary" onclick="showNewContractModal()">+ New Contract</button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Customer</th>
+                                    <th>Project</th>
+                                    <th>Amount</th>
+                                    <th>Payment Method</th>
+                                    <th>Installments</th>
+                                    <th>Start Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contractsTableBody">
+                                <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination">
+                        <button id="prevPageContracts" class="btn btn-secondary" onclick="changePageContracts(-1)">Previous</button>
+                        <span id="pageInfoContracts">Page 1</span>
+                        <button id="nextPageContracts" class="btn btn-secondary" onclick="changePageContracts(1)">Next</button>
+                    </div>
+                </div>
+                
+                <!-- Activities Page -->
                 <div id="activitiesPage" class="page-content" style="display: none;">
-                    <h2>Activities</h2>
-                    <p>Coming soon...</p>
+                    <div class="page-header">
+                        <h2>Activities</h2>
+                        <button class="btn btn-primary" onclick="showNewActivityModal()">+ New Activity</button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Subject</th>
+                                    <th>Related To</th>
+                                    <th>User</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activitiesTableBody">
+                                <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination">
+                        <button id="prevPageActivities" class="btn btn-secondary" onclick="changePageActivities(-1)">Previous</button>
+                        <span id="pageInfoActivities">Page 1</span>
+                        <button id="nextPageActivities" class="btn btn-secondary" onclick="changePageActivities(1)">Next</button>
+                    </div>
                 </div>
                 
-                <div id="settingsPage" class="page-content" style="display: none;">
-                    <h2>Settings</h2>
-                    <p>Coming soon...</p>
+                <!-- Users Page -->
+                <div id="usersPage" class="page-content" style="display: none;">
+                    <div class="page-header">
+                        <h2>Users</h2>
+                        <button class="btn btn-primary" onclick="showNewUserModal()">+ New User</button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination">
+                        <button id="prevPageUsers" class="btn btn-secondary" onclick="changePageUsers(-1)">Previous</button>
+                        <span id="pageInfoUsers">Page 1</span>
+                        <button id="nextPageUsers" class="btn btn-secondary" onclick="changePageUsers(1)">Next</button>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
     
-    <script>
-        let currentPage = 1;
-        let currentPageName = 'leads';
-        
-        // Check authentication
-        fetch('/api/auth/session', {
-            credentials: 'include'
-        })
-            .then(r => r.json())
-            .then(data => {
-                console.log('Session data:', data);
-                if (!data.authenticated) {
-                    console.log('Not authenticated, redirecting to login');
-                    window.location.href = '/login.html';
-                    return;
-                }
-                
-                document.getElementById('userName').textContent = data.user.name || data.user.email;
-                loadLeads();
-            })
-            .catch(err => {
-                console.error('Session check error:', err);
-                window.location.href = '/login.html';
-            });
-        
-        // Logout
-        document.getElementById('logoutBtn').addEventListener('click', async () => {
-            await fetch('/api/auth/logout', { 
-                method: 'POST',
-                credentials: 'include'
-            });
-            window.location.href = '/login.html';
-        });
-        
-        // Navigation
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                e.preventDefault();
-                const page = item.dataset.page;
-                showPage(page);
-            });
-        });
-        
-        function showPage(pageName) {
-            document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            
-            document.getElementById(pageName + 'Page').style.display = 'block';
-            document.querySelector(`[data-page="${pageName}"]`).classList.add('active');
-            currentPageName = pageName;
-            
-            if (pageName === 'leads') {
-                loadLeads();
-            }
-        }
-        
-        async function loadLeads() {
-            const tbody = document.getElementById('leadsTableBody');
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center">Loading...</td></tr>';
-            
-            try {
-                const response = await fetch(`/api/leads?page=${currentPage}&limit=20`, {
-                    credentials: 'include'
-                });
-                const data = await response.json();
-                
-                if (data.success && data.data) {
-                    if (data.data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No leads found</td></tr>';
-                    } else {
-                        tbody.innerHTML = data.data.map(lead => `
-                            <tr>
-                                <td>${lead.id}</td>
-                                <td>${lead.name || '-'}</td>
-                                <td>${lead.email || '-'}</td>
-                                <td>${lead.phone || '-'}</td>
-                                <td>${lead.zipcode || '-'}</td>
-                                <td><span class="badge badge-${lead.status || 'new'}">${lead.status || 'new'}</span></td>
-                                <td>${lead.source || '-'}</td>
-                                <td>${lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '-'}</td>
-                                <td>
-                                    <button class="btn btn-sm" onclick="viewLead(${lead.id})">View</button>
-                                </td>
-                            </tr>
-                        `).join('');
-                    }
-                    
-                    // Update pagination
-                    const totalPages = Math.ceil(data.total / 20);
-                    document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages || 1}`;
-                    document.getElementById('prevPage').disabled = currentPage <= 1;
-                    document.getElementById('nextPage').disabled = currentPage >= totalPages;
-                } else {
-                    tbody.innerHTML = '<tr><td colspan="9" class="text-center">Error loading leads</td></tr>';
-                }
-            } catch (error) {
-                tbody.innerHTML = '<tr><td colspan="9" class="text-center">Error: ' + error.message + '</td></tr>';
-            }
-        }
-        
-        function changePage(delta) {
-            currentPage += delta;
-            if (currentPage < 1) currentPage = 1;
-            loadLeads();
-        }
-        
-        function refreshLeads() {
-            currentPage = 1;
-            loadLeads();
-        }
-        
-        function viewLead(id) {
-            alert('View lead ' + id + ' - Feature coming soon!');
-        }
-    </script>
+    <script src="dashboard.js"></script>
 </body>
 </html>

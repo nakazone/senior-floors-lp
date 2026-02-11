@@ -1,0 +1,567 @@
+/**
+ * Dashboard JavaScript - Main functionality
+ */
+let currentPage = 1;
+let currentPageName = 'dashboard';
+let dashboardStats = null;
+
+// Check authentication
+fetch('/api/auth/session', { credentials: 'include' })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.authenticated) {
+            window.location.href = '/login.html';
+            return;
+        }
+        document.getElementById('userName').textContent = data.user.name || data.user.email;
+        loadDashboard();
+    })
+    .catch(err => {
+        console.error('Session check error:', err);
+        window.location.href = '/login.html';
+    });
+
+// Logout
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    window.location.href = '/login.html';
+});
+
+// Navigation
+document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+        e.preventDefault();
+        showPage(item.dataset.page);
+    });
+});
+
+function showPage(pageName) {
+    document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    
+    const pageEl = document.getElementById(pageName + 'Page');
+    if (pageEl) {
+        pageEl.style.display = 'block';
+        document.querySelector(`[data-page="${pageName}"]`).classList.add('active');
+        currentPageName = pageName;
+        
+        // Load page data
+        if (pageName === 'dashboard') loadDashboard();
+        else if (pageName === 'leads') { currentPage = 1; loadLeads(); }
+        else if (pageName === 'customers') { currentPage = 1; loadCustomers(); }
+        else if (pageName === 'quotes') { currentPage = 1; loadQuotes(); }
+        else if (pageName === 'projects') { currentPage = 1; loadProjects(); }
+        else if (pageName === 'schedule') { currentPage = 1; loadVisits(); }
+        else if (pageName === 'financeiro') { currentPage = 1; loadContracts(); }
+        else if (pageName === 'activities') { currentPage = 1; loadActivities(); }
+        else if (pageName === 'users') { currentPage = 1; loadUsers(); }
+    }
+}
+
+// Dashboard
+async function loadDashboard() {
+    try {
+        const response = await fetch('/api/dashboard/stats', { credentials: 'include' });
+        const data = await response.json();
+        
+        if (data.success) {
+            dashboardStats = data.data;
+            renderDashboardStats();
+        }
+    } catch (error) {
+        console.error('Dashboard error:', error);
+    }
+}
+
+function renderDashboardStats() {
+    if (!dashboardStats) return;
+    
+    const stats = dashboardStats;
+    const statsHtml = `
+        <div class="stat-card">
+            <h3>Leads</h3>
+            <div class="stat-value">${stats.leads.total}</div>
+            <div class="stat-details">
+                <span>New: ${stats.leads.new_leads}</span>
+                <span>Today: ${stats.leads.today}</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <h3>Customers</h3>
+            <div class="stat-value">${stats.customers.total}</div>
+            <div class="stat-details">
+                <span>Active: ${stats.customers.active}</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <h3>Quotes</h3>
+            <div class="stat-value">${stats.quotes.total}</div>
+            <div class="stat-details">
+                <span>Value: $${parseFloat(stats.quotes.total_value || 0).toLocaleString()}</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <h3>Projects</h3>
+            <div class="stat-value">${stats.projects.total}</div>
+            <div class="stat-details">
+                <span>In Progress: ${stats.projects.in_progress}</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <h3>Revenue</h3>
+            <div class="stat-value">$${parseFloat(stats.contracts.total_revenue || 0).toLocaleString()}</div>
+            <div class="stat-details">
+                <span>This Month: $${parseFloat(stats.contracts.this_month_revenue || 0).toLocaleString()}</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <h3>Visits</h3>
+            <div class="stat-value">${stats.visits.scheduled}</div>
+            <div class="stat-details">
+                <span>Today: ${stats.visits.today}</span>
+                <span>This Week: ${stats.visits.this_week}</span>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('dashboardStats').innerHTML = statsHtml;
+    
+    // Recent leads
+    const recentLeadsHtml = stats.recent_leads && stats.recent_leads.length > 0
+        ? stats.recent_leads.map(l => `
+            <div class="recent-item">
+                <strong>${l.name || 'N/A'}</strong>
+                <span>${l.email || ''}</span>
+                <span class="badge badge-${l.status || 'new'}">${l.status || 'new'}</span>
+            </div>
+        `).join('')
+        : '<p>No recent leads</p>';
+    document.getElementById('recentLeads').innerHTML = recentLeadsHtml;
+    
+    // Upcoming visits
+    const visitsHtml = stats.upcoming_visits && stats.upcoming_visits.length > 0
+        ? stats.upcoming_visits.map(v => `
+            <div class="recent-item">
+                <strong>${new Date(v.scheduled_at).toLocaleString()}</strong>
+                <span>${v.lead_name || v.customer_name || v.project_name || 'N/A'}</span>
+                <span class="badge badge-${v.status || 'scheduled'}">${v.status || 'scheduled'}</span>
+            </div>
+        `).join('')
+        : '<p>No upcoming visits</p>';
+    document.getElementById('upcomingVisits').innerHTML = visitsHtml;
+}
+
+// Leads
+let leadsPage = 1;
+async function loadLeads() {
+    const tbody = document.getElementById('leadsTableBody');
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center">Loading...</td></tr>';
+    
+    try {
+        const response = await fetch(`/api/leads?page=${leadsPage}&limit=20`, { credentials: 'include' });
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            if (data.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center">No leads found</td></tr>';
+            } else {
+                tbody.innerHTML = data.data.map(lead => `
+                    <tr>
+                        <td>${lead.id}</td>
+                        <td>${lead.name || '-'}</td>
+                        <td>${lead.email || '-'}</td>
+                        <td>${lead.phone || '-'}</td>
+                        <td>${lead.zipcode || '-'}</td>
+                        <td><span class="badge badge-${lead.status || 'new'}">${lead.status || 'new'}</span></td>
+                        <td>${lead.source || '-'}</td>
+                        <td>${lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '-'}</td>
+                        <td><button class="btn btn-sm" onclick="viewLead(${lead.id})">View</button></td>
+                    </tr>
+                `).join('');
+            }
+            
+            const totalPages = Math.ceil(data.total / 20);
+            document.getElementById('pageInfoLeads').textContent = `Page ${leadsPage} of ${totalPages || 1}`;
+            document.getElementById('prevPageLeads').disabled = leadsPage <= 1;
+            document.getElementById('nextPageLeads').disabled = leadsPage >= totalPages;
+        }
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">Error: ' + error.message + '</td></tr>';
+    }
+}
+
+function changePageLeads(delta) {
+    leadsPage += delta;
+    if (leadsPage < 1) leadsPage = 1;
+    loadLeads();
+}
+
+function refreshLeads() {
+    leadsPage = 1;
+    loadLeads();
+}
+
+function viewLead(id) {
+    alert('View lead ' + id + ' - Feature coming soon!');
+}
+
+// Customers
+let customersPage = 1;
+async function loadCustomers() {
+    const tbody = document.getElementById('customersTableBody');
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center">Loading...</td></tr>';
+    
+    try {
+        const response = await fetch(`/api/customers?page=${customersPage}&limit=20`, { credentials: 'include' });
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            if (data.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center">No customers found</td></tr>';
+            } else {
+                tbody.innerHTML = data.data.map(c => `
+                    <tr>
+                        <td>${c.id}</td>
+                        <td>${c.name || '-'}</td>
+                        <td>${c.email || '-'}</td>
+                        <td>${c.phone || '-'}</td>
+                        <td>${c.city || '-'}</td>
+                        <td>${c.customer_type || '-'}</td>
+                        <td><span class="badge badge-${c.status || 'active'}">${c.status || 'active'}</span></td>
+                        <td>${c.created_at ? new Date(c.created_at).toLocaleDateString() : '-'}</td>
+                        <td><button class="btn btn-sm" onclick="viewCustomer(${c.id})">View</button></td>
+                    </tr>
+                `).join('');
+            }
+            
+            const totalPages = Math.ceil(data.total / 20);
+            document.getElementById('pageInfoCustomers').textContent = `Page ${customersPage} of ${totalPages || 1}`;
+            document.getElementById('prevPageCustomers').disabled = customersPage <= 1;
+            document.getElementById('nextPageCustomers').disabled = customersPage >= totalPages;
+        }
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">Error: ' + error.message + '</td></tr>';
+    }
+}
+
+function changePageCustomers(delta) {
+    customersPage += delta;
+    if (customersPage < 1) customersPage = 1;
+    loadCustomers();
+}
+
+function viewCustomer(id) {
+    alert('View customer ' + id + ' - Feature coming soon!');
+}
+
+function showNewCustomerModal() {
+    alert('New Customer form - Coming soon!');
+}
+
+// Quotes
+let quotesPage = 1;
+async function loadQuotes() {
+    const tbody = document.getElementById('quotesTableBody');
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
+    
+    try {
+        const response = await fetch(`/api/quotes?page=${quotesPage}&limit=20`, { credentials: 'include' });
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            if (data.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center">No quotes found</td></tr>';
+            } else {
+                tbody.innerHTML = data.data.map(q => `
+                    <tr>
+                        <td>${q.quote_number || 'N/A'}</td>
+                        <td>${q.customer_name || q.lead_name || '-'}</td>
+                        <td>$${parseFloat(q.total_amount || 0).toLocaleString()}</td>
+                        <td><span class="badge badge-${q.status || 'draft'}">${q.status || 'draft'}</span></td>
+                        <td>${q.created_at ? new Date(q.created_at).toLocaleDateString() : '-'}</td>
+                        <td>${q.expiration_date ? new Date(q.expiration_date).toLocaleDateString() : '-'}</td>
+                        <td><button class="btn btn-sm" onclick="viewQuote(${q.id})">View</button></td>
+                    </tr>
+                `).join('');
+            }
+            
+            const totalPages = Math.ceil(data.total / 20);
+            document.getElementById('pageInfoQuotes').textContent = `Page ${quotesPage} of ${totalPages || 1}`;
+            document.getElementById('prevPageQuotes').disabled = quotesPage <= 1;
+            document.getElementById('nextPageQuotes').disabled = quotesPage >= totalPages;
+        }
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">Error: ' + error.message + '</td></tr>';
+    }
+}
+
+function changePageQuotes(delta) {
+    quotesPage += delta;
+    if (quotesPage < 1) quotesPage = 1;
+    loadQuotes();
+}
+
+function viewQuote(id) {
+    alert('View quote ' + id + ' - Feature coming soon!');
+}
+
+function showNewQuoteModal() {
+    alert('New Quote form - Coming soon!');
+}
+
+// Projects
+let projectsPage = 1;
+async function loadProjects() {
+    const tbody = document.getElementById('projectsTableBody');
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center">Loading...</td></tr>';
+    
+    try {
+        const response = await fetch(`/api/projects?page=${projectsPage}&limit=20`, { credentials: 'include' });
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            if (data.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No projects found</td></tr>';
+            } else {
+                tbody.innerHTML = data.data.map(p => `
+                    <tr>
+                        <td>${p.id}</td>
+                        <td>${p.name || '-'}</td>
+                        <td>${p.customer_name || '-'}</td>
+                        <td>${p.project_type || '-'}</td>
+                        <td><span class="badge badge-${p.status || 'quoted'}">${p.status || 'quoted'}</span></td>
+                        <td>$${parseFloat(p.estimated_cost || 0).toLocaleString()}</td>
+                        <td>${p.estimated_start_date || '-'}</td>
+                        <td><button class="btn btn-sm" onclick="viewProject(${p.id})">View</button></td>
+                    </tr>
+                `).join('');
+            }
+            
+            const totalPages = Math.ceil(data.total / 20);
+            document.getElementById('pageInfoProjects').textContent = `Page ${projectsPage} of ${totalPages || 1}`;
+            document.getElementById('prevPageProjects').disabled = projectsPage <= 1;
+            document.getElementById('nextPageProjects').disabled = projectsPage >= totalPages;
+        }
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Error: ' + error.message + '</td></tr>';
+    }
+}
+
+function changePageProjects(delta) {
+    projectsPage += delta;
+    if (projectsPage < 1) projectsPage = 1;
+    loadProjects();
+}
+
+function viewProject(id) {
+    alert('View project ' + id + ' - Feature coming soon!');
+}
+
+function showNewProjectModal() {
+    alert('New Project form - Coming soon!');
+}
+
+// Visits/Schedule
+let visitsPage = 1;
+async function loadVisits() {
+    const tbody = document.getElementById('visitsTableBody');
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
+    
+    try {
+        const response = await fetch(`/api/visits?page=${visitsPage}&limit=20`, { credentials: 'include' });
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            if (data.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center">No visits scheduled</td></tr>';
+            } else {
+                tbody.innerHTML = data.data.map(v => `
+                    <tr>
+                        <td>${v.id}</td>
+                        <td>${v.scheduled_at ? new Date(v.scheduled_at).toLocaleString() : '-'}</td>
+                        <td>${v.lead_name || v.customer_name || '-'}</td>
+                        <td>${v.project_name || '-'}</td>
+                        <td>${v.seller_id || '-'}</td>
+                        <td><span class="badge badge-${v.status || 'scheduled'}">${v.status || 'scheduled'}</span></td>
+                        <td><button class="btn btn-sm" onclick="viewVisit(${v.id})">View</button></td>
+                    </tr>
+                `).join('');
+            }
+            
+            const totalPages = Math.ceil(data.total / 20);
+            document.getElementById('pageInfoVisits').textContent = `Page ${visitsPage} of ${totalPages || 1}`;
+            document.getElementById('prevPageVisits').disabled = visitsPage <= 1;
+            document.getElementById('nextPageVisits').disabled = visitsPage >= totalPages;
+        }
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">Error: ' + error.message + '</td></tr>';
+    }
+}
+
+function changePageVisits(delta) {
+    visitsPage += delta;
+    if (visitsPage < 1) visitsPage = 1;
+    loadVisits();
+}
+
+function viewVisit(id) {
+    alert('View visit ' + id + ' - Feature coming soon!');
+}
+
+function showNewVisitModal() {
+    alert('New Visit form - Coming soon!');
+}
+
+// Contracts/Financeiro
+let contractsPage = 1;
+async function loadContracts() {
+    const tbody = document.getElementById('contractsTableBody');
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center">Loading...</td></tr>';
+    
+    try {
+        const response = await fetch(`/api/contracts?page=${contractsPage}&limit=20`, { credentials: 'include' });
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            if (data.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No contracts found</td></tr>';
+            } else {
+                tbody.innerHTML = data.data.map(c => `
+                    <tr>
+                        <td>${c.id}</td>
+                        <td>${c.customer_name || '-'}</td>
+                        <td>${c.project_name || '-'}</td>
+                        <td>$${parseFloat(c.closed_amount || 0).toLocaleString()}</td>
+                        <td>${c.payment_method || '-'}</td>
+                        <td>${c.installments || 1}x</td>
+                        <td>${c.start_date || '-'}</td>
+                        <td><button class="btn btn-sm" onclick="viewContract(${c.id})">View</button></td>
+                    </tr>
+                `).join('');
+            }
+            
+            const totalPages = Math.ceil(data.total / 20);
+            document.getElementById('pageInfoContracts').textContent = `Page ${contractsPage} of ${totalPages || 1}`;
+            document.getElementById('prevPageContracts').disabled = contractsPage <= 1;
+            document.getElementById('nextPageContracts').disabled = contractsPage >= totalPages;
+        }
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Error: ' + error.message + '</td></tr>';
+    }
+}
+
+function changePageContracts(delta) {
+    contractsPage += delta;
+    if (contractsPage < 1) contractsPage = 1;
+    loadContracts();
+}
+
+function viewContract(id) {
+    alert('View contract ' + id + ' - Feature coming soon!');
+}
+
+function showNewContractModal() {
+    alert('New Contract form - Coming soon!');
+}
+
+// Activities
+let activitiesPage = 1;
+async function loadActivities() {
+    const tbody = document.getElementById('activitiesTableBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
+    
+    try {
+        const response = await fetch(`/api/activities?page=${activitiesPage}&limit=50`, { credentials: 'include' });
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            if (data.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No activities found</td></tr>';
+            } else {
+                tbody.innerHTML = data.data.map(a => `
+                    <tr>
+                        <td>${a.activity_date ? new Date(a.activity_date).toLocaleString() : '-'}</td>
+                        <td>${a.activity_type || '-'}</td>
+                        <td>${a.subject || '-'}</td>
+                        <td>${a.related_to || '-'}</td>
+                        <td>${a.user_name || '-'}</td>
+                        <td><button class="btn btn-sm" onclick="viewActivity(${a.id})">View</button></td>
+                    </tr>
+                `).join('');
+            }
+            
+            const totalPages = Math.ceil(data.total / 50);
+            document.getElementById('pageInfoActivities').textContent = `Page ${activitiesPage} of ${totalPages || 1}`;
+            document.getElementById('prevPageActivities').disabled = activitiesPage <= 1;
+            document.getElementById('nextPageActivities').disabled = activitiesPage >= totalPages;
+        }
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Error: ' + error.message + '</td></tr>';
+    }
+}
+
+function changePageActivities(delta) {
+    activitiesPage += delta;
+    if (activitiesPage < 1) activitiesPage = 1;
+    loadActivities();
+}
+
+function viewActivity(id) {
+    alert('View activity ' + id + ' - Feature coming soon!');
+}
+
+function showNewActivityModal() {
+    alert('New Activity form - Coming soon!');
+}
+
+// Users
+let usersPage = 1;
+async function loadUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center">Loading...</td></tr>';
+    
+    try {
+        const response = await fetch(`/api/users?page=${usersPage}&limit=20`, { credentials: 'include' });
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            if (data.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No users found</td></tr>';
+            } else {
+                tbody.innerHTML = data.data.map(u => `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td>${u.name || '-'}</td>
+                        <td>${u.email || '-'}</td>
+                        <td>${u.phone || '-'}</td>
+                        <td>${u.role || '-'}</td>
+                        <td><span class="badge badge-${(u.is_active !== undefined ? u.is_active : u.active) ? 'active' : 'inactive'}">${(u.is_active !== undefined ? u.is_active : u.active) ? 'Active' : 'Inactive'}</span></td>
+                        <td>${u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</td>
+                        <td><button class="btn btn-sm" onclick="viewUser(${u.id})">View</button></td>
+                    </tr>
+                `).join('');
+            }
+            
+            const totalPages = Math.ceil(data.total / 20);
+            document.getElementById('pageInfoUsers').textContent = `Page ${usersPage} of ${totalPages || 1}`;
+            document.getElementById('prevPageUsers').disabled = usersPage <= 1;
+            document.getElementById('nextPageUsers').disabled = usersPage >= totalPages;
+        }
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Error: ' + error.message + '</td></tr>';
+    }
+}
+
+function changePageUsers(delta) {
+    usersPage += delta;
+    if (usersPage < 1) usersPage = 1;
+    loadUsers();
+}
+
+function viewUser(id) {
+    alert('View user ' + id + ' - Feature coming soon!');
+}
+
+function showNewUserModal() {
+    alert('New User form - Coming soon!');
+}
