@@ -87,6 +87,9 @@ app.get('/api/health', (req, res) => {
 // Dashboard
 app.get('/api/dashboard/stats', requireAuth, getDashboardStats);
 
+// Pipeline Stages
+app.get('/api/pipeline-stages', requireAuth, listPipelineStages);
+
 // Leads
 app.get('/api/leads', requireAuth, listLeads);
 app.get('/api/leads/:id', requireAuth, getLead);
