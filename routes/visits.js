@@ -15,6 +15,7 @@ export async function listVisits(req, res) {
     const offset = (page - 1) * limit;
     const status = req.query.status || null;
     const sellerId = req.query.seller_id || null;
+    const leadId = req.query.lead_id || null;
     const dateFrom = req.query.date_from || null;
     const dateTo = req.query.date_to || null;
 
@@ -22,12 +23,16 @@ export async function listVisits(req, res) {
     const params = [];
 
     if (status) {
-      whereClause += ' AND status = ?';
+      whereClause += ' AND v.status = ?';
       params.push(status);
     }
     if (sellerId) {
-      whereClause += ' AND seller_id = ?';
+      whereClause += ' AND v.assigned_to = ?';
       params.push(sellerId);
+    }
+    if (leadId) {
+      whereClause += ' AND v.lead_id = ?';
+      params.push(leadId);
     }
     if (dateFrom) {
       whereClause += ' AND scheduled_at >= ?';
@@ -41,12 +46,10 @@ export async function listVisits(req, res) {
     const [rows] = await pool.query(
       `SELECT v.*, 
               l.name as lead_name, l.email as lead_email, l.phone as lead_phone,
-              c.name as customer_name, c.email as customer_email, c.phone as customer_phone,
-              p.name as project_name
+              u.name as assigned_to_name
        FROM visits v
        LEFT JOIN leads l ON v.lead_id = l.id
-       LEFT JOIN customers c ON v.customer_id = c.id
-       LEFT JOIN projects p ON v.project_id = p.id
+       LEFT JOIN users u ON v.assigned_to = u.id
        WHERE ${whereClause}
        ORDER BY v.scheduled_at ASC 
        LIMIT ? OFFSET ?`,
