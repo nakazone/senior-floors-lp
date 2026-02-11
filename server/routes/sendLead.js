@@ -207,13 +207,16 @@ export async function handleSendLead(req, res) {
       mail_sent = true;
       writeLeadLog(`✅ Email sent successfully to ${mailOptions.to}`);
     } catch (e) {
-      writeLeadLog(`❌ Email failed: ${e.message}`);
+      // Email é opcional - não bloquear o fluxo se falhar
+      writeLeadLog(`⚠️ Email failed (non-blocking): ${e.message}`);
       // Log mais detalhado para debug
       if (e.code === 'EAUTH') {
-        writeLeadLog(`⚠️ Authentication error - verify App Password is correct (16 chars, no spaces)`);
+        writeLeadLog(`⚠️ Gmail authentication error - email will be skipped`);
+        writeLeadLog(`⚠️ Tip: Remove SMTP_* variables to disable email, or fix App Password`);
         writeLeadLog(`⚠️ SMTP_USER: ${smtpUser}, SMTP_PASS length: ${smtpPass.length}`);
       }
-      console.error('Email error:', e);
+      // Não lançar erro - email é opcional
+      console.error('Email error (non-blocking):', e.message);
     }
   } else {
     if (!smtpPass || smtpPass === 'YOUR_APP_PASSWORD_HERE') {
