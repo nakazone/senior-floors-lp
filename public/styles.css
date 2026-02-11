@@ -480,6 +480,23 @@ tr:hover {
     font-size: 1.5rem;
     cursor: pointer;
     padding: 8px;
+    margin-right: var(--spacing-sm);
+}
+
+/* Mobile Overlay */
+.mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+}
+
+.mobile-overlay.active {
+    display: block;
 }
 
 /* Mobile Styles */
@@ -609,22 +626,6 @@ tr:hover {
     
     .page-title {
         font-size: 1.5rem;
-    }
-    
-    /* Mobile overlay */
-    .mobile-overlay {
-        display: none;
-        position: fixed;
-        top: 60px;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 998;
-    }
-    
-    .mobile-overlay.active {
-        display: block;
     }
     
     /* Login mobile */
