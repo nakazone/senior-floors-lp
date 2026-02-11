@@ -93,18 +93,12 @@ body {
 .dashboard-container {
     min-height: 100vh;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
 }
 
-/* Header */
+/* Header - Removido, agora está no sidebar */
 .dashboard-header {
-    background: var(--primary-color);
-    color: var(--bg-white);
-    padding: var(--spacing-sm) var(--spacing-md);
-    box-shadow: var(--shadow-lg);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
+    display: none;
 }
 
 .header-content {
@@ -151,49 +145,126 @@ body {
 .dashboard-main {
     flex: 1;
     display: flex;
-    max-width: 1400px;
-    margin: 0 auto;
     width: 100%;
+    margin-left: 280px; /* Space for fixed sidebar */
     padding: var(--spacing-md);
-    gap: var(--spacing-md);
 }
 
 .dashboard-content {
     flex: 1;
     display: flex;
     flex-direction: column;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
 }
 
-/* Sidebar */
+/* Sidebar - Fixed */
 .dashboard-sidebar {
-    width: 250px;
+    width: 280px;
     background: var(--bg-white);
-    border-radius: 8px;
-    box-shadow: var(--shadow);
-    padding: var(--spacing-sm);
-    height: fit-content;
-    position: sticky;
-    top: 80px;
+    box-shadow: var(--shadow-lg);
+    padding: 0;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    overflow-y: auto;
+    transition: transform 0.3s ease;
+}
+
+/* Mobile sidebar behavior */
+@media (max-width: 768px) {
+    .dashboard-sidebar {
+        transform: translateX(-100%);
+        width: 280px;
+    }
+    
+    .dashboard-sidebar.mobile-open {
+        transform: translateX(0);
+    }
+    
+    .dashboard-main {
+        margin-left: 0;
+        width: 100%;
+    }
+    
+    .mobile-menu-toggle {
+        display: block !important;
+        position: fixed;
+        top: var(--spacing-sm);
+        left: var(--spacing-sm);
+        z-index: 1001;
+        background: var(--primary-color);
+        color: var(--bg-white);
+        border: none;
+        padding: 10px 14px;
+        border-radius: 6px;
+        font-size: 1.2rem;
+        cursor: pointer;
+        box-shadow: var(--shadow);
+    }
+}
+
+.sidebar-header {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    background: var(--primary-color);
+    color: var(--bg-white);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.sidebar-header img {
+    height: 50px;
+    width: auto;
+}
+
+.sidebar-header h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--bg-white);
 }
 
 .sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0;
+    padding: var(--spacing-sm);
+    flex: 1;
 }
 
 .nav-item {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-    padding: 12px var(--spacing-sm);
+    padding: 14px var(--spacing-sm);
     color: var(--text-light);
     text-decoration: none;
     border-radius: 6px;
     transition: var(--transition);
     font-size: 0.95rem;
     font-weight: 500;
+    position: relative;
+    margin-bottom: 4px;
+}
+
+.nav-item::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: var(--spacing-sm);
+    width: 0;
+    height: 2px;
+    background-color: var(--secondary-color);
+    transition: width 0.3s ease;
+    border-radius: 2px;
 }
 
 .nav-item:hover {
@@ -201,9 +272,18 @@ body {
     color: var(--primary-color);
 }
 
+.nav-item:hover::after {
+    width: calc(100% - var(--spacing-sm) * 2);
+}
+
 .nav-item.active {
     background: var(--primary-color);
     color: var(--bg-white);
+}
+
+.nav-item.active::after {
+    background-color: var(--secondary-color);
+    width: calc(100% - var(--spacing-sm) * 2);
 }
 
 .nav-item span {
@@ -632,6 +712,43 @@ tr:hover {
     .login-box {
         padding: var(--spacing-md);
         margin: var(--spacing-sm);
+    }
+    
+    /* Dashboard mobile adjustments */
+    .dashboard-sidebar {
+        transform: translateX(-100%);
+    }
+    
+    .dashboard-sidebar.mobile-open {
+        transform: translateX(0);
+    }
+    
+    .dashboard-main {
+        margin-left: 0;
+        padding: var(--spacing-sm);
+    }
+    
+    .mobile-menu-toggle {
+        display: block !important;
+    }
+    
+    .mobile-overlay {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    
+    .mobile-overlay.active {
+        opacity: 1;
+        visibility: visible;
     }
 }
 
