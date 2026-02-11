@@ -199,10 +199,32 @@ async function main() {
     // Atualizar order_num se estiver usando 'order' ao invés de 'order_num'
     if (columnNames.includes('order') && !columnNames.includes('order_num')) {
       console.log('📝 Migrando coluna order → order_num...');
-      await connection.execute(
-        "ALTER TABLE pipeline_stages CHANGE COLUMN `order` order_num INT(11) DEFAULT 0"
-      );
-      console.log('✅ Migração concluída\n');
+      try {
+        await connection.execute(
+          "ALTER TABLE pipeline_stages CHANGE COLUMN `order` order_num INT(11) DEFAULT 0"
+        );
+        console.log('✅ Migração concluída\n');
+      } catch (error) {
+        if (error.message.includes('Duplicate column')) {
+          console.log('⚠️  Coluna order_num já existe, pulando migração\n');
+        } else {
+          throw error;
+        }
+      }
+    } else if (columnNames.includes('order') && columnNames.includes('order_num')) {
+      // Se ambas existem, copiar dados de order para order_num e remover order
+      console.log('📝 Copiando dados de order para order_num e removendo order...');
+      try {
+        await connection.execute(
+          "UPDATE pipeline_stages SET order_num = `order` WHERE order_num = 0 OR order_num IS NULL"
+        );
+        await connection.execute(
+          "ALTER TABLE pipeline_stages DROP COLUMN `order`"
+        );
+        console.log('✅ Coluna order removida\n');
+      } catch (error) {
+        console.log(`⚠️  Erro ao migrar order: ${error.message}\n`);
+      }
     }
 
     // Verificar estágios finais e marcar is_closed
