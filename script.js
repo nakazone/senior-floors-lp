@@ -32,11 +32,15 @@
         var emailVal = (form.querySelector('[name="email"]') || {}).value || '';
         var phoneVal = (form.querySelector('[name="phone"]') || {}).value || '';
         var zipVal = (form.querySelector('[name="zipcode"]') || {}).value || '';
-        if (!nameVal || nameVal.trim().length < 2) { if (errorEl) { errorEl.textContent = 'Name is required.'; errorEl.style.display = 'block'; } return; }
-        if (!/^[^@]+@[^@]+\.[^@]+$/.test((emailVal || '').trim())) { if (errorEl) { errorEl.textContent = 'Valid email is required.'; errorEl.style.display = 'block'; } return; }
-        if (!phoneVal || phoneVal.replace(/\D/g, '').length < 10) { if (errorEl) { errorEl.textContent = 'Phone number is required.'; errorEl.style.display = 'block'; } return; }
+        function validationFail(msg) {
+            form.removeAttribute('data-submitting');
+            if (errorEl) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
+        }
+        if (!nameVal || nameVal.trim().length < 2) { validationFail('Name is required.'); return; }
+        if (!/^[^@]+@[^@]+\.[^@]+$/.test((emailVal || '').trim())) { validationFail('Valid email is required.'); return; }
+        if (!phoneVal || phoneVal.replace(/\D/g, '').length < 10) { validationFail('Phone number is required.'); return; }
         var zipClean = (zipVal || '').replace(/\D/g, '');
-        if (!zipClean || zipClean.length < 5) { if (errorEl) { errorEl.textContent = 'Valid 5-digit zip code is required.'; errorEl.style.display = 'block'; } return; }
+        if (!zipClean || zipClean.length < 5) { validationFail('Valid 5-digit zip code is required.'); return; }
         if (errorEl) errorEl.style.display = 'none';
         var btn = form.querySelector('button[type="submit"]');
         if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
