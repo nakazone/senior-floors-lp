@@ -102,7 +102,7 @@ export async function handleSendLead(req, res) {
   }
 
   // 3) Send to System API (Railway) - ALWAYS if SYSTEM_API_URL is set
-  const systemUrl = process.env.SYSTEM_API_URL;
+  // systemUrl já foi declarado acima (linha 60)
   if (systemUrl) {
     try {
       const base = systemUrl.replace(/\/$/, '');
