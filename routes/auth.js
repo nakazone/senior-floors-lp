@@ -17,9 +17,18 @@ export async function login(req, res) {
       return res.status(503).json({ success: false, error: 'Database not available' });
     }
 
-    // Buscar usuário (tentar password_hash ou password)
+    // Buscar usuário (detectar qual coluna de senha existe)
+    // Primeiro verificar estrutura da tabela
+    const [columns] = await pool.query(`SHOW COLUMNS FROM users`);
+    const columnNames = columns.map(c => c.Field);
+    const hasPasswordHash = columnNames.includes('password_hash');
+    const hasPassword = columnNames.includes('password');
+    
+    const passwordField = hasPasswordHash ? 'password_hash' : (hasPassword ? 'password' : null);
+    const selectFields = `id, name, email, role, is_active${passwordField ? `, ${passwordField}` : ''}`;
+    
     const [users] = await pool.query(
-      `SELECT id, name, email, password_hash, password, role, is_active 
+      `SELECT ${selectFields}
        FROM users 
        WHERE email = ? AND is_active = 1 
        LIMIT 1`,
@@ -31,7 +40,7 @@ export async function login(req, res) {
     }
 
     const user = users[0];
-    const storedPassword = user.password_hash || user.password;
+    const storedPassword = passwordField ? user[passwordField] : null;
 
     if (!storedPassword) {
       // Usuário sem senha - permitir login se for admin (primeira vez)
