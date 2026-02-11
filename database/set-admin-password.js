@@ -68,27 +68,38 @@ async function setAdminPassword() {
     const adminUser = users[0];
     console.log(`📧 Usuário encontrado: ${adminUser.email} (ID: ${adminUser.id})`);
 
-    // Atualizar senha (tentar password_hash primeiro, depois password)
+    // Verificar quais colunas de senha existem
+    const [allColumns] = await connection.query(
+      `SHOW COLUMNS FROM users`
+    );
+    
+    const columnNames = allColumns.map(c => c.Field);
+    console.log('📋 Colunas encontradas na tabela users:');
+    columnNames.forEach(col => console.log(`   - ${col}`));
+    
+    // Procurar coluna de senha
+    let passwordColumn = null;
+    if (columnNames.includes('password_hash')) {
+      passwordColumn = 'password_hash';
+    } else if (columnNames.includes('password')) {
+      passwordColumn = 'password';
+    } else {
+      console.error('\n❌ Nenhuma coluna de senha encontrada!');
+      console.error('Colunas disponíveis:', columnNames.join(', '));
+      console.error('\n💡 Você pode criar a coluna manualmente:');
+      console.error('ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL;');
+      process.exit(1);
+    }
+    
+    console.log(`\n🔧 Usando coluna: ${passwordColumn}`);
+
+    // Atualizar senha
     try {
-      // Verificar qual coluna existe
-      const [columns] = await connection.query(
-        `SHOW COLUMNS FROM users LIKE 'password_hash'`
+      await connection.query(
+        `UPDATE users SET ${passwordColumn} = ? WHERE email = 'admin@senior-floors.com'`,
+        [hash]
       );
-      
-      if (columns.length > 0) {
-        await connection.query(
-          `UPDATE users SET password_hash = ? WHERE email = 'admin@senior-floors.com'`,
-          [hash]
-        );
-        console.log('✅ Senha atualizada na coluna password_hash');
-      } else {
-        // Tentar coluna password
-        await connection.query(
-          `UPDATE users SET password = ? WHERE email = 'admin@senior-floors.com'`,
-          [hash]
-        );
-        console.log('✅ Senha atualizada na coluna password');
-      }
+      console.log(`✅ Senha atualizada na coluna ${passwordColumn}`);
     } catch (e) {
       console.error('❌ Erro ao atualizar senha:', e.message);
       process.exit(1);
