@@ -351,8 +351,11 @@
                 <!-- Quotes Page -->
                 <div id="quotesPage" class="page-content" style="display: none;">
                     <div class="page-header">
-                        <h2>Quotes</h2>
-                        <button class="btn btn-primary" onclick="showNewQuoteModal()">+ New Quote</button>
+                        <h2>Estimates</h2>
+                        <div style="display: flex; gap: var(--spacing-sm);">
+                            <button class="btn btn-primary" onclick="window.open('estimate-builder.html', '_blank')">+ New Estimate</button>
+                            <button class="btn btn-secondary" onclick="loadEstimateAnalytics()">Analytics</button>
+                        </div>
                     </div>
                     
                     <div class="table-container">
