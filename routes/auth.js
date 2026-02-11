@@ -23,14 +23,28 @@ export async function login(req, res) {
     const columnNames = columns.map(c => c.Field);
     const hasPasswordHash = columnNames.includes('password_hash');
     const hasPassword = columnNames.includes('password');
+    const hasIsActive = columnNames.includes('is_active');
+    const hasActive = columnNames.includes('active');
     
     const passwordField = hasPasswordHash ? 'password_hash' : (hasPassword ? 'password' : null);
-    const selectFields = `id, name, email, role, is_active${passwordField ? `, ${passwordField}` : ''}`;
+    const activeField = hasIsActive ? 'is_active' : (hasActive ? 'active' : null);
+    
+    // Construir SELECT dinamicamente
+    let selectFields = 'id, name, email';
+    if (columnNames.includes('role')) selectFields += ', role';
+    if (activeField) selectFields += `, ${activeField}`;
+    if (passwordField) selectFields += `, ${passwordField}`;
+    
+    // Construir WHERE dinamicamente
+    let whereClause = 'WHERE email = ?';
+    if (activeField) {
+      whereClause += ` AND ${activeField} = 1`;
+    }
     
     const [users] = await pool.query(
       `SELECT ${selectFields}
        FROM users 
-       WHERE email = ? AND is_active = 1 
+       ${whereClause}
        LIMIT 1`,
       [email.toLowerCase().trim()]
     );
@@ -41,13 +55,14 @@ export async function login(req, res) {
 
     const user = users[0];
     const storedPassword = passwordField ? user[passwordField] : null;
+    const userRole = user.role || 'user';
 
     if (!storedPassword) {
       // Usuário sem senha - permitir login se for admin (primeira vez)
-      if (user.role === 'admin') {
+      if (userRole === 'admin') {
         req.session.userId = user.id;
         req.session.userEmail = user.email;
-        req.session.userRole = user.role;
+        req.session.userRole = userRole;
         req.session.userName = user.name;
         
         return res.json({
@@ -56,7 +71,7 @@ export async function login(req, res) {
             id: user.id,
             name: user.name,
             email: user.email,
-            role: user.role
+            role: userRole
           },
           message: 'Logged in (no password set - please set one)'
         });
@@ -73,15 +88,18 @@ export async function login(req, res) {
     // Criar sessão
     req.session.userId = user.id;
     req.session.userEmail = user.email;
-    req.session.userRole = user.role;
+    req.session.userRole = userRole;
     req.session.userName = user.name;
 
-    // Atualizar last_login
+    // Atualizar last_login (se coluna existir)
     try {
-      await pool.query(
-        `UPDATE users SET last_login = NOW() WHERE id = ?`,
-        [user.id]
-      );
+      if (columnNames.includes('last_login') || columnNames.includes('last_login_at')) {
+        const lastLoginField = columnNames.includes('last_login_at') ? 'last_login_at' : 'last_login';
+        await pool.query(
+          `UPDATE users SET ${lastLoginField} = NOW() WHERE id = ?`,
+          [user.id]
+        );
+      }
     } catch (e) {
       // Ignorar erro se coluna não existir
     }
@@ -92,12 +110,17 @@ export async function login(req, res) {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: userRole
       }
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ success: false, error: 'Internal server error' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Internal server error',
+      message: error.message 
+    });
   }
 }
 
