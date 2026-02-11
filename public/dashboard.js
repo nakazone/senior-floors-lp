@@ -28,7 +28,7 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
     window.location.href = '/login.html';
 });
 
-// Mobile menu toggle (only on mobile)
+// Mobile menu toggle
 const mobileMenuToggle = document.getElementById('mobileMenuToggle');
 const dashboardSidebar = document.getElementById('dashboardSidebar');
 const mobileOverlay = document.getElementById('mobileOverlay');
@@ -37,22 +37,30 @@ function isMobile() {
     return window.innerWidth <= 768;
 }
 
+function updateMobileMenuVisibility() {
+    if (mobileMenuToggle && dashboardSidebar) {
+        if (isMobile()) {
+            mobileMenuToggle.style.display = 'block';
+        } else {
+            mobileMenuToggle.style.display = 'none';
+            dashboardSidebar.classList.remove('mobile-open');
+            if (mobileOverlay) mobileOverlay.classList.remove('active');
+        }
+    }
+}
+
 if (mobileMenuToggle && dashboardSidebar && mobileOverlay) {
     mobileMenuToggle.addEventListener('click', () => {
-        if (isMobile()) {
-            dashboardSidebar.classList.toggle('mobile-open');
-            mobileOverlay.classList.toggle('active');
-        }
+        dashboardSidebar.classList.toggle('mobile-open');
+        mobileOverlay.classList.toggle('active');
     });
 
     mobileOverlay.addEventListener('click', () => {
-        if (isMobile()) {
-            dashboardSidebar.classList.remove('mobile-open');
-            mobileOverlay.classList.remove('active');
-        }
+        dashboardSidebar.classList.remove('mobile-open');
+        mobileOverlay.classList.remove('active');
     });
 
-    // Close mobile menu when clicking nav item (only on mobile)
+    // Close mobile menu when clicking nav item
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
             if (isMobile()) {
@@ -61,6 +69,11 @@ if (mobileMenuToggle && dashboardSidebar && mobileOverlay) {
             }
         });
     });
+    
+    // Update on resize
+    window.addEventListener('resize', updateMobileMenuVisibility);
+    updateMobileMenuVisibility();
+}
 
     // Handle window resize - ensure sidebar is visible on desktop
     window.addEventListener('resize', () => {
