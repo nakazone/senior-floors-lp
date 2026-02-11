@@ -60,15 +60,14 @@ export async function createInteraction(req, res) {
     return res.status(400).json({ success: false, error: 'Invalid lead ID' });
   }
 
-  const {
-    type,
-    direction,
-    subject,
-    notes,
-    duration_minutes,
-    outcome,
-    next_followup_date
-  } = req.body;
+  const body = req.body || {};
+  const type = body.type;
+  const direction = body.direction ?? null;
+  const subject = body.subject ?? null;
+  const notes = body.notes ?? null;
+  const duration_minutes = body.duration_minutes ?? null;
+  const outcome = body.outcome ?? null;
+  const next_followup_date = body.next_followup_date ?? null;
 
   if (!type) {
     return res.status(400).json({ success: false, error: 'Type is required' });
@@ -81,7 +80,7 @@ export async function createInteraction(req, res) {
       `INSERT INTO interactions 
        (lead_id, user_id, type, direction, subject, notes, duration_minutes, outcome, next_followup_date)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [leadId, userId, type, direction, subject, notes, duration_minutes, outcome, next_followup_date]
+      [leadId, userId ?? null, type, direction, subject, notes, duration_minutes, outcome, next_followup_date]
     );
 
     // Buscar criado

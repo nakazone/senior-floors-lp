@@ -72,6 +72,10 @@
                 
                 <!-- Dashboard Page -->
                 <div id="dashboardPage" class="page-content">
+                    <div id="urgentLeadsBanner" class="urgent-leads-banner" style="display: none;">
+                        <span id="urgentLeadsBannerText"></span>
+                        <a href="#" onclick="showPage('leads'); return false;" id="urgentLeadsBannerLink">Ver leads</a>
+                    </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
                         <h2 class="page-title">Dashboard</h2>
                         <button class="btn btn-primary" onclick="loadDashboard()">🔄 Refresh</button>

@@ -18,9 +18,24 @@
             margin-bottom: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .lead-header h1 {
+        .lead-header h1,
+        .lead-title {
             margin: 0 0 10px 0;
             color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .lead-title-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: #1a2036;
+            color: white;
+            font-size: 1.35rem;
         }
         .lead-meta {
             display: flex;
@@ -179,7 +194,10 @@
         <main class="dashboard-main">
             <div class="lead-detail-container">
                 <div class="lead-header">
-                    <h1 id="leadName">Loading...</h1>
+                    <h1 class="lead-title">
+                        <span class="lead-title-icon" aria-hidden="true">👤</span>
+                        <span id="leadName">Loading...</span>
+                    </h1>
                     <div class="lead-meta">
                         <div class="lead-meta-item">
                             <strong>Status:</strong>
@@ -194,12 +212,8 @@
                             <span id="leadPhone">-</span>
                         </div>
                         <div class="lead-meta-item">
-                            <strong>Source:</strong>
-                            <span id="leadSource">-</span>
-                        </div>
-                        <div class="lead-meta-item">
-                            <strong>Created:</strong>
-                            <span id="leadCreated">-</span>
+                            <strong>Next Steps:</strong>
+                            <span id="leadNextSteps">-</span>
                         </div>
                     </div>
                 </div>
@@ -207,6 +221,7 @@
                 <div class="tabs">
                     <button class="tab active" data-tab="summary">📋 Resumo</button>
                     <button class="tab" data-tab="qualification">✅ Qualificação</button>
+                    <button class="tab" data-tab="followups">📌 Follow-ups</button>
                     <button class="tab" data-tab="interactions">💬 Interações</button>
                     <button class="tab" data-tab="visits">🏠 Visitas</button>
                     <button class="tab" data-tab="measurements">📏 Medições</button>
@@ -244,6 +259,17 @@
                 <!-- Tab: Qualification -->
                 <div id="qualificationTab" class="tab-content">
                     <h2>Qualificação</h2>
+                    <!-- Bloco com informações salvas (visível quando há qualificação) -->
+                    <div id="qualificationSummaryBlock" class="qualification-summary-block" style="display: none;">
+                        <div class="qualification-summary-card">
+                            <div class="qualification-summary-header">
+                                <span>Informações da qualificação</span>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="showQualificationEditForm()">✏️ Editar informações</button>
+                            </div>
+                            <div id="qualificationSummaryContent" class="qualification-summary-content"></div>
+                        </div>
+                    </div>
+                    <!-- Formulário (visível para preencher ou editar) -->
                     <form id="qualificationForm">
                         <div class="form-row">
                             <div class="form-group">
@@ -320,6 +346,15 @@
                     </form>
                 </div>
 
+                <!-- Tab: Follow-ups -->
+                <div id="followupsTab" class="tab-content">
+                    <h2>Follow-ups</h2>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary" onclick="showNewFollowupModal()">+ Novo Follow-up</button>
+                    </div>
+                    <ul id="followupsList" class="followups-list"></ul>
+                </div>
+
                 <!-- Tab: Interactions -->
                 <div id="interactionsTab" class="tab-content">
                     <h2>Interações</h2>
@@ -384,6 +419,91 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Lightbox: Novo Follow-up -->
+    <div id="newFollowupModal" class="modal modal-lightbox" aria-hidden="true">
+        <div class="modal-backdrop" onclick="closeFollowupModal()"></div>
+        <div class="modal-content modal-content-lightbox">
+            <div class="modal-header modal-header-lightbox">
+                <h3>📌 Novo Follow-up</h3>
+                <button type="button" class="modal-close modal-close-lightbox" onclick="closeFollowupModal()" aria-label="Fechar">&times;</button>
+            </div>
+            <form id="newFollowupForm" onsubmit="return submitFollowupForm(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Título *</label>
+                        <input type="text" id="followupTitle" name="title" required placeholder="ex: Ligar para cliente">
+                    </div>
+                    <div class="form-group">
+                        <label>Descrição</label>
+                        <textarea id="followupDescription" name="description" rows="3" placeholder="Opcional"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Data/Hora *</label>
+                            <input type="datetime-local" id="followupDueDate" name="due_date" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Prioridade</label>
+                            <select id="followupPriority" name="priority">
+                                <option value="low">Baixa</option>
+                                <option value="medium" selected>Média</option>
+                                <option value="high">Alta</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Designar para</label>
+                        <select name="assigned_to" id="followupAssignedSelect">
+                            <option value="">Eu mesmo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer-lightbox">
+                    <button type="button" class="btn btn-secondary" onclick="closeFollowupModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Criar Follow-up</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lightbox: Nova Interação -->
+    <div id="newInteractionModal" class="modal modal-lightbox" aria-hidden="true">
+        <div class="modal-backdrop" onclick="closeInteractionModal()"></div>
+        <div class="modal-content modal-content-lightbox">
+            <div class="modal-header modal-header-lightbox">
+                <h3>💬 Nova Interação</h3>
+                <button type="button" class="modal-close modal-close-lightbox" onclick="closeInteractionModal()" aria-label="Fechar">&times;</button>
+            </div>
+            <form id="newInteractionForm" onsubmit="return submitInteractionForm(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Tipo de interação</label>
+                        <select name="type" id="interactionType" required>
+                            <option value="">Selecione...</option>
+                            <option value="call">📞 Chamada</option>
+                            <option value="whatsapp">💬 WhatsApp</option>
+                            <option value="email">📧 Email</option>
+                            <option value="visit">🏠 Visita</option>
+                            <option value="meeting">🤝 Reunião</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Assunto <span class="optional">(opcional)</span></label>
+                        <input type="text" name="subject" id="interactionSubject" placeholder="ex: Retorno de ligação">
+                    </div>
+                    <div class="form-group">
+                        <label>Notas</label>
+                        <textarea name="notes" id="interactionNotes" rows="4" required placeholder="Descreva o que foi tratado..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer-lightbox">
+                    <button type="button" class="btn btn-secondary" onclick="closeInteractionModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar interação</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script src="lead-detail.js"></script>

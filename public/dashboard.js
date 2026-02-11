@@ -247,23 +247,48 @@ function renderDashboardStats() {
     
     document.getElementById('dashboardStats').innerHTML = statsHtml;
     
+    // Banner: leads novos (urgência 30 min)
+    const urgentCount = stats.new_leads_urgent_count || 0;
+    const bannerEl = document.getElementById('urgentLeadsBanner');
+    const bannerText = document.getElementById('urgentLeadsBannerText');
+    if (bannerEl && bannerText) {
+        if (urgentCount > 0) {
+            bannerText.textContent = '⚠️ Você tem ' + urgentCount + ' lead(s) novo(s). Contate em até 30 minutos!';
+            bannerEl.style.display = 'flex';
+        } else {
+            bannerEl.style.display = 'none';
+        }
+    }
+    
     // Render charts
     renderCharts(stats);
     
-    // Recent leads
+    // Recent leads (com badge de urgência para novos)
+    const urgentIds = (stats.new_leads_urgent || []).reduce((acc, l) => { acc[l.id] = l.created_at; return acc; }, {});
+    function minutesRemaining(createdAt) {
+        if (!createdAt) return 0;
+        const end = new Date(new Date(createdAt).getTime() + 30 * 60000);
+        const min = Math.max(0, Math.ceil((end - new Date()) / 60000));
+        return min;
+    }
     const recentLeadsHtml = stats.recent_leads && stats.recent_leads.length > 0
-        ? stats.recent_leads.map(l => `
+        ? stats.recent_leads.map(l => {
+            const isNew = urgentIds[l.id];
+            const minLeft = isNew ? minutesRemaining(l.created_at) : 0;
+            const badge = isNew && minLeft > 0 ? '<span class="badge-urgent-new">Novo – ' + minLeft + ' min</span>' : '';
+            return `
             <div style="padding: 12px; border-bottom: 1px solid var(--border-color);">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div>
-                        <strong style="color: var(--text-dark);">${l.name || 'Unknown'}</strong><br>
+                        <strong style="color: var(--text-dark);">${l.name || 'Unknown'}</strong> ${badge}<br>
                         <small style="color: var(--text-muted);">${l.email || ''}</small><br>
                         <span class="badge badge-info" style="margin-top: 4px; display: inline-block;">${l.status || 'new'}</span>
                     </div>
                     <small style="color: var(--text-muted);">${new Date(l.created_at).toLocaleDateString()}</small>
                 </div>
             </div>
-        `).join('')
+        `;
+        }).join('')
         : '<div class="empty-state"><div class="empty-state-icon">📋</div><p>No recent leads</p></div>';
     document.getElementById('recentLeads').innerHTML = recentLeadsHtml;
     
@@ -480,10 +505,17 @@ async function loadLeads() {
                 if (data.data.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="9" class="text-center">No leads found</td></tr>';
                 } else {
-                    tbody.innerHTML = data.data.map(lead => `
-                        <tr>
+                    function isLeadUrgentNew(createdAt) {
+                        if (!createdAt) return 0;
+                        var end = new Date(new Date(createdAt).getTime() + 30 * 60000);
+                        return Math.max(0, Math.ceil((end - new Date()) / 60000));
+                    }
+                    tbody.innerHTML = data.data.map(lead => {
+                        var minLeft = isLeadUrgentNew(lead.created_at);
+                        var urgentBadge = minLeft > 0 ? ' <span class="badge-urgent-new">Novo – ' + minLeft + ' min</span>' : '';
+                        return `<tr>
                             <td>${lead.id}</td>
-                            <td>${lead.name || '-'}</td>
+                            <td>${lead.name || '-'}${urgentBadge}</td>
                             <td>${lead.email || '-'}</td>
                             <td>${lead.phone || '-'}</td>
                             <td>${lead.zipcode || '-'}</td>
@@ -495,8 +527,8 @@ async function loadLeads() {
                                 <button class="btn btn-sm" onclick="showAssignLeadModal(${lead.id})" title="Designar">👤</button>
                                 <button class="btn btn-sm" onclick="showFollowupModal(${lead.id})" title="Follow-up">📅</button>
                             </td>
-                        </tr>
-                    `).join('');
+                        </tr>`;
+                    }).join('');
                 }
             }
             

@@ -71,6 +71,7 @@ async function loadLead() {
             renderLead();
             loadPipelineStages();
             loadQualification();
+            loadFollowups();
             loadInteractions();
             loadVisits();
             loadProposals();
@@ -90,8 +91,8 @@ function renderLead() {
     document.getElementById('leadName').textContent = currentLead.name || 'Sem nome';
     document.getElementById('leadEmail').textContent = currentLead.email || '-';
     document.getElementById('leadPhone').textContent = currentLead.phone || '-';
-    document.getElementById('leadSource').textContent = currentLead.source || '-';
-    document.getElementById('leadCreated').textContent = currentLead.created_at ? new Date(currentLead.created_at).toLocaleDateString() : '-';
+    var nextStepsEl = document.getElementById('leadNextSteps');
+    if (nextStepsEl) nextStepsEl.textContent = currentLead.next_steps || currentLead.next_steps_notes || '-';
 
     // Form fields
     document.getElementById('leadNotes').value = currentLead.notes || '';
@@ -266,6 +267,57 @@ function attachQualificationScoreListeners() {
     });
 }
 
+var qualificationLabels = {
+    property_type: { house: 'Casa', apartment: 'Apartamento', commercial: 'Comercial', other: 'Outro' },
+    service_type: { installation: 'Instalação', repair: 'Reparo', renovation: 'Renovação', other: 'Outro' },
+    urgency: { low: 'Baixa', medium: 'Média', high: 'Alta', urgent: 'Urgente' },
+    payment_type: { cash: 'Dinheiro', financing: 'Financiamento', insurance: 'Seguro' }
+};
+
+function getQualificationLabel(field, value) {
+    if (!value) return '-';
+    const map = qualificationLabels[field];
+    return (map && map[value]) ? map[value] : value;
+}
+
+function renderQualificationSummary(qual) {
+    const el = document.getElementById('qualificationSummaryContent');
+    const block = document.getElementById('qualificationSummaryBlock');
+    const form = document.getElementById('qualificationForm');
+    if (!el || !block || !form) return;
+    var html = '';
+    html += '<div class="qualification-summary-item"><span class="label">Tipo de Propriedade</span><div class="value">' + getQualificationLabel('property_type', qual.property_type) + '</div></div>';
+    html += '<div class="qualification-summary-item"><span class="label">Tipo de Serviço</span><div class="value">' + getQualificationLabel('service_type', qual.service_type) + '</div></div>';
+    html += '<div class="qualification-summary-item"><span class="label">Área (sqft)</span><div class="value">' + (qual.estimated_area != null ? Number(qual.estimated_area).toLocaleString() : '-') + '</div></div>';
+    html += '<div class="qualification-summary-item"><span class="label">Orçamento</span><div class="value">$ ' + (qual.estimated_budget != null ? Number(qual.estimated_budget).toLocaleString() : '-') + '</div></div>';
+    html += '<div class="qualification-summary-item"><span class="label">Urgência</span><div class="value">' + getQualificationLabel('urgency', qual.urgency) + '</div></div>';
+    html += '<div class="qualification-summary-item"><span class="label">Score</span><div class="value score-value">' + (qual.score != null ? qual.score : '-') + '</div></div>';
+    if (qual.decision_maker || qual.decision_timeline || qual.payment_type) {
+        if (qual.decision_maker) html += '<div class="qualification-summary-item"><span class="label">Tomador de Decisão</span><div class="value">' + escapeHtml(qual.decision_maker) + '</div></div>';
+        if (qual.decision_timeline) html += '<div class="qualification-summary-item"><span class="label">Prazo de Decisão</span><div class="value">' + escapeHtml(qual.decision_timeline) + '</div></div>';
+        if (qual.payment_type) html += '<div class="qualification-summary-item"><span class="label">Tipo de Pagamento</span><div class="value">' + getQualificationLabel('payment_type', qual.payment_type) + '</div></div>';
+    }
+    if (qual.qualification_notes) {
+        html += '<div class="qualification-summary-item span-full"><span class="label">Notas</span><div class="value">' + escapeHtml(qual.qualification_notes) + '</div></div>';
+    }
+    el.innerHTML = html;
+    block.style.display = 'block';
+    form.style.display = 'none';
+}
+
+function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showQualificationEditForm() {
+    var block = document.getElementById('qualificationSummaryBlock');
+    var form = document.getElementById('qualificationForm');
+    if (block) block.style.display = 'none';
+    if (form) form.style.display = 'block';
+}
+
 async function loadQualification() {
     try {
         const response = await fetch(`/api/leads/${currentLeadId}/qualification`, { credentials: 'include' });
@@ -283,12 +335,21 @@ async function loadQualification() {
             document.getElementById('qualPaymentType').value = qual.payment_type || '';
             document.getElementById('qualNotes').value = qual.qualification_notes || '';
             updateQualificationScoreDisplay();
+            renderQualificationSummary(qual);
         } else {
             updateQualificationScoreDisplay();
+            var block = document.getElementById('qualificationSummaryBlock');
+            var form = document.getElementById('qualificationForm');
+            if (block) block.style.display = 'none';
+            if (form) form.style.display = 'block';
         }
     } catch (error) {
         console.log('Qualification not found or error:', error);
         updateQualificationScoreDisplay();
+        var block = document.getElementById('qualificationSummaryBlock');
+        var form = document.getElementById('qualificationForm');
+        if (block) block.style.display = 'none';
+        if (form) form.style.display = 'block';
     }
 }
 
@@ -393,6 +454,102 @@ function getInteractionTypeLabel(type) {
     return labels[type] || type;
 }
 
+async function loadFollowups() {
+    if (!currentLeadId) return;
+    try {
+        const response = await fetch(`/api/leads/${currentLeadId}/followups`, { credentials: 'include' });
+        const data = await response.json();
+        const list = document.getElementById('followupsList');
+        if (!list) return;
+        if (data.success && data.data && data.data.length > 0) {
+            list.innerHTML = data.data.map(f => {
+                const due = f.due_date ? new Date(f.due_date).toLocaleString('pt-BR') : '-';
+                const status = f.status === 'completed' ? 'Concluído' : f.status === 'cancelled' ? 'Cancelado' : 'Pendente';
+                const priority = f.priority === 'high' ? 'Alta' : f.priority === 'low' ? 'Baixa' : 'Média';
+                return `<li class="followup-item">
+                    <div class="followup-item-header">
+                        <strong>${escapeHtml(f.title)}</strong>
+                        <span class="followup-due">${due}</span>
+                    </div>
+                    ${f.description ? `<div class="followup-item-desc">${escapeHtml(f.description)}</div>` : ''}
+                    <div class="followup-item-meta">Prioridade: ${priority} · Status: ${status}${f.assigned_to_name ? ' · ' + escapeHtml(f.assigned_to_name) : ''}</div>
+                </li>`;
+            }).join('');
+        } else {
+            list.innerHTML = '<li class="empty-state">Nenhum follow-up agendado.</li>';
+        }
+    } catch (error) {
+        console.error('Error loading followups:', error);
+        var list = document.getElementById('followupsList');
+        if (list) list.innerHTML = '<li class="empty-state">Erro ao carregar follow-ups.</li>';
+    }
+}
+
+function showNewFollowupModal() {
+    var modal = document.getElementById('newFollowupModal');
+    if (!modal) return;
+    document.getElementById('followupTitle').value = '';
+    document.getElementById('followupDescription').value = '';
+    var tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(10, 0, 0, 0);
+    document.getElementById('followupDueDate').value = tomorrow.toISOString().slice(0, 16);
+    document.getElementById('followupPriority').value = 'medium';
+    loadUsersForFollowupSelect();
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeFollowupModal() {
+    var modal = document.getElementById('newFollowupModal');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+}
+
+async function loadUsersForFollowupSelect() {
+    var sel = document.getElementById('followupAssignedSelect');
+    if (!sel) return;
+    try {
+        var r = await fetch('/api/users?limit=100', { credentials: 'include' });
+        var d = await r.json();
+        sel.innerHTML = '<option value="">Eu mesmo</option>';
+        if (d.success && d.data && d.data.length) {
+            d.data.forEach(u => {
+                if (!u.id) return;
+                var opt = document.createElement('option');
+                opt.value = u.id;
+                opt.textContent = u.name || u.email || 'User ' + u.id;
+                sel.appendChild(opt);
+            });
+        }
+    } catch (e) { /* ignore */ }
+}
+
+function submitFollowupForm(e) {
+    e.preventDefault();
+    var title = document.getElementById('followupTitle').value.trim();
+    var due_date = document.getElementById('followupDueDate').value;
+    var description = document.getElementById('followupDescription').value.trim() || null;
+    var priority = document.getElementById('followupPriority').value || 'medium';
+    var assigned_to = document.getElementById('followupAssignedSelect').value || null;
+    if (!title || !due_date) return false;
+    closeFollowupModal();
+    fetch(`/api/leads/${currentLeadId}/followups`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ title: title, description: description, due_date: due_date, priority: priority, assigned_to: assigned_to ? parseInt(assigned_to, 10) : null })
+    }).then(r => r.json()).then(data => {
+        if (data.success) loadFollowups();
+        else alert('Erro ao criar follow-up: ' + (data.error || 'Desconhecido'));
+    }).catch(() => alert('Erro ao criar follow-up'));
+    return false;
+}
+
 async function loadVisits() {
     try {
         const response = await fetch(`/api/visits?lead_id=${currentLeadId}`, { credentials: 'include' });
@@ -447,12 +604,33 @@ function switchTab(tabName) {
 }
 
 function showNewInteractionModal() {
-    const type = prompt('Tipo de interação:\n1. call\n2. whatsapp\n3. email\n4. visit\n5. meeting');
-    const notes = prompt('Notas:');
-    
-    if (type && notes) {
-        createInteraction({ type, notes });
-    }
+    const modal = document.getElementById('newInteractionModal');
+    if (!modal) return;
+    document.getElementById('interactionType').value = '';
+    document.getElementById('interactionSubject').value = '';
+    document.getElementById('interactionNotes').value = '';
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeInteractionModal() {
+    const modal = document.getElementById('newInteractionModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+function submitInteractionForm(e) {
+    e.preventDefault();
+    const type = document.getElementById('interactionType').value;
+    const subject = document.getElementById('interactionSubject').value.trim() || null;
+    const notes = document.getElementById('interactionNotes').value.trim();
+    if (!type || !notes) return false;
+    closeInteractionModal();
+    createInteraction({ type, subject, notes });
+    return false;
 }
 
 function showNewVisitModal() {

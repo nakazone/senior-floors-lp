@@ -39,15 +39,15 @@ export async function createFollowup(req, res) {
     return res.status(400).json({ success: false, error: 'Invalid lead ID' });
   }
 
-  const {
-    title,
-    description,
-    due_date,
-    priority = 'medium',
-    assigned_to
-  } = req.body;
+  const body = req.body || {};
+  const title = body.title && body.title.trim();
+  const description = body.description != null ? body.description.trim() || null : null;
+  const due_date = body.due_date || null;
+  const priority = body.priority || 'medium';
+  const assigned_to = body.assigned_to != null ? parseInt(body.assigned_to, 10) || null : null;
+  const user_id = assigned_to ?? userId ?? null;
 
-  if (!title || title.trim().length < 3) {
+  if (!title || title.length < 3) {
     return res.status(400).json({ success: false, error: 'Title is required (min 3 characters)' });
   }
 
@@ -64,9 +64,9 @@ export async function createFollowup(req, res) {
        VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
       [
         leadId,
-        assigned_to || userId,
-        title.trim(),
-        description || null,
+        user_id,
+        title,
+        description,
         due_date,
         priority
       ]

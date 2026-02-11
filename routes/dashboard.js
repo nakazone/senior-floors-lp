@@ -83,6 +83,15 @@ export async function getDashboardStats(req, res) {
       LIMIT 10
     `);
 
+    // Leads novos (últimos 30 min) — urgência de contato
+    const [newLeadsUrgent] = await pool.query(`
+      SELECT id, name, email, phone, created_at 
+      FROM leads 
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+      ORDER BY created_at DESC
+    `);
+    const new_leads_urgent_count = newLeadsUrgent.length;
+
     // Visits próximas (próximos 7 dias)
     const [upcomingVisits] = await pool.query(`
       SELECT v.id, v.scheduled_at, v.status,
@@ -106,7 +115,9 @@ export async function getDashboardStats(req, res) {
         contracts: contractsStats[0],
         visits: visitsStats[0],
         recent_leads: recentLeads,
-        upcoming_visits: upcomingVisits
+        upcoming_visits: upcomingVisits,
+        new_leads_urgent_count: new_leads_urgent_count,
+        new_leads_urgent: newLeadsUrgent
       }
     });
   } catch (error) {
