@@ -14,6 +14,14 @@ import { handleDbCheck } from './routes/dbCheck.js';
 import { listLeads, getLead, updateLead } from './routes/leads.js';
 import { login, logout, checkSession } from './routes/auth.js';
 import { requireAuth } from './middleware/auth.js';
+import { listCustomers, getCustomer, createCustomer, updateCustomer } from './routes/customers.js';
+import { listQuotes, getQuote, createQuote, updateQuote } from './routes/quotes.js';
+import { listProjects, getProject, createProject, updateProject } from './routes/projects.js';
+import { listVisits, getVisit, createVisit, updateVisit } from './routes/visits.js';
+import { listActivities, createActivity } from './routes/activities.js';
+import { listContracts, getContract, createContract, updateContract } from './routes/contracts.js';
+import { listUsers, getUser, createUser, updateUser } from './routes/users.js';
+import { getDashboardStats } from './routes/dashboard.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -70,9 +78,54 @@ app.get('/api/health', (req, res) => {
 });
 
 // Protected API routes (require authentication)
+
+// Dashboard
+app.get('/api/dashboard/stats', requireAuth, getDashboardStats);
+
+// Leads
 app.get('/api/leads', requireAuth, listLeads);
 app.get('/api/leads/:id', requireAuth, getLead);
 app.put('/api/leads/:id', requireAuth, updateLead);
+
+// Customers
+app.get('/api/customers', requireAuth, listCustomers);
+app.get('/api/customers/:id', requireAuth, getCustomer);
+app.post('/api/customers', requireAuth, createCustomer);
+app.put('/api/customers/:id', requireAuth, updateCustomer);
+
+// Quotes
+app.get('/api/quotes', requireAuth, listQuotes);
+app.get('/api/quotes/:id', requireAuth, getQuote);
+app.post('/api/quotes', requireAuth, createQuote);
+app.put('/api/quotes/:id', requireAuth, updateQuote);
+
+// Projects
+app.get('/api/projects', requireAuth, listProjects);
+app.get('/api/projects/:id', requireAuth, getProject);
+app.post('/api/projects', requireAuth, createProject);
+app.put('/api/projects/:id', requireAuth, updateProject);
+
+// Visits/Schedule
+app.get('/api/visits', requireAuth, listVisits);
+app.get('/api/visits/:id', requireAuth, getVisit);
+app.post('/api/visits', requireAuth, createVisit);
+app.put('/api/visits/:id', requireAuth, updateVisit);
+
+// Activities
+app.get('/api/activities', requireAuth, listActivities);
+app.post('/api/activities', requireAuth, createActivity);
+
+// Contracts/Financeiro
+app.get('/api/contracts', requireAuth, listContracts);
+app.get('/api/contracts/:id', requireAuth, getContract);
+app.post('/api/contracts', requireAuth, createContract);
+app.put('/api/contracts/:id', requireAuth, updateContract);
+
+// Users
+app.get('/api/users', requireAuth, listUsers);
+app.get('/api/users/:id', requireAuth, getUser);
+app.post('/api/users', requireAuth, createUser);
+app.put('/api/users/:id', requireAuth, updateUser);
 
 // Compatibility: system.php?api=receive-lead
 app.all('/system.php', (req, res) => {
@@ -104,6 +157,14 @@ app.use((req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Senior Floors System running on port ${PORT}`);
   console.log('  Admin Panel: http://localhost:' + PORT);
-  console.log('  POST /api/receive-lead — receive lead from LP');
-  console.log('  GET  /api/db-check, /api/leads, /api/leads/:id');
+  console.log('\n  API Endpoints:');
+  console.log('  Dashboard: GET /api/dashboard/stats');
+  console.log('  Leads: GET /api/leads, GET /api/leads/:id, PUT /api/leads/:id');
+  console.log('  Customers: GET /api/customers, POST /api/customers, PUT /api/customers/:id');
+  console.log('  Quotes: GET /api/quotes, POST /api/quotes, PUT /api/quotes/:id');
+  console.log('  Projects: GET /api/projects, POST /api/projects, PUT /api/projects/:id');
+  console.log('  Visits: GET /api/visits, POST /api/visits, PUT /api/visits/:id');
+  console.log('  Activities: GET /api/activities, POST /api/activities');
+  console.log('  Contracts: GET /api/contracts, POST /api/contracts, PUT /api/contracts/:id');
+  console.log('  Users: GET /api/users, POST /api/users, PUT /api/users/:id');
 });
