@@ -14,7 +14,7 @@
     <div class="login-container">
         <div class="login-box">
             <div class="login-header">
-                <img src="https://senior-floors.com/assets/SeniorFloors.png" alt="Senior Floors" class="logo-image" style="height: 60px; margin-bottom: 1rem; display: block; margin-left: auto; margin-right: auto;" onerror="this.style.display='none'">
+                <img src="https://senior-floors.com/assets/SeniorFloors.png" alt="Senior Floors" class="logo-image" style="height: 80px; margin-bottom: 1.5rem; display: block; margin-left: auto; margin-right: auto; max-width: 100%;">
                 <h1>Senior Floors</h1>
                 <p>CRM System</p>
             </div>
@@ -32,7 +32,7 @@
                 
                 <div id="errorMessage" class="error-message" style="display: none;"></div>
                 
-                <button type="submit" class="btn btn-primary" id="loginBtn">
+                <button type="submit" class="btn btn-primary btn-login-full" id="loginBtn">
                     Login
                 </button>
             </form>
@@ -58,13 +58,18 @@
                 console.log('Session check:', err);
             });
         
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
+        // Função de login
+        async function performLogin() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const errorDiv = document.getElementById('errorMessage');
             const loginBtn = document.getElementById('loginBtn');
+            
+            if (!email || !password) {
+                errorDiv.textContent = 'Please fill in all fields';
+                errorDiv.style.display = 'block';
+                return;
+            }
             
             errorDiv.style.display = 'none';
             loginBtn.disabled = true;
@@ -97,6 +102,27 @@
                 errorDiv.style.display = 'block';
                 loginBtn.disabled = false;
                 loginBtn.textContent = 'Login';
+            }
+        }
+        
+        // Submit do formulário
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            performLogin();
+        });
+        
+        // Enter key nos campos de input
+        document.getElementById('email').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('password').focus();
+            }
+        });
+        
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                performLogin();
             }
         });
     </script>
