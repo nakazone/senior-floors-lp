@@ -141,6 +141,31 @@ body {
     font-size: 0.9rem;
 }
 
+.sidebar-footer {
+    padding: var(--spacing-md);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--primary-color);
+    margin-top: auto;
+}
+
+.sidebar-footer .user-name {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.85rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.sidebar-footer .btn {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--bg-white);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.sidebar-footer .btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
 /* Main Layout */
 .dashboard-main {
     flex: 1;
@@ -245,7 +270,7 @@ body {
     align-items: center;
     gap: var(--spacing-sm);
     padding: 14px var(--spacing-sm);
-    color: var(--text-light);
+    color: rgba(255, 255, 255, 0.85);
     text-decoration: none;
     border-radius: 6px;
     transition: var(--transition);
@@ -268,8 +293,8 @@ body {
 }
 
 .nav-item:hover {
-    background: var(--bg-primary-light);
-    color: var(--primary-color);
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--bg-white);
 }
 
 .nav-item:hover::after {
@@ -277,7 +302,7 @@ body {
 }
 
 .nav-item.active {
-    background: var(--primary-color);
+    background: rgba(255, 255, 255, 0.15);
     color: var(--bg-white);
 }
 
