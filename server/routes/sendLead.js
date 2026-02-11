@@ -93,7 +93,7 @@ export async function handleSendLead(req, res) {
     writeLeadLog('CSV write failed: ' + e.message);
   }
 
-  // 3) Send to System API (Railway) - ALWAYS if SYSTEM_API_URL is set, or if local DB save failed
+  // 3) Send to System API (Railway) - ALWAYS if SYSTEM_API_URL is set
   const systemUrl = process.env.SYSTEM_API_URL;
   if (systemUrl) {
     try {
@@ -108,7 +108,7 @@ export async function handleSendLead(req, res) {
         message: message || '',
       }).toString();
       
-      writeLeadLog(`Sending to System API: ${url}`);
+      writeLeadLog(`Sending to System API (Railway): ${url}`);
       
       const r = await fetch(url, {
         method: 'POST',
@@ -121,29 +121,45 @@ export async function handleSendLead(req, res) {
         const data = await r.json();
         system_database_saved = data.database_saved;
         if (data.database_saved && data.lead_id) {
+          // Se Railway salvou, usar esse ID mesmo se local também salvou
           db_saved = true;
           lead_id = data.lead_id;
-          writeLeadLog(`Lead saved via System API (Railway) | ID: ${lead_id}`);
+          writeLeadLog(`✅ Lead saved via System API (Railway) | ID: ${lead_id}`);
         } else {
-          writeLeadLog(`System API responded but didn't save: ${data.db_error || 'Unknown error'}`);
+          writeLeadLog(`⚠️ System API responded but didn't save: ${data.db_error || 'Unknown error'}`);
+          // Se local não salvou e Railway também não, manter db_saved como false
+          if (!db_saved) {
+            db_saved = false;
+          }
         }
       } else {
         const errorText = await r.text();
         system_error = `HTTP ${r.status}: ${errorText.substring(0, 100)}`;
-        writeLeadLog(`System API error: ${system_error}`);
+        writeLeadLog(`❌ System API error: ${system_error}`);
+        // Se local não salvou e Railway falhou, manter db_saved como false
+        if (!db_saved) {
+          db_saved = false;
+        }
       }
     } catch (e) {
       system_error = e.message || 'Request failed';
-      writeLeadLog(`System API exception: ${system_error}`);
+      writeLeadLog(`❌ System API exception: ${system_error}`);
+      // Se local não salvou e Railway falhou, manter db_saved como false
+      if (!db_saved) {
+        db_saved = false;
+      }
     }
   } else {
-    writeLeadLog('SYSTEM_API_URL not configured - lead not sent to Railway');
-  }
-  
-  // If local DB saved but no system URL, mark as sent
-  if (db_saved && !systemUrl) {
-    system_sent = true;
-    system_database_saved = true;
+    writeLeadLog('⚠️ SYSTEM_API_URL not configured - lead NOT sent to Railway System');
+    // Se não tem SYSTEM_API_URL e local não salvou, marcar como não salvo
+    if (!db_saved) {
+      system_sent = false;
+      system_database_saved = false;
+    } else {
+      // Se local salvou mas não tem SYSTEM_API_URL, marcar como enviado localmente
+      system_sent = true;
+      system_database_saved = true;
+    }
   }
 
   // 4) Optional: email via Nodemailer
