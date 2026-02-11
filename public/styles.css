@@ -710,6 +710,13 @@ tr:hover {
     margin-right: auto;
     max-width: 100%;
     object-fit: contain;
+    width: auto;
+}
+
+.login-header .logo-image[src*="data:image"] {
+    background: var(--bg-light);
+    border-radius: 8px;
+    padding: 10px;
 }
 
 .login-header h1 {
@@ -761,6 +768,10 @@ tr:hover {
     margin-top: var(--spacing-sm);
     height: auto;
     min-height: 44px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .login-footer {
