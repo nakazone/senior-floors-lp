@@ -27,6 +27,7 @@ import { listInteractions, createInteraction } from './routes/interactions.js';
 import { getMeasurement, createOrUpdateMeasurement } from './routes/measurements.js';
 import { listProposals, getProposal, createProposal, updateProposal } from './routes/proposals.js';
 import { listFollowups, createFollowup, updateFollowup, deleteFollowup } from './routes/followups.js';
+import { listPipelineStages } from './routes/pipelineStages.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
