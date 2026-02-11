@@ -55,20 +55,7 @@ async function setAdminPassword() {
     const hash = await bcrypt.hash(password, 10);
     console.log(`Hash gerado: ${hash.substring(0, 30)}...\n`);
 
-    // Verificar se o usuário admin existe
-    const [users] = await connection.query(
-      `SELECT id, email, password_hash FROM users WHERE email = 'admin@senior-floors.com' LIMIT 1`
-    );
-
-    if (users.length === 0) {
-      console.error('❌ Usuário admin@senior-floors.com não encontrado!');
-      process.exit(1);
-    }
-
-    const adminUser = users[0];
-    console.log(`📧 Usuário encontrado: ${adminUser.email} (ID: ${adminUser.id})`);
-
-    // Verificar quais colunas de senha existem
+    // Primeiro verificar quais colunas existem
     const [allColumns] = await connection.query(
       `SHOW COLUMNS FROM users`
     );
@@ -76,6 +63,19 @@ async function setAdminPassword() {
     const columnNames = allColumns.map(c => c.Field);
     console.log('📋 Colunas encontradas na tabela users:');
     columnNames.forEach(col => console.log(`   - ${col}`));
+    
+    // Verificar se o usuário admin existe (sem incluir coluna de senha ainda)
+    const [users] = await connection.query(
+      `SELECT id, email FROM users WHERE email = 'admin@senior-floors.com' LIMIT 1`
+    );
+
+    if (users.length === 0) {
+      console.error('\n❌ Usuário admin@senior-floors.com não encontrado!');
+      process.exit(1);
+    }
+
+    const adminUser = users[0];
+    console.log(`\n📧 Usuário encontrado: ${adminUser.email} (ID: ${adminUser.id})`);
     
     // Procurar coluna de senha
     let passwordColumn = null;
