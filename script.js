@@ -62,9 +62,10 @@
                     if (r.status === 404) data = { success: false, message: 'Serviço de envio indisponível. Tente novamente em instantes ou ligue (720) 751-9813.' };
                     else data = { success: false, message: (r.text && r.text.length < 200) ? r.text : 'Resposta inválida do servidor. Tente novamente.' };
                 }
+                if (!data || typeof data !== 'object') data = { success: false, message: 'Erro ao processar resposta. Tente novamente.' };
                 if (data && !data.success && r.status === 404) { data.message = 'Serviço de envio indisponível. Tente novamente em instantes ou ligue (720) 751-9813.'; }
                 if (btn) { btn.disabled = false; btn.textContent = isHero ? 'Get My Free Estimate' : 'Request My Free Estimate Now'; }
-                if (data.success && successEl) {
+                if (data && data.success && successEl) {
                     successEl.style.display = 'block';
                     successEl.style.visibility = 'visible';
                     successEl.classList.add('show');
@@ -74,7 +75,7 @@
                     if (data.success && data.system_database_saved === false && typeof window.SENIOR_FLOORS_RECEIVE_LEAD_URL === 'string' && window.SENIOR_FLOORS_RECEIVE_LEAD_URL) {
                         fetch(window.SENIOR_FLOORS_RECEIVE_LEAD_URL, { method: 'POST', body: body, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' } }).catch(function() {});
                     }
-                } else if (errorEl) {
+                } else if (errorEl && data) {
                     errorEl.textContent = data.message || 'Erro ao enviar. Tente novamente.';
                     errorEl.style.display = 'block';
                 }
