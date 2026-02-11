@@ -513,6 +513,15 @@ tr:hover {
     color: #2c5282;
 }
 
+.required {
+    color: #c53030;
+}
+
+input.score-auto {
+    background: var(--bg-primary-light);
+    cursor: default;
+}
+
 /* Pagination */
 .pagination {
     display: flex;

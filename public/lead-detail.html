@@ -237,8 +237,8 @@
                     <form id="qualificationForm">
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Tipo de Propriedade</label>
-                                <select id="qualPropertyType">
+                                <label>Tipo de Propriedade <span class="required">*</span></label>
+                                <select id="qualPropertyType" required>
                                     <option value="">Selecione...</option>
                                     <option value="house">Casa</option>
                                     <option value="apartment">Apartamento</option>
@@ -247,8 +247,8 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Tipo de Serviço</label>
-                                <select id="qualServiceType">
+                                <label>Tipo de Serviço <span class="required">*</span></label>
+                                <select id="qualServiceType" required>
                                     <option value="">Selecione...</option>
                                     <option value="installation">Instalação</option>
                                     <option value="repair">Reparo</option>
@@ -257,27 +257,27 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Área Estimada (sqft)</label>
-                                <input type="number" id="qualEstimatedArea" step="0.01">
+                                <label>Área Estimada (sqft) <span class="required">*</span></label>
+                                <input type="number" id="qualEstimatedArea" step="0.01" min="0" required placeholder="ex: 500">
                             </div>
                             <div class="form-group">
-                                <label>Orçamento Estimado</label>
-                                <input type="number" id="qualEstimatedBudget" step="0.01">
+                                <label>Orçamento Estimado <span class="required">*</span></label>
+                                <input type="number" id="qualEstimatedBudget" step="0.01" min="0" required placeholder="ex: 15000">
                             </div>
-                        </div>
-                        <div class="form-row">
                             <div class="form-group">
-                                <label>Urgência</label>
-                                <select id="qualUrgency">
+                                <label>Urgência <span class="required">*</span></label>
+                                <select id="qualUrgency" required>
                                     <option value="low">Baixa</option>
-                                    <option value="medium">Média</option>
+                                    <option value="medium" selected>Média</option>
                                     <option value="high">Alta</option>
                                     <option value="urgent">Urgente</option>
                                 </select>
                             </div>
+                        </div>
+                        <div class="form-row">
                             <div class="form-group">
                                 <label>Tomador de Decisão</label>
-                                <input type="text" id="qualDecisionMaker">
+                                <input type="text" id="qualDecisionMaker" placeholder="Opcional">
                             </div>
                             <div class="form-group">
                                 <label>Prazo de Decisão</label>
@@ -294,8 +294,8 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label>Score de Qualificação (0-100)</label>
-                            <input type="number" id="qualScore" min="0" max="100">
+                            <label>Score de Qualificação (automático)</label>
+                            <input type="number" id="qualScore" min="0" max="100" readonly class="score-auto">
                         </div>
                         <div class="form-group">
                             <label>Notas de Qualificação</label>

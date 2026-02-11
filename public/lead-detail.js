@@ -46,6 +46,9 @@ window.addEventListener('DOMContentLoaded', () => {
             switchTab(tabName);
         });
     });
+
+    // Score automático da qualificação: atualiza ao mudar tipo, serviço, área, orçamento ou urgência
+    attachQualificationScoreListeners();
 });
 
 async function loadLead() {
@@ -160,7 +163,6 @@ async function saveLead() {
 
         const data = await response.json();
         if (data.success) {
-            alert('Lead atualizado com sucesso!');
             loadLead();
         } else {
             alert('Erro ao atualizar: ' + (data.error || 'Desconhecido'));
@@ -169,6 +171,62 @@ async function saveLead() {
         console.error('Error saving lead:', error);
         alert('Erro ao salvar');
     }
+}
+
+/**
+ * Calcula score de qualificação (0-100) com base em: tipo, serviço, área, orçamento, urgência.
+ * Só considera pontos quando os campos obrigatórios estão preenchidos.
+ */
+function calculateQualificationScore() {
+    const propertyType = (document.getElementById('qualPropertyType')?.value || '').trim();
+    const serviceType = (document.getElementById('qualServiceType')?.value || '').trim();
+    const area = parseFloat(document.getElementById('qualEstimatedArea')?.value) || 0;
+    const budget = parseFloat(document.getElementById('qualEstimatedBudget')?.value) || 0;
+    const urgency = (document.getElementById('qualUrgency')?.value || 'medium').trim();
+
+    let pts = 0;
+    // Tipo de propriedade (até 20)
+    const propertyScores = { house: 20, apartment: 17, commercial: 12, other: 8 };
+    pts += propertyScores[propertyType] || 0;
+    // Tipo de serviço (até 20)
+    const serviceScores = { installation: 20, renovation: 17, repair: 12, other: 8 };
+    pts += serviceScores[serviceType] || 0;
+    // Área estimada em sqft (até 20) — só conta se preenchido
+    if (area > 0) {
+        if (area <= 250) pts += 5;
+        else if (area <= 500) pts += 10;
+        else if (area <= 1000) pts += 14;
+        else if (area <= 2000) pts += 18;
+        else pts += 20;
+    }
+    // Orçamento (até 20) — só conta se preenchido
+    if (budget > 0) {
+        if (budget < 5000) pts += 5;
+        else if (budget < 15000) pts += 10;
+        else if (budget < 30000) pts += 15;
+        else pts += 20;
+    }
+    // Urgência (até 20)
+    const urgencyScores = { low: 8, medium: 12, high: 17, urgent: 20 };
+    pts += urgencyScores[urgency] || 12;
+
+    return Math.min(100, Math.round(pts));
+}
+
+function updateQualificationScoreDisplay() {
+    const el = document.getElementById('qualScore');
+    if (el) el.value = calculateQualificationScore();
+}
+
+function attachQualificationScoreListeners() {
+    const ids = ['qualPropertyType', 'qualServiceType', 'qualEstimatedArea', 'qualEstimatedBudget', 'qualUrgency'];
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', updateQualificationScoreDisplay);
+            el.addEventListener('change', updateQualificationScoreDisplay);
+        }
+    });
 }
 
 async function loadQualification() {
@@ -186,27 +244,57 @@ async function loadQualification() {
             document.getElementById('qualDecisionMaker').value = qual.decision_maker || '';
             document.getElementById('qualDecisionTimeline').value = qual.decision_timeline || '';
             document.getElementById('qualPaymentType').value = qual.payment_type || '';
-            document.getElementById('qualScore').value = qual.score || '';
             document.getElementById('qualNotes').value = qual.qualification_notes || '';
+            updateQualificationScoreDisplay();
+        } else {
+            updateQualificationScoreDisplay();
         }
     } catch (error) {
-        // Qualification might not exist yet, that's OK
         console.log('Qualification not found or error:', error);
+        updateQualificationScoreDisplay();
     }
 }
 
 async function saveQualification() {
+    const propertyType = document.getElementById('qualPropertyType').value?.trim();
+    const serviceType = document.getElementById('qualServiceType').value?.trim();
+    const estimatedArea = document.getElementById('qualEstimatedArea').value?.trim();
+    const estimatedBudget = document.getElementById('qualEstimatedBudget').value?.trim();
+    const urgency = document.getElementById('qualUrgency').value?.trim();
+
+    if (!propertyType) {
+        alert('Selecione o Tipo de Propriedade.');
+        return;
+    }
+    if (!serviceType) {
+        alert('Selecione o Tipo de Serviço.');
+        return;
+    }
+    if (!estimatedArea || parseFloat(estimatedArea) <= 0) {
+        alert('Informe a Área estimada (sqft).');
+        return;
+    }
+    if (!estimatedBudget || parseFloat(estimatedBudget) <= 0) {
+        alert('Informe o Orçamento estimado.');
+        return;
+    }
+    if (!urgency) {
+        alert('Selecione a Urgência.');
+        return;
+    }
+
+    const score = calculateQualificationScore();
     const qualification = {
-        property_type: document.getElementById('qualPropertyType').value,
-        service_type: document.getElementById('qualServiceType').value,
-        estimated_area: parseFloat(document.getElementById('qualEstimatedArea').value) || null,
-        estimated_budget: parseFloat(document.getElementById('qualEstimatedBudget').value) || null,
-        urgency: document.getElementById('qualUrgency').value,
-        decision_maker: document.getElementById('qualDecisionMaker').value,
-        decision_timeline: document.getElementById('qualDecisionTimeline').value,
-        payment_type: document.getElementById('qualPaymentType').value,
-        score: parseInt(document.getElementById('qualScore').value) || null,
-        qualification_notes: document.getElementById('qualNotes').value
+        property_type: propertyType,
+        service_type: serviceType,
+        estimated_area: parseFloat(estimatedArea) || null,
+        estimated_budget: parseFloat(estimatedBudget) || null,
+        urgency: urgency,
+        decision_maker: document.getElementById('qualDecisionMaker').value?.trim() || null,
+        decision_timeline: document.getElementById('qualDecisionTimeline').value?.trim() || null,
+        payment_type: document.getElementById('qualPaymentType').value?.trim() || null,
+        score: score,
+        qualification_notes: document.getElementById('qualNotes').value?.trim() || null
     };
 
     try {
@@ -219,7 +307,6 @@ async function saveQualification() {
 
         const data = await response.json();
         if (data.success) {
-            alert('Qualificação salva com sucesso!');
             loadQualification();
         } else {
             alert('Erro ao salvar: ' + (data.error || 'Desconhecido'));
@@ -350,7 +437,6 @@ async function createInteraction(interaction) {
 
         const data = await response.json();
         if (data.success) {
-            alert('Interação criada com sucesso!');
             loadInteractions();
         } else {
             alert('Erro: ' + (data.error || 'Desconhecido'));
