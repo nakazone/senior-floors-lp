@@ -54,11 +54,15 @@
                 ? 'https://senior-floors.com/send-lead.php'
                 : (new URL(form.getAttribute('action') || 'send-lead.php', window.location.href).href));
         fetch(url, { method: 'POST', body: body, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' } })
-            .then(function(r) { return r.text().then(function(t) { return { status: r.status, text: t }; }); })
+            .then(function(r) { return r.text().then(function(t) { return { status: r.status, text: t, ok: r.ok }; }); })
             .then(function(r) {
                 form.removeAttribute('data-submitting');
                 var data = null;
-                try { data = JSON.parse(r.text); } catch (err) { data = { success: false, message: r.text || 'Invalid response' }; }
+                try { data = JSON.parse(r.text); } catch (err) {
+                    if (r.status === 404) data = { success: false, message: 'Serviço de envio indisponível. Tente novamente em instantes ou ligue (720) 751-9813.' };
+                    else data = { success: false, message: (r.text && r.text.length < 200) ? r.text : 'Resposta inválida do servidor. Tente novamente.' };
+                }
+                if (data && !data.success && r.status === 404) { data.message = 'Serviço de envio indisponível. Tente novamente em instantes ou ligue (720) 751-9813.'; }
                 if (btn) { btn.disabled = false; btn.textContent = isHero ? 'Get My Free Estimate' : 'Request My Free Estimate Now'; }
                 if (data.success && successEl) {
                     successEl.style.display = 'block';

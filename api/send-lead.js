@@ -7,8 +7,16 @@ function parseBody(req) {
   if (req.body && typeof req.body === 'object' && (req.body.name != null || req.body.email != null)) {
     return req.body;
   }
-  if (typeof req.body === 'string' && req.body.length > 0) {
-    const params = new URLSearchParams(req.body);
+  let raw = req.body;
+  if (typeof raw === 'string' && raw.length > 0) {
+    const params = new URLSearchParams(raw);
+    const o = {};
+    for (const [k, v] of params.entries()) o[k] = v;
+    return o;
+  }
+  if (Buffer.isBuffer(raw) && raw.length > 0) {
+    raw = raw.toString('utf8');
+    const params = new URLSearchParams(raw);
     const o = {};
     for (const [k, v] of params.entries()) o[k] = v;
     return o;
