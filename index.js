@@ -29,6 +29,8 @@ import { listProposals, getProposal, createProposal, updateProposal } from './ro
 import { listFollowups, createFollowup, updateFollowup, deleteFollowup } from './routes/followups.js';
 import { listPipelineStages } from './routes/pipelineStages.js';
 import { listEstimates, getEstimate, createEstimate, updateEstimate, deleteEstimate, getEstimateAnalytics } from './routes/estimates.js';
+import { listCrews, getCrew, createCrew, updateCrew } from './routes/crews.js';
+import { listSchedules, getSchedule, createSchedule, updateSchedule, simulateScheduleOptions, getCrewAvailability } from './routes/schedules.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -150,6 +152,20 @@ app.get('/api/visits', requireAuth, listVisits);
 app.get('/api/visits/:id', requireAuth, getVisit);
 app.post('/api/visits', requireAuth, createVisit);
 app.put('/api/visits/:id', requireAuth, updateVisit);
+
+// Crews
+app.get('/api/crews', requireAuth, listCrews);
+app.get('/api/crews/:id', requireAuth, getCrew);
+app.post('/api/crews', requireAuth, createCrew);
+app.put('/api/crews/:id', requireAuth, updateCrew);
+
+// Project Schedules (Smart Scheduling)
+app.get('/api/schedules', requireAuth, listSchedules);
+app.get('/api/schedules/:id', requireAuth, getSchedule);
+app.post('/api/schedules', requireAuth, createSchedule);
+app.put('/api/schedules/:id', requireAuth, updateSchedule);
+app.post('/api/schedules/simulate', requireAuth, simulateScheduleOptions);
+app.get('/api/crews/:crewId/availability', requireAuth, getCrewAvailability);
 
 // Measurements (from visits)
 app.get('/api/visits/:visitId/measurement', requireAuth, getMeasurement);
