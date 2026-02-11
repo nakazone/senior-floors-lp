@@ -79,6 +79,26 @@ app.all('/system.php', (req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  console.error('Stack:', err.stack);
+  res.status(500).json({ 
+    success: false, 
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  if (req.path.startsWith('/api/')) {
+    res.status(404).json({ success: false, error: 'Not found' });
+  } else {
+    res.status(404).send('Page not found');
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Senior Floors System running on port ${PORT}`);
   console.log('  Admin Panel: http://localhost:' + PORT);
