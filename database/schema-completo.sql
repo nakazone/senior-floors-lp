@@ -5,6 +5,7 @@
 -- ============================================
 -- 1. TABELA DE USUÁRIOS
 -- ============================================
+-- NOTA: Se você já executou schema.sql antes, execute migrate-users-table.sql primeiro
 CREATE TABLE IF NOT EXISTS `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,

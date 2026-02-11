@@ -54,6 +54,78 @@ async function runSchema() {
     connection = await mysql.createConnection(config);
     console.log('✅ Connected to MySQL');
 
+    // Verificar se precisa migrar tabela users (de 'active' para 'is_active')
+    try {
+      const [columns] = await connection.query(`
+        SELECT COLUMN_NAME 
+        FROM information_schema.COLUMNS 
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME IN ('active', 'is_active')
+      `, [config.database]);
+      
+      const hasActive = columns.some(c => c.COLUMN_NAME === 'active');
+      const hasIsActive = columns.some(c => c.COLUMN_NAME === 'is_active');
+      
+      if (hasActive && !hasIsActive) {
+        console.log('🔄 Migrando tabela users (active → is_active)...');
+        await connection.query('ALTER TABLE `users` CHANGE COLUMN `active` `is_active` tinyint(1) DEFAULT 1 COMMENT \'1=ativo, 0=inativo\'');
+        console.log('✅ Migração concluída');
+      }
+      
+      // Adicionar colunas faltantes se a tabela users já existe
+      const [allColumns] = await connection.query(`
+        SELECT COLUMN_NAME 
+        FROM information_schema.COLUMNS 
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users'
+      `, [config.database]);
+      
+      const columnNames = allColumns.map(c => c.COLUMN_NAME);
+      const alters = [];
+      
+      if (!columnNames.includes('phone')) {
+        alters.push('ADD COLUMN `phone` varchar(50) DEFAULT NULL AFTER `is_active`');
+      }
+      if (!columnNames.includes('avatar')) {
+        alters.push('ADD COLUMN `avatar` varchar(500) DEFAULT NULL COMMENT \'URL da foto do perfil\' AFTER `phone`');
+      }
+      if (!columnNames.includes('last_login_at')) {
+        alters.push('ADD COLUMN `last_login_at` timestamp NULL DEFAULT NULL AFTER `avatar`');
+      }
+      
+      if (alters.length > 0) {
+        console.log('🔄 Adicionando colunas faltantes na tabela users...');
+        await connection.query(`ALTER TABLE \`users\` ${alters.join(', ')}`);
+        console.log('✅ Colunas adicionadas');
+      }
+      
+      // Adicionar índices se não existirem
+      const [indexes] = await connection.query(`
+        SELECT INDEX_NAME 
+        FROM information_schema.STATISTICS 
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND INDEX_NAME IN ('idx_role', 'idx_is_active')
+      `, [config.database]);
+      
+      const indexNames = indexes.map(i => i.INDEX_NAME);
+      const indexAlters = [];
+      
+      if (!indexNames.includes('idx_role')) {
+        indexAlters.push('ADD KEY `idx_role` (`role`)');
+      }
+      if (!indexNames.includes('idx_is_active')) {
+        indexAlters.push('ADD KEY `idx_is_active` (`is_active`)');
+      }
+      
+      if (indexAlters.length > 0) {
+        console.log('🔄 Adicionando índices faltantes...');
+        await connection.query(`ALTER TABLE \`users\` ${indexAlters.join(', ')}`);
+        console.log('✅ Índices adicionados');
+      }
+    } catch (migError) {
+      // Se a tabela não existe, tudo bem - será criada pelo schema
+      if (!migError.message.includes("doesn't exist")) {
+        console.warn('⚠️  Aviso na migração:', migError.message);
+      }
+    }
+
     const schemaPath = path.join(__dirname, 'schema-completo.sql');
     if (!fs.existsSync(schemaPath)) {
       console.error(`❌ Schema file not found: ${schemaPath}`);
@@ -61,7 +133,7 @@ async function runSchema() {
     }
 
     const sql = fs.readFileSync(schemaPath, 'utf8');
-    console.log('📄 Executing schema-completo.sql...');
+    console.log('\n📄 Executando schema-completo.sql...');
     console.log('   (This may take a few moments...)');
 
     await connection.query(sql);
