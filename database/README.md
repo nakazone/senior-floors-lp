@@ -1,80 +1,180 @@
 # Database Schema
 
-## Como executar o schema
+## Schemas Disponíveis
 
-### ⚡ Opção 1: Via Script Node.js (Mais Fácil - Railway)
+### 1. `schema.sql` - Schema Básico (Mínimo)
+Apenas as tabelas essenciais:
+- `leads` - Tabela de leads
+- `users` - Tabela de usuários básica
 
-Se você tem Railway CLI instalado:
+**Use quando:** Você só precisa do básico para receber leads da LP.
+
+### 2. `schema-completo.sql` - Schema Completo do CRM ⭐
+Todas as tabelas do sistema CRM completo:
+- `users` - Usuários com roles (admin, sales_rep, project_manager)
+- `pipeline_stages` - Estágios do pipeline de vendas
+- `leads` - Leads completos com campos adicionais
+- `lead_notes` - Notas sobre leads
+- `lead_activities` - Histórico de atividades/interações
+- `tasks` - Tarefas/TODOs
+- `settings` - Configurações do sistema
+
+**Dados iniciais incluídos:**
+- 6 estágios padrão do pipeline (Novo Lead, Qualificação, Proposta, etc.)
+- 1 usuário admin padrão (email: `admin@senior-floors.com`, senha: `admin123`)
+- Configurações padrão do sistema
+
+**Use quando:** Você quer o CRM completo com todas as funcionalidades.
+
+---
+
+## Como Executar
+
+### Opção 1: Via Script Node.js (Recomendado)
 
 ```bash
-# No diretório do projeto
+cd /Users/naka/senior-floors-landing/senior-floors-system
+
+# Schema básico
 railway run node database/run-schema.js
+
+# Schema completo (edite run-schema.js para usar schema-completo.sql)
+# Ou execute diretamente:
+railway run node -e "
+import mysql from 'mysql2/promise';
+import fs from 'fs';
+const config = {
+  host: process.env.RAILWAY_TCP_PROXY_DOMAIN || process.env.MYSQLHOST || process.env.DB_HOST,
+  port: parseInt(process.env.RAILWAY_TCP_PROXY_PORT || process.env.MYSQLPORT || '3306'),
+  user: process.env.MYSQLUSER || process.env.DB_USER,
+  password: process.env.MYSQLPASSWORD || process.env.DB_PASS,
+  database: process.env.MYSQLDATABASE || process.env.DB_NAME,
+  multipleStatements: true
+};
+const sql = fs.readFileSync('database/schema-completo.sql', 'utf8');
+const conn = await mysql.createConnection(config);
+await conn.query(sql);
+console.log('✅ Schema completo executado!');
+await conn.end();
+"
 ```
-
-O script detecta automaticamente as variáveis do Railway MySQL (`MYSQLHOST`, `MYSQLDATABASE`, etc.) e executa o schema.
-
-**Sem Railway CLI?** Veja outras opções abaixo ou instale: `npm install -g @railway/cli`
 
 ### Opção 2: Via MySQL CLI
 
-1. No Railway MySQL → **"Data"** → copie as credenciais (`MYSQLHOST`, `MYSQLUSER`, etc.)
-2. Execute:
-
 ```bash
-mysql -h MYSQLHOST -P MYSQLPORT -u MYSQLUSER -pMYSQLPASSWORD MYSQLDATABASE < database/schema.sql
+# Schema básico
+mysql -h HOST -P PORT -u USER -pPASSWORD DATABASE < database/schema.sql
+
+# Schema completo
+mysql -h HOST -P PORT -u USER -pPASSWORD DATABASE < database/schema-completo.sql
 ```
 
-### Opção 3: Via Ferramenta GUI (MySQL Workbench, DBeaver, TablePlus)
+### Opção 3: Via Ferramenta GUI
 
-1. No Railway MySQL → **"Data"** → **"Connect"** → copie a connection string
+1. Railway MySQL → **"Data"** → **"Connect"** → copie connection string
 2. Conecte com MySQL Workbench/DBeaver/TablePlus
-3. Execute o conteúdo de `schema.sql`
+3. Execute o conteúdo de `schema-completo.sql`
 
-### Opção 4: Via phpMyAdmin (Hostinger)
+---
 
-1. Acesse phpMyAdmin no Hostinger
-2. Selecione seu banco de dados
-3. Vá em **"SQL"**
-4. Cole o conteúdo de `schema.sql`
-5. Clique em **"Executar"**
+## Estrutura das Tabelas
 
-### Opção 3: Via linha de comando MySQL
+### `users`
+- **id** - Primary key
+- **name** - Nome do usuário
+- **email** - Email (único)
+- **password** - Hash bcrypt
+- **role** - admin, sales_rep, project_manager, user
+- **is_active** - 1=ativo, 0=inativo
+- **phone** - Telefone
+- **avatar** - URL da foto
+- **last_login_at** - Último login
 
-```bash
-mysql -h DB_HOST -u DB_USER -p DB_NAME < database/schema.sql
-```
+### `pipeline_stages`
+- **id** - Primary key
+- **name** - Nome do estágio
+- **description** - Descrição
+- **order** - Ordem de exibição
+- **color** - Cor (hex)
+- **is_active** - Ativo/inativo
 
-Ou conecte e execute:
+### `leads` (completo)
+- **id** - Primary key
+- **name, email, phone, zipcode** - Dados básicos
+- **message** - Mensagem do formulário
+- **source** - Origem (LP-Hero, LP-Contact, etc.)
+- **status** - new, contacted, qualified, converted, lost
+- **priority** - low, medium, high
+- **owner_id** - FK para users
+- **pipeline_stage_id** - FK para pipeline_stages
+- **estimated_value** - Valor estimado do projeto
+- **estimated_date** - Data estimada
+- **notes** - Notas gerais
+- **converted_at** - Data de conversão
+- **lost_reason** - Motivo da perda
 
-```bash
-mysql -h DB_HOST -u DB_USER -p
-USE DB_NAME;
-SOURCE database/schema.sql;
-```
+### `lead_notes`
+- **id** - Primary key
+- **lead_id** - FK para leads
+- **user_id** - FK para users (quem criou)
+- **note** - Texto da nota
+- **is_private** - Nota privada ou pública
 
-## Estrutura da tabela `leads`
+### `lead_activities`
+- **id** - Primary key
+- **lead_id** - FK para leads
+- **user_id** - FK para users
+- **activity_type** - call, email, meeting, note, status_change
+- **title** - Título da atividade
+- **description** - Descrição
+- **activity_date** - Data/hora da atividade
+- **duration_minutes** - Duração (para calls/meetings)
 
-- **id** — Primary key, auto increment
-- **name** — Nome do lead
-- **email** — Email do lead
-- **phone** — Telefone
-- **zipcode** — CEP (5 dígitos)
-- **message** — Mensagem opcional
-- **source** — Origem (LP-Hero, LP-Contact)
-- **form_type** — Tipo de formulário (hero-form, contact-form)
-- **status** — Status (new, contacted, qualified, converted, lost)
-- **priority** — Prioridade (low, medium, high)
-- **ip_address** — IP do visitante
-- **owner_id** — ID do usuário responsável (opcional)
-- **pipeline_stage_id** — ID do estágio no pipeline (opcional)
-- **created_at** — Data de criação
-- **updated_at** — Data de atualização
+### `tasks`
+- **id** - Primary key
+- **lead_id** - FK para leads (opcional)
+- **user_id** - FK para users (responsável)
+- **title** - Título da tarefa
+- **description** - Descrição
+- **due_date** - Data de vencimento
+- **completed_at** - Data de conclusão
+- **priority** - low, medium, high
+- **status** - pending, in_progress, completed, cancelled
 
-## Após executar
+### `settings`
+- **id** - Primary key
+- **key** - Chave da configuração (única)
+- **value** - Valor (texto ou JSON)
+- **type** - string, number, boolean, json
+- **description** - Descrição
 
-Teste novamente:
-```
-https://sua-url-railway.up.railway.app/api/db-check
-```
+---
 
-Deve retornar: `"table_leads_exists": true`
+## Após Executar o Schema Completo
+
+1. **Teste a conexão:**
+   ```bash
+   curl https://sua-url-railway.up.railway.app/api/db-check
+   ```
+   Deve retornar: `"table_leads_exists": true`
+
+2. **Login inicial:**
+   - Email: `admin@senior-floors.com`
+   - Senha: `admin123`
+   - ⚠️ **ALTERE A SENHA IMEDIATAMENTE APÓS O PRIMEIRO LOGIN!**
+
+3. **Verificar dados iniciais:**
+   - 6 estágios do pipeline criados
+   - 1 usuário admin criado
+   - Configurações padrão inseridas
+
+---
+
+## Migração do Schema Básico para Completo
+
+Se você já executou `schema.sql` e quer migrar para o completo:
+
+1. Execute `schema-completo.sql` - ele usa `CREATE TABLE IF NOT EXISTS`, então não vai duplicar tabelas existentes
+2. Os dados existentes em `leads` e `users` serão preservados
+3. Novas tabelas (`pipeline_stages`, `lead_notes`, etc.) serão criadas
+4. Dados iniciais (estágios, admin, settings) serão inseridos apenas se não existirem (`INSERT IGNORE`)
