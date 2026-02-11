@@ -23,6 +23,22 @@ app.options('*', (req, res) => {
   res.sendStatus(204);
 });
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({
+    service: 'Senior Floors System API',
+    status: 'running',
+    endpoints: {
+      health: '/api/health',
+      dbCheck: '/api/db-check',
+      receiveLead: 'POST /api/receive-lead',
+      listLeads: 'GET /api/leads',
+      getLead: 'GET /api/leads/:id',
+      updateLead: 'PUT /api/leads/:id'
+    }
+  });
+});
+
 // — API (LP sends leads here; CRM consumes these)
 app.get('/api/db-check', handleDbCheck);
 app.post('/api/receive-lead', handleReceiveLead);
