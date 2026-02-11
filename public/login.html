@@ -40,12 +40,17 @@
     
     <script>
         // Check if already logged in
-        fetch('/api/auth/session')
+        fetch('/api/auth/session', {
+            credentials: 'include'
+        })
             .then(r => r.json())
             .then(data => {
                 if (data.authenticated) {
                     window.location.href = '/dashboard.html';
                 }
+            })
+            .catch(err => {
+                console.log('Session check:', err);
             });
         
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -64,13 +69,17 @@
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ email, password })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    window.location.href = '/dashboard.html';
+                    // Aguardar um pouco para garantir que a sessão foi salva
+                    setTimeout(() => {
+                        window.location.href = '/dashboard.html';
+                    }, 100);
                 } else {
                     errorDiv.textContent = data.error || 'Login failed';
                     errorDiv.style.display = 'block';
@@ -78,6 +87,7 @@
                     loginBtn.textContent = 'Login';
                 }
             } catch (error) {
+                console.error('Login error:', error);
                 errorDiv.textContent = 'Connection error. Please try again.';
                 errorDiv.style.display = 'block';
                 loginBtn.disabled = false;

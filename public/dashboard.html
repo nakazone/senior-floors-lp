@@ -99,21 +99,32 @@
         let currentPageName = 'leads';
         
         // Check authentication
-        fetch('/api/auth/session')
+        fetch('/api/auth/session', {
+            credentials: 'include'
+        })
             .then(r => r.json())
             .then(data => {
+                console.log('Session data:', data);
                 if (!data.authenticated) {
+                    console.log('Not authenticated, redirecting to login');
                     window.location.href = '/login.html';
                     return;
                 }
                 
                 document.getElementById('userName').textContent = data.user.name || data.user.email;
                 loadLeads();
+            })
+            .catch(err => {
+                console.error('Session check error:', err);
+                window.location.href = '/login.html';
             });
         
         // Logout
         document.getElementById('logoutBtn').addEventListener('click', async () => {
-            await fetch('/api/auth/logout', { method: 'POST' });
+            await fetch('/api/auth/logout', { 
+                method: 'POST',
+                credentials: 'include'
+            });
             window.location.href = '/login.html';
         });
         
@@ -144,7 +155,9 @@
             tbody.innerHTML = '<tr><td colspan="9" class="text-center">Loading...</td></tr>';
             
             try {
-                const response = await fetch(`/api/leads?page=${currentPage}&limit=20`);
+                const response = await fetch(`/api/leads?page=${currentPage}&limit=20`, {
+                    credentials: 'include'
+                });
                 const data = await response.json();
                 
                 if (data.success && data.data) {

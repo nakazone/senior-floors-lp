@@ -26,9 +26,11 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'senior-floors-secret-change-in-production',
   resave: false,
   saveUninitialized: false,
+  name: 'seniorfloors.sid', // Nome customizado para evitar conflitos
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Railway pode usar HTTP, então false é mais seguro
     httpOnly: true,
+    sameSite: 'lax', // Permite cookies em navegação cross-site
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
