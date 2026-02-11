@@ -170,11 +170,11 @@
                         <h2 class="page-title">CRM - Kanban Board</h2>
                         <div style="display: flex; gap: var(--spacing-sm);">
                             <button class="btn btn-secondary" onclick="showNewLeadModal()">+ Novo Lead</button>
-                            <button class="btn btn-secondary" onclick="loadKanbanBoard()">🔄 Refresh</button>
+                            <button class="btn btn-secondary" onclick="if(typeof loadKanbanBoard === 'function') loadKanbanBoard(); else if(typeof loadCRMKanban === 'function') loadCRMKanban();">🔄 Refresh</button>
                         </div>
                     </div>
                     
-                    <div id="kanbanView">
+                    <div id="kanbanView" style="display: block;">
                         <div id="kanbanBoard" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--spacing-md);"></div>
                     </div>
                 </div>
