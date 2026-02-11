@@ -3,14 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1a2036">
     <title>Senior Floors - Dashboard</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <div class="dashboard-container">
         <header class="dashboard-header">
             <div class="header-content">
-                <h1>Senior Floors CRM</h1>
+                <h1>
+                    <a href="dashboard.html">
+                        <img src="https://senior-floors.com/assets/SeniorFloors.png" alt="Senior Floors" class="logo-image" onerror="this.style.display='none'">
+                        Senior Floors CRM
+                    </a>
+                </h1>
                 <div class="header-actions">
                     <span id="userName" class="user-name"></span>
                     <button id="logoutBtn" class="btn btn-secondary">Logout</button>
@@ -57,23 +67,50 @@
                 
                 <!-- Dashboard Page -->
                 <div id="dashboardPage" class="page-content">
-                    <div class="page-header">
-                        <h2>Dashboard</h2>
-                        <button class="btn btn-primary" onclick="loadDashboard()">Refresh</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+                        <h2 class="page-title">Dashboard</h2>
+                        <button class="btn btn-primary" onclick="loadDashboard()">🔄 Refresh</button>
                     </div>
                     
                     <div id="dashboardStats" class="stats-grid">
                         <!-- Stats serão carregadas aqui -->
                     </div>
                     
-                    <div class="dashboard-sections">
-                        <div class="dashboard-section">
-                            <h3>Recent Leads</h3>
-                            <div id="recentLeads" class="recent-list"></div>
+                    <div class="charts-container">
+                        <div class="chart-card">
+                            <h3>Leads por Status</h3>
+                            <div class="chart-container">
+                                <canvas id="leadsStatusChart"></canvas>
+                            </div>
                         </div>
-                        <div class="dashboard-section">
-                            <h3>Upcoming Visits</h3>
-                            <div id="upcomingVisits" class="recent-list"></div>
+                        <div class="chart-card">
+                            <h3>Leads por Mês</h3>
+                            <div class="chart-container">
+                                <canvas id="leadsMonthlyChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Receita Projetada</h3>
+                            <div class="chart-container">
+                                <canvas id="revenueChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Performance por Vendedor</h3>
+                            <div class="chart-container">
+                                <canvas id="salesPerformanceChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: var(--spacing-md); margin-top: var(--spacing-md);">
+                        <div class="chart-card">
+                            <h3>Leads Recentes</h3>
+                            <div id="recentLeads" style="max-height: 400px; overflow-y: auto;"></div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Visitas Próximas</h3>
+                            <div id="upcomingVisits" style="max-height: 400px; overflow-y: auto;"></div>
                         </div>
                     </div>
                 </div>
