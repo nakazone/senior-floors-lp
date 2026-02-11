@@ -187,7 +187,7 @@ body {
 /* Sidebar - Fixed */
 .dashboard-sidebar {
     width: 280px;
-    background: var(--bg-white);
+    background: var(--primary-color);
     box-shadow: var(--shadow-lg);
     padding: 0;
     height: 100vh;
@@ -237,24 +237,27 @@ body {
 
 .sidebar-header {
     padding: var(--spacing-md);
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     background: var(--primary-color);
     color: var(--bg-white);
     display: flex;
+    flex-direction: column;
     align-items: center;
     gap: var(--spacing-sm);
+    text-align: center;
 }
 
 .sidebar-header img {
-    height: 50px;
+    height: 80px;
     width: auto;
 }
 
 .sidebar-header h1 {
-    font-size: 1.25rem;
-    font-weight: 600;
+    font-size: 0.9rem;
+    font-weight: 500;
     margin: 0;
-    color: var(--bg-white);
+    color: rgba(255, 255, 255, 0.9);
+    letter-spacing: 0.5px;
 }
 
 .sidebar-nav {
