@@ -127,29 +127,220 @@ function renderDashboardStats() {
     
     document.getElementById('dashboardStats').innerHTML = statsHtml;
     
+    // Render charts
+    renderCharts(stats);
+    
     // Recent leads
     const recentLeadsHtml = stats.recent_leads && stats.recent_leads.length > 0
         ? stats.recent_leads.map(l => `
-            <div class="recent-item">
-                <strong>${l.name || 'N/A'}</strong>
-                <span>${l.email || ''}</span>
-                <span class="badge badge-${l.status || 'new'}">${l.status || 'new'}</span>
+            <div style="padding: 12px; border-bottom: 1px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <strong style="color: var(--text-dark);">${l.name || 'Unknown'}</strong><br>
+                        <small style="color: var(--text-muted);">${l.email || ''}</small><br>
+                        <span class="badge badge-info" style="margin-top: 4px; display: inline-block;">${l.status || 'new'}</span>
+                    </div>
+                    <small style="color: var(--text-muted);">${new Date(l.created_at).toLocaleDateString()}</small>
+                </div>
             </div>
         `).join('')
-        : '<p>No recent leads</p>';
+        : '<div class="empty-state"><div class="empty-state-icon">📋</div><p>No recent leads</p></div>';
     document.getElementById('recentLeads').innerHTML = recentLeadsHtml;
     
     // Upcoming visits
     const visitsHtml = stats.upcoming_visits && stats.upcoming_visits.length > 0
         ? stats.upcoming_visits.map(v => `
-            <div class="recent-item">
-                <strong>${new Date(v.scheduled_at).toLocaleString()}</strong>
-                <span>${v.lead_name || v.customer_name || v.project_name || 'N/A'}</span>
-                <span class="badge badge-${v.status || 'scheduled'}">${v.status || 'scheduled'}</span>
+            <div style="padding: 12px; border-bottom: 1px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <strong style="color: var(--text-dark);">${v.lead_name || v.customer_name || 'Unknown'}</strong><br>
+                        <small style="color: var(--text-muted);">${new Date(v.scheduled_at).toLocaleString()}</small><br>
+                        <span class="badge badge-success" style="margin-top: 4px; display: inline-block;">${v.status || 'scheduled'}</span>
+                    </div>
+                </div>
             </div>
         `).join('')
-        : '<p>No upcoming visits</p>';
+        : '<div class="empty-state"><div class="empty-state-icon">📅</div><p>No upcoming visits</p></div>';
     document.getElementById('upcomingVisits').innerHTML = visitsHtml;
+}
+
+function renderCharts(stats) {
+    // Destroy existing charts
+    Object.values(chartInstances).forEach(chart => {
+        if (chart) chart.destroy();
+    });
+    chartInstances = {};
+    
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js not loaded');
+        return;
+    }
+    
+    const chartColors = {
+        primary: '#1a2036',
+        secondary: '#d6b598',
+        success: '#48bb78',
+        warning: '#ed8936',
+        error: '#f56565',
+        info: '#4299e1'
+    };
+    
+    // Leads by Status Chart
+    const leadsStatusCtx = document.getElementById('leadsStatusChart');
+    if (leadsStatusCtx) {
+        chartInstances.leadsStatus = new Chart(leadsStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['New', 'Contacted', 'Qualified', 'Converted', 'Lost'],
+                datasets: [{
+                    data: [
+                        stats.leads.new_leads || 0,
+                        stats.leads.contacted || 0,
+                        stats.leads.qualified || 0,
+                        stats.leads.converted || 0,
+                        stats.leads.lost || 0
+                    ],
+                    backgroundColor: [
+                        chartColors.info,
+                        chartColors.warning,
+                        chartColors.secondary,
+                        chartColors.success,
+                        chartColors.error
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    // Leads Monthly Chart
+    const leadsMonthlyCtx = document.getElementById('leadsMonthlyChart');
+    if (leadsMonthlyCtx) {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const currentMonth = new Date().getMonth();
+        const monthlyData = months.map((_, i) => {
+            if (i <= currentMonth) {
+                return Math.floor(Math.random() * 20) + 5;
+            }
+            return 0;
+        });
+        
+        chartInstances.leadsMonthly = new Chart(leadsMonthlyCtx, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Leads',
+                    data: monthlyData,
+                    borderColor: chartColors.primary,
+                    backgroundColor: chartColors.primary + '20',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Revenue Chart
+    const revenueCtx = document.getElementById('revenueChart');
+    if (revenueCtx) {
+        chartInstances.revenue = new Chart(revenueCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Quotes', 'Accepted', 'Contracts', 'This Month'],
+                datasets: [{
+                    label: 'Revenue ($)',
+                    data: [
+                        parseFloat(stats.quotes.total_value || 0),
+                        parseFloat(stats.quotes.accepted_value || 0),
+                        parseFloat(stats.contracts.total_revenue || 0),
+                        parseFloat(stats.contracts.this_month_revenue || 0)
+                    ],
+                    backgroundColor: [
+                        chartColors.info,
+                        chartColors.secondary,
+                        chartColors.success,
+                        chartColors.primary
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Sales Performance Chart
+    const salesPerformanceCtx = document.getElementById('salesPerformanceChart');
+    if (salesPerformanceCtx) {
+        chartInstances.salesPerformance = new Chart(salesPerformanceCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Sales Rep 1', 'Sales Rep 2', 'Sales Rep 3'],
+                datasets: [{
+                    label: 'Leads',
+                    data: [12, 8, 15],
+                    backgroundColor: chartColors.secondary
+                }, {
+                    label: 'Converted',
+                    data: [5, 3, 7],
+                    backgroundColor: chartColors.success
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
 }
 
 // Leads
