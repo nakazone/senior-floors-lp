@@ -111,7 +111,14 @@ function showPage(pageName) {
         else if (pageName === 'customers') { currentPage = 1; loadCustomers(); }
         else if (pageName === 'quotes') { currentPage = 1; loadQuotes(); }
         else if (pageName === 'projects') { currentPage = 1; loadProjects(); }
-        else if (pageName === 'schedule') { currentPage = 1; loadVisits(); }
+        else if (pageName === 'schedule') { 
+            currentPage = 1; 
+            if (typeof loadScheduleData === 'function') {
+                loadScheduleData();
+            } else {
+                loadVisits(); // Fallback to old visits
+            }
+        }
         else if (pageName === 'financeiro') { currentPage = 1; loadContracts(); }
         else if (pageName === 'activities') { currentPage = 1; loadActivities(); }
         else if (pageName === 'users') { currentPage = 1; loadUsers(); }

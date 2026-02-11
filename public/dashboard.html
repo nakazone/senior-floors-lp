@@ -429,8 +429,43 @@
                     </div>
                 </div>
                 
-                <!-- Schedule Page -->
+                <!-- Schedule Page (Smart Scheduling Engine) -->
                 <div id="schedulePage" class="page-content" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);">
+                        <h2 class="page-title">Smart Scheduling</h2>
+                        <div style="display: flex; gap: var(--spacing-sm);">
+                            <button class="btn btn-secondary" onclick="showScheduleView('month')">📅 Month</button>
+                            <button class="btn btn-secondary" onclick="showScheduleView('week')">📆 Week</button>
+                            <button class="btn btn-secondary" onclick="showScheduleView('crew')">👥 Crew Timeline</button>
+                            <button class="btn btn-primary" onclick="showNewScheduleModal()">+ Schedule Project</button>
+                            <button class="btn btn-secondary" onclick="loadScheduleDashboard()">🔄 Refresh</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Forecast Dashboard -->
+                    <div id="scheduleForecast" class="stats-grid" style="margin-bottom: var(--spacing-md);">
+                        <!-- Forecast stats will be loaded here -->
+                    </div>
+                    
+                    <!-- Calendar Views -->
+                    <div id="scheduleMonthView" class="schedule-view">
+                        <div id="scheduleCalendar" style="background: var(--bg-white); border-radius: 8px; padding: var(--spacing-md);">
+                            <!-- Calendar will be rendered here -->
+                        </div>
+                    </div>
+                    
+                    <div id="scheduleWeekView" class="schedule-view" style="display: none;">
+                        <div id="scheduleWeekCalendar" style="background: var(--bg-white); border-radius: 8px; padding: var(--spacing-md);">
+                            <!-- Week view will be rendered here -->
+                        </div>
+                    </div>
+                    
+                    <div id="scheduleCrewView" class="schedule-view" style="display: none;">
+                        <div id="scheduleCrewTimeline" style="background: var(--bg-white); border-radius: 8px; padding: var(--spacing-md);">
+                            <!-- Crew timeline will be rendered here -->
+                        </div>
+                    </div>
+                </div>
                     <div class="page-header">
                         <h2>Schedule / Visits</h2>
                         <button class="btn btn-primary" onclick="showNewVisitModal()">+ Schedule Visit</button>
@@ -568,5 +603,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="dashboard.js"></script>
     <script src="leads-kanban.js"></script>
+    <script src="schedule-engine.js"></script>
 </body>
 </html>
