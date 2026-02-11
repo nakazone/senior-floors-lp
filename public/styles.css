@@ -774,13 +774,16 @@ tr:hover {
     height: auto;
     min-height: 44px;
     text-align: center !important;
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
+    gap: 0;
 }
 
+.btn-login-full,
 .btn-login-full * {
     text-align: center;
+    justify-content: center;
 }
 
 .login-footer {
