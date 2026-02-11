@@ -170,7 +170,11 @@ export async function updateLead(req, res) {
     for (const key of allowed) {
       if (body[key] !== undefined) {
         set.push(`\`${key}\` = ?`);
-        values.push(body[key]);
+        let val = body[key];
+        if (val === undefined) val = null;
+        else if (['owner_id', 'pipeline_stage_id'].includes(key)) val = val === '' || val == null ? null : parseInt(val, 10) || null;
+        else if (key === 'estimated_value') val = val === '' || val == null ? null : parseFloat(val) || null;
+        values.push(val);
       }
     }
     
