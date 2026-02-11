@@ -303,7 +303,7 @@ async function allocatePayrollToOverhead(pool, entry, cost) {
 /**
  * Recalcula financial do projeto no banco
  */
-async function recalculateProjectFinancialInDB(pool, projectId) {
+export async function recalculateProjectFinancialInDB(pool, projectId) {
   const [financials] = await pool.query(
     'SELECT * FROM project_financials WHERE project_id = ?',
     [projectId]
