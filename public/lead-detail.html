@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Details - Senior Floors CRM</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .lead-detail-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .lead-header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .lead-header h1 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .lead-meta {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .lead-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .lead-meta-item strong {
+            color: #666;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+        .tab {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+        .tab:hover {
+            color: #3498db;
+        }
+        .tab.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .timeline {
+            list-style: none;
+            padding: 0;
+        }
+        .timeline-item {
+            padding: 15px;
+            border-left: 3px solid #3498db;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .timeline-item-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .timeline-item-title {
+            font-weight: 600;
+            color: #333;
+        }
+        .timeline-item-date {
+            color: #666;
+            font-size: 12px;
+        }
+        .timeline-item-content {
+            color: #666;
+            margin-top: 5px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <div class="header-content">
+                <h1><a href="dashboard.html" style="text-decoration: none; color: inherit;">Senior Floors CRM</a></h1>
+                <div class="header-actions">
+                    <span id="userName" class="user-name"></span>
+                    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="dashboard-main">
+            <div class="lead-detail-container">
+                <div class="lead-header">
+                    <h1 id="leadName">Loading...</h1>
+                    <div class="lead-meta">
+                        <div class="lead-meta-item">
+                            <strong>Status:</strong>
+                            <span id="leadStatus" class="status-badge">-</span>
+                        </div>
+                        <div class="lead-meta-item">
+                            <strong>Email:</strong>
+                            <span id="leadEmail">-</span>
+                        </div>
+                        <div class="lead-meta-item">
+                            <strong>Phone:</strong>
+                            <span id="leadPhone">-</span>
+                        </div>
+                        <div class="lead-meta-item">
+                            <strong>Source:</strong>
+                            <span id="leadSource">-</span>
+                        </div>
+                        <div class="lead-meta-item">
+                            <strong>Created:</strong>
+                            <span id="leadCreated">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab active" data-tab="summary">📋 Resumo</button>
+                    <button class="tab" data-tab="qualification">✅ Qualificação</button>
+                    <button class="tab" data-tab="interactions">💬 Interações</button>
+                    <button class="tab" data-tab="visits">🏠 Visitas</button>
+                    <button class="tab" data-tab="measurements">📏 Medições</button>
+                    <button class="tab" data-tab="proposals">💰 Propostas</button>
+                    <button class="tab" data-tab="contract">📄 Contrato</button>
+                    <button class="tab" data-tab="production">🏗️ Produção</button>
+                </div>
+
+                <!-- Tab: Summary -->
+                <div id="summaryTab" class="tab-content active">
+                    <h2>Resumo do Lead</h2>
+                    <div class="form-group">
+                        <label>Notas</label>
+                        <textarea id="leadNotes" placeholder="Adicione notas sobre este lead..."></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select id="leadStatusSelect"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Prioridade</label>
+                            <select id="leadPriority">
+                                <option value="low">Baixa</option>
+                                <option value="medium">Média</option>
+                                <option value="high">Alta</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Valor Estimado</label>
+                            <input type="number" id="leadEstimatedValue" step="0.01" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="saveLead()">Salvar Alterações</button>
+                    </div>
+                </div>
+
+                <!-- Tab: Qualification -->
+                <div id="qualificationTab" class="tab-content">
+                    <h2>Qualificação</h2>
+                    <form id="qualificationForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Tipo de Propriedade</label>
+                                <select id="qualPropertyType">
+                                    <option value="">Selecione...</option>
+                                    <option value="house">Casa</option>
+                                    <option value="apartment">Apartamento</option>
+                                    <option value="commercial">Comercial</option>
+                                    <option value="other">Outro</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Tipo de Serviço</label>
+                                <select id="qualServiceType">
+                                    <option value="">Selecione...</option>
+                                    <option value="installation">Instalação</option>
+                                    <option value="repair">Reparo</option>
+                                    <option value="renovation">Renovação</option>
+                                    <option value="other">Outro</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Área Estimada (sqft)</label>
+                                <input type="number" id="qualEstimatedArea" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>Orçamento Estimado</label>
+                                <input type="number" id="qualEstimatedBudget" step="0.01">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Urgência</label>
+                                <select id="qualUrgency">
+                                    <option value="low">Baixa</option>
+                                    <option value="medium">Média</option>
+                                    <option value="high">Alta</option>
+                                    <option value="urgent">Urgente</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Tomador de Decisão</label>
+                                <input type="text" id="qualDecisionMaker">
+                            </div>
+                            <div class="form-group">
+                                <label>Prazo de Decisão</label>
+                                <input type="text" id="qualDecisionTimeline" placeholder="ex: 1 semana, 1 mês">
+                            </div>
+                            <div class="form-group">
+                                <label>Tipo de Pagamento</label>
+                                <select id="qualPaymentType">
+                                    <option value="">Selecione...</option>
+                                    <option value="cash">Dinheiro</option>
+                                    <option value="financing">Financiamento</option>
+                                    <option value="insurance">Seguro</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Score de Qualificação (0-100)</label>
+                            <input type="number" id="qualScore" min="0" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label>Notas de Qualificação</label>
+                            <textarea id="qualNotes" rows="4"></textarea>
+                        </div>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-primary" onclick="saveQualification()">Salvar Qualificação</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tab: Interactions -->
+                <div id="interactionsTab" class="tab-content">
+                    <h2>Interações</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="showNewInteractionModal()">+ Nova Interação</button>
+                    </div>
+                    <ul id="interactionsList" class="timeline"></ul>
+                </div>
+
+                <!-- Tab: Visits -->
+                <div id="visitsTab" class="tab-content">
+                    <h2>Visitas</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="showNewVisitModal()">+ Agendar Visita</button>
+                    </div>
+                    <div id="visitsList"></div>
+                </div>
+
+                <!-- Tab: Measurements -->
+                <div id="measurementsTab" class="tab-content">
+                    <h2>Medições</h2>
+                    <div id="measurementsContent">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📏</div>
+                            <p>Nenhuma medição registrada ainda.</p>
+                            <p>Complete uma visita primeiro para adicionar medições.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Proposals -->
+                <div id="proposalsTab" class="tab-content">
+                    <h2>Propostas</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="showNewProposalModal()">+ Nova Proposta</button>
+                    </div>
+                    <div id="proposalsList"></div>
+                </div>
+
+                <!-- Tab: Contract -->
+                <div id="contractTab" class="tab-content">
+                    <h2>Contrato</h2>
+                    <div id="contractContent">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📄</div>
+                            <p>Nenhum contrato associado ainda.</p>
+                            <p>Após aceitar uma proposta, o contrato será criado automaticamente.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Production -->
+                <div id="productionTab" class="tab-content">
+                    <h2>Produção / Obra</h2>
+                    <div id="productionContent">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🏗️</div>
+                            <p>Nenhum projeto em produção ainda.</p>
+                            <p>Após assinar o contrato, o projeto será criado automaticamente.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="lead-detail.js"></script>
+</body>
+</html>

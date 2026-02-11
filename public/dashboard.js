@@ -202,7 +202,7 @@ function refreshLeads() {
 }
 
 function viewLead(id) {
-    alert('View lead ' + id + ' - Feature coming soon!');
+    window.location.href = `lead-detail.html?id=${id}`;
 }
 
 // Customers
