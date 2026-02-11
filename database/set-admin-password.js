@@ -1,0 +1,111 @@
+/**
+ * Script para definir senha do admin
+ * Uso: railway run node database/set-admin-password.js
+ */
+import bcrypt from 'bcryptjs';
+import mysql from 'mysql2/promise';
+
+async function setAdminPassword() {
+  const password = '@@Senior123';
+  
+  // Railway MySQL: para conexão externa, use DATABASE_PUBLIC_URL ou TCP Proxy
+  let host, port, user, password_db, database;
+  
+  if (process.env.DATABASE_PUBLIC_URL) {
+    const url = new URL(process.env.DATABASE_PUBLIC_URL);
+    host = url.hostname;
+    port = parseInt(url.port || '3306');
+    user = url.username;
+    password_db = url.password;
+    database = url.pathname.slice(1);
+  } else {
+    host = process.env.RAILWAY_TCP_PROXY_DOMAIN || process.env.MYSQLHOST || process.env.MYSQL_HOST || process.env.DB_HOST;
+    port = parseInt(process.env.RAILWAY_TCP_PROXY_PORT || process.env.MYSQLPORT || process.env.MYSQL_PORT || process.env.DB_PORT || '3306');
+    user = process.env.MYSQLUSER || process.env.MYSQL_USER || process.env.DB_USER;
+    password_db = process.env.MYSQLPASSWORD || process.env.MYSQL_PASSWORD || process.env.DB_PASS;
+    database = process.env.MYSQLDATABASE || process.env.MYSQL_DATABASE || process.env.DB_NAME;
+  }
+  
+  const config = {
+    host,
+    port,
+    user,
+    password: password_db,
+    database,
+  };
+
+  console.log('🔐 Definindo senha do admin...');
+  console.log(`Host: ${config.host}`);
+  console.log(`Database: ${config.database}`);
+  console.log(`User: ${config.user}\n`);
+
+  if (!config.host || !config.database || !config.user) {
+    console.error('❌ Missing MySQL credentials!');
+    console.error('Set MYSQLHOST, MYSQLDATABASE, MYSQLUSER, MYSQLPASSWORD (or DB_* equivalents)');
+    process.exit(1);
+  }
+
+  let connection;
+  try {
+    connection = await mysql.createConnection(config);
+    console.log('✅ Connected to MySQL\n');
+
+    // Gerar hash da senha
+    console.log('🔑 Gerando hash da senha...');
+    const hash = await bcrypt.hash(password, 10);
+    console.log(`Hash gerado: ${hash.substring(0, 30)}...\n`);
+
+    // Verificar se o usuário admin existe
+    const [users] = await connection.query(
+      `SELECT id, email, password_hash FROM users WHERE email = 'admin@senior-floors.com' LIMIT 1`
+    );
+
+    if (users.length === 0) {
+      console.error('❌ Usuário admin@senior-floors.com não encontrado!');
+      process.exit(1);
+    }
+
+    const adminUser = users[0];
+    console.log(`📧 Usuário encontrado: ${adminUser.email} (ID: ${adminUser.id})`);
+
+    // Atualizar senha (tentar password_hash primeiro, depois password)
+    try {
+      // Verificar qual coluna existe
+      const [columns] = await connection.query(
+        `SHOW COLUMNS FROM users LIKE 'password_hash'`
+      );
+      
+      if (columns.length > 0) {
+        await connection.query(
+          `UPDATE users SET password_hash = ? WHERE email = 'admin@senior-floors.com'`,
+          [hash]
+        );
+        console.log('✅ Senha atualizada na coluna password_hash');
+      } else {
+        // Tentar coluna password
+        await connection.query(
+          `UPDATE users SET password = ? WHERE email = 'admin@senior-floors.com'`,
+          [hash]
+        );
+        console.log('✅ Senha atualizada na coluna password');
+      }
+    } catch (e) {
+      console.error('❌ Erro ao atualizar senha:', e.message);
+      process.exit(1);
+    }
+
+    console.log('\n✅ Senha definida com sucesso!');
+    console.log('\n📋 Credenciais de acesso:');
+    console.log('   Email: admin@senior-floors.com');
+    console.log('   Senha: @@Senior123');
+    console.log('\n🔗 Acesse: https://sua-url-railway.up.railway.app');
+
+    await connection.end();
+  } catch (error) {
+    console.error('\n❌ Error:', error.message);
+    if (connection) await connection.end();
+    process.exit(1);
+  }
+}
+
+setAdminPassword();
