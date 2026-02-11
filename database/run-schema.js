@@ -11,14 +11,33 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function runSchema() {
-  // Railway MySQL usa MYSQLHOST, MYSQLUSER, etc.
-  // Mas também aceita DB_HOST, DB_USER, etc. (do nosso .env)
+  // Railway MySQL: para conexão externa, use DATABASE_PUBLIC_URL ou TCP Proxy
+  // DATABASE_PUBLIC_URL tem formato: mysql://user:pass@host:port/dbname
+  let host, port, user, password, database;
+  
+  if (process.env.DATABASE_PUBLIC_URL) {
+    // Parse DATABASE_PUBLIC_URL
+    const url = new URL(process.env.DATABASE_PUBLIC_URL);
+    host = url.hostname;
+    port = parseInt(url.port || '3306');
+    user = url.username;
+    password = url.password;
+    database = url.pathname.slice(1); // Remove leading /
+  } else {
+    // Fallback para variáveis individuais (TCP Proxy ou manual)
+    host = process.env.RAILWAY_TCP_PROXY_DOMAIN || process.env.MYSQLHOST || process.env.MYSQL_HOST || process.env.DB_HOST;
+    port = parseInt(process.env.RAILWAY_TCP_PROXY_PORT || process.env.MYSQLPORT || process.env.MYSQL_PORT || process.env.DB_PORT || '3306');
+    user = process.env.MYSQLUSER || process.env.MYSQL_USER || process.env.DB_USER;
+    password = process.env.MYSQLPASSWORD || process.env.MYSQL_PASSWORD || process.env.DB_PASS;
+    database = process.env.MYSQLDATABASE || process.env.MYSQL_DATABASE || process.env.DB_NAME;
+  }
+  
   const config = {
-    host: process.env.MYSQLHOST || process.env.MYSQL_HOST || process.env.DB_HOST,
-    port: parseInt(process.env.MYSQLPORT || process.env.MYSQL_PORT || process.env.DB_PORT || '3306'),
-    user: process.env.MYSQLUSER || process.env.MYSQL_USER || process.env.DB_USER,
-    password: process.env.MYSQLPASSWORD || process.env.MYSQL_PASSWORD || process.env.DB_PASS,
-    database: process.env.MYSQLDATABASE || process.env.MYSQL_DATABASE || process.env.DB_NAME,
+    host,
+    port,
+    user,
+    password,
+    database,
     multipleStatements: true,
   };
 
