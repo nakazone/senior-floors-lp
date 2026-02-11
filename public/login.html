@@ -17,7 +17,7 @@
                 <img src="https://senior-floors.com/assets/SeniorFloors.png" 
                      alt="Senior Floors" 
                      class="logo-image"
-                     onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'200\' height=\'80\'%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-size=\'24\' font-weight=\'bold\' fill=\'%231a2036\'%3ESenior Floors%3C/text%3E%3C/svg%3E';">
+                     onerror="handleLogoError(this)">
                 <h1>Senior Floors</h1>
                 <p>CRM System</p>
             </div>
@@ -47,6 +47,34 @@
     </div>
     
     <script>
+        // Handle logo loading error with fallback
+        function handleLogoError(img) {
+            // Try alternative URLs
+            const alternatives = [
+                'https://www.senior-floors.com/assets/SeniorFloors.png',
+                'https://senior-floors.com/logoSeniorFloors.png',
+                'https://www.senior-floors.com/logoSeniorFloors.png'
+            ];
+            
+            let currentIndex = 0;
+            const tryNext = () => {
+                if (currentIndex < alternatives.length) {
+                    img.src = alternatives[currentIndex];
+                    currentIndex++;
+                } else {
+                    // Final fallback: show text logo
+                    img.style.display = 'none';
+                    const textLogo = document.createElement('div');
+                    textLogo.className = 'text-logo-fallback';
+                    textLogo.innerHTML = '<div style="font-size: 2rem; font-weight: 700; color: var(--primary-color); margin-bottom: 1rem;">Senior Floors</div>';
+                    img.parentNode.insertBefore(textLogo, img);
+                }
+            };
+            
+            img.onerror = tryNext;
+            tryNext();
+        }
+        
         // Check if already logged in
         fetch('/api/auth/session', {
             credentials: 'include'
