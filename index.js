@@ -28,6 +28,7 @@ import { getMeasurement, createOrUpdateMeasurement } from './routes/measurements
 import { listProposals, getProposal, createProposal, updateProposal } from './routes/proposals.js';
 import { listFollowups, createFollowup, updateFollowup, deleteFollowup } from './routes/followups.js';
 import { listPipelineStages } from './routes/pipelineStages.js';
+import { listEstimates, getEstimate, createEstimate, updateEstimate, deleteEstimate, getEstimateAnalytics } from './routes/estimates.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -129,6 +130,14 @@ app.get('/api/quotes', requireAuth, listQuotes);
 app.get('/api/quotes/:id', requireAuth, getQuote);
 app.post('/api/quotes', requireAuth, createQuote);
 app.put('/api/quotes/:id', requireAuth, updateQuote);
+
+// Estimates (Professional Flooring Estimate Engine)
+app.get('/api/estimates', requireAuth, listEstimates);
+app.get('/api/estimates/:id', requireAuth, getEstimate);
+app.post('/api/estimates', requireAuth, createEstimate);
+app.put('/api/estimates/:id', requireAuth, updateEstimate);
+app.delete('/api/estimates/:id', requireAuth, deleteEstimate);
+app.get('/api/estimates/analytics/overview', requireAuth, getEstimateAnalytics);
 
 // Projects
 app.get('/api/projects', requireAuth, listProjects);
