@@ -66,11 +66,21 @@ async function setAdminPassword() {
     
     // Verificar se o usuário admin existe (sem incluir coluna de senha ainda)
     const [users] = await connection.query(
-      `SELECT id, email FROM users WHERE email = 'admin@senior-floors.com' LIMIT 1`
+      `SELECT id, email FROM users WHERE email = ? LIMIT 1`,
+      ['admin@senior-floors.com']
     );
 
     if (users.length === 0) {
-      console.error('\n❌ Usuário admin@senior-floors.com não encontrado!');
+      // Tentar listar todos os usuários para debug
+      console.log('\n⚠️  Usuário admin@senior-floors.com não encontrado!');
+      console.log('📋 Listando todos os usuários disponíveis:');
+      const [allUsers] = await connection.query(`SELECT id, email, name FROM users LIMIT 10`);
+      if (allUsers.length > 0) {
+        allUsers.forEach(u => console.log(`   - ${u.email} (${u.name || 'N/A'})`));
+        console.log('\n💡 Você pode usar qualquer um desses emails ou criar um novo usuário admin.');
+      } else {
+        console.log('   Nenhum usuário encontrado na tabela!');
+      }
       process.exit(1);
     }
 
@@ -87,7 +97,7 @@ async function setAdminPassword() {
       console.error('\n❌ Nenhuma coluna de senha encontrada!');
       console.error('Colunas disponíveis:', columnNames.join(', '));
       console.error('\n💡 Você pode criar a coluna manualmente:');
-      console.error('ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL;');
+      console.error('ALTER TABLE users ADD COLUMN password VARCHAR(255) NULL;');
       process.exit(1);
     }
     
@@ -95,10 +105,17 @@ async function setAdminPassword() {
 
     // Atualizar senha
     try {
-      await connection.query(
-        `UPDATE users SET ${passwordColumn} = ? WHERE email = 'admin@senior-floors.com'`,
-        [hash]
+      const [result] = await connection.query(
+        `UPDATE users SET ${passwordColumn} = ? WHERE email = ?`,
+        [hash, 'admin@senior-floors.com']
       );
+      
+      if (result.affectedRows === 0) {
+        console.error('\n⚠️  Nenhuma linha foi atualizada!');
+        console.error('Verifique se o email está correto ou se o usuário existe.');
+        process.exit(1);
+      }
+      
       console.log(`✅ Senha atualizada na coluna ${passwordColumn}`);
     } catch (e) {
       console.error('❌ Erro ao atualizar senha:', e.message);
