@@ -29,6 +29,26 @@ fetch('/api/auth/session', { credentials: 'include' })
         window.location.href = '/login.html';
     });
 
+// Popup toast no canto inferior – novo lead recebido
+function showNewLeadToast(count, message) {
+    var container = document.getElementById('toastContainer');
+    if (!container) return;
+    var toast = document.createElement('div');
+    toast.className = 'toast-lead';
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML =
+        '<span class="toast-lead-icon">🔔</span>' +
+        '<div class="toast-lead-body">' +
+        '<div class="toast-lead-title">Novo lead recebido!</div>' +
+        '<div class="toast-lead-msg">' + (message || (count === 1 ? '1 novo lead. Contate em até 30 min!' : count + ' novos leads. Contate em até 30 min!')) + '</div>' +
+        '</div>' +
+        '<button type="button" class="toast-lead-btn" onclick="this.closest(\'.toast-lead\').remove(); showPage(\'leads\');">Ver leads</button>';
+    container.appendChild(toast);
+    setTimeout(function () {
+        if (toast.parentNode) toast.remove();
+    }, 8000);
+}
+
 // Auto-refresh: poll for new leads and show notification
 function startNewLeadPolling() {
     if (newLeadPollTimer) return;
@@ -44,8 +64,9 @@ function startNewLeadPolling() {
                 if (lastLeadCount !== null && total > lastLeadCount) {
                     const n = total - lastLeadCount;
                     const msg = n === 1 ? '1 novo lead recebido.' : n + ' novos leads recebidos.';
+                    showNewLeadToast(n, msg);
                     if ('Notification' in window && Notification.permission === 'granted') {
-                        new Notification('Senior Floors CRM – Novo lead', { body: msg });
+                        try { new Notification('Senior Floors CRM – Novo lead', { body: msg }); } catch (e) {}
                     }
                     if (currentPageName === 'dashboard') loadDashboard();
                     if (currentPageName === 'leads' && typeof loadLeads === 'function') loadLeads();

@@ -1288,6 +1288,79 @@ input.score-auto {
     margin-left: 6px;
 }
 
+/* Toast popup (canto inferior) – novo lead */
+.toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.toast-container .toast-lead {
+    pointer-events: auto;
+    min-width: 320px;
+    max-width: 400px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #1a2036 0%, #252b47 100%);
+    color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(26, 32, 54, 0.4);
+    border-left: 4px solid var(--secondary-color);
+    animation: toastSlideIn 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toast-lead .toast-lead-icon {
+    font-size: 1.75rem;
+}
+
+.toast-lead .toast-lead-body {
+    flex: 1;
+}
+
+.toast-lead .toast-lead-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.toast-lead .toast-lead-msg {
+    font-size: 0.9rem;
+    opacity: 0.95;
+}
+
+.toast-lead .toast-lead-btn {
+    padding: 8px 14px;
+    background: var(--secondary-color);
+    color: var(--text-dark);
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.toast-lead .toast-lead-btn:hover {
+    background: var(--secondary-hover);
+}
+
+@keyframes toastSlideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
 /* Kanban Styles */
 .kanban-column {
     background: var(--bg-light);

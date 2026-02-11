@@ -62,12 +62,7 @@ export async function createInteraction(req, res) {
 
   const body = req.body || {};
   const type = body.type;
-  const direction = body.direction ?? null;
-  const subject = body.subject ?? null;
   const notes = body.notes ?? null;
-  const duration_minutes = body.duration_minutes ?? null;
-  const outcome = body.outcome ?? null;
-  const next_followup_date = body.next_followup_date ?? null;
 
   if (!type) {
     return res.status(400).json({ success: false, error: 'Type is required' });
@@ -75,12 +70,10 @@ export async function createInteraction(req, res) {
 
   try {
     const pool = await getDBConnection();
-    
+    // INSERT apenas colunas que existem na tabela (compatível com schema mínimo: lead_id, user_id, type, notes)
     const [result] = await pool.execute(
-      `INSERT INTO interactions 
-       (lead_id, user_id, type, direction, subject, notes, duration_minutes, outcome, next_followup_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [leadId, userId ?? null, type, direction, subject, notes, duration_minutes, outcome, next_followup_date]
+      `INSERT INTO interactions (lead_id, user_id, type, notes) VALUES (?, ?, ?, ?)`,
+      [leadId, userId ?? null, type, notes]
     );
 
     // Buscar criado
