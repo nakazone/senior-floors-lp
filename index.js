@@ -31,6 +31,7 @@ import { listPipelineStages } from './routes/pipelineStages.js';
 import { listEstimates, getEstimate, createEstimate, updateEstimate, deleteEstimate, getEstimateAnalytics } from './routes/estimates.js';
 import { listCrews, getCrew, createCrew, updateCrew } from './routes/crews.js';
 import { listSchedules, getSchedule, createSchedule, updateSchedule, simulateScheduleOptions, getCrewAvailability } from './routes/schedules.js';
+import { getProjectFinancial, updateProjectFinancial, listExpenses, createExpense, approveExpense, listPayrollEntries, createPayrollEntry, approvePayrollEntry, getFinancialDashboard } from './routes/financials.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -181,6 +182,17 @@ app.get('/api/contracts', requireAuth, listContracts);
 app.get('/api/contracts/:id', requireAuth, getContract);
 app.post('/api/contracts', requireAuth, createContract);
 app.put('/api/contracts/:id', requireAuth, updateContract);
+
+// Financial Management
+app.get('/api/projects/:projectId/financial', requireAuth, getProjectFinancial);
+app.put('/api/projects/:projectId/financial', requireAuth, updateProjectFinancial);
+app.get('/api/expenses', requireAuth, listExpenses);
+app.post('/api/expenses', requireAuth, createExpense);
+app.put('/api/expenses/:id/approve', requireAuth, approveExpense);
+app.get('/api/payroll', requireAuth, listPayrollEntries);
+app.post('/api/payroll', requireAuth, createPayrollEntry);
+app.put('/api/payroll/:id/approve', requireAuth, approvePayrollEntry);
+app.get('/api/financial/dashboard', requireAuth, getFinancialDashboard);
 
 // Users
 app.get('/api/users', requireAuth, listUsers);
