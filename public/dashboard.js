@@ -14,7 +14,7 @@ fetch('/api/auth/session', { credentials: 'include' })
             window.location.href = '/login.html';
             return;
         }
-        document.getElementById('userName').textContent = data.user.name || data.user.email;
+        // User name removed from sidebar footer
         loadDashboard();
     })
     .catch(err => {

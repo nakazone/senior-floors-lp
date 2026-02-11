@@ -146,24 +146,24 @@ body {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     background: var(--primary-color);
     margin-top: auto;
+    flex-shrink: 0;
 }
 
 .sidebar-footer .user-name {
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 0.85rem;
-    margin-bottom: var(--spacing-sm);
+    display: none;
 }
 
 .sidebar-footer .btn {
     width: 100%;
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--bg-white);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: var(--secondary-color);
+    color: var(--text-dark);
+    border: none;
+    font-weight: 600;
 }
 
 .sidebar-footer .btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
+    background: var(--secondary-hover);
+    color: var(--text-dark);
 }
 
 /* Main Layout */
@@ -171,7 +171,7 @@ body {
     flex: 1;
     display: flex;
     width: 100%;
-    margin-left: 280px; /* Space for fixed sidebar */
+    margin-left: 240px; /* Space for fixed sidebar */
     padding: var(--spacing-md);
 }
 
@@ -186,7 +186,7 @@ body {
 
 /* Sidebar - Fixed */
 .dashboard-sidebar {
-    width: 280px;
+    width: 240px;
     background: var(--primary-color);
     box-shadow: var(--shadow-lg);
     padding: 0;
@@ -198,7 +198,7 @@ body {
     display: flex;
     flex-direction: column;
     z-index: 1000;
-    overflow-y: auto;
+    overflow: hidden;
     transition: transform 0.3s ease;
 }
 
@@ -206,7 +206,7 @@ body {
 @media (max-width: 768px) {
     .dashboard-sidebar {
         transform: translateX(-100%);
-        width: 280px;
+        width: 240px;
     }
     
     .dashboard-sidebar.mobile-open {
@@ -266,6 +266,8 @@ body {
     gap: 0;
     padding: var(--spacing-sm);
     flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .nav-item {
