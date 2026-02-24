@@ -75,7 +75,6 @@
                     successEl.classList.add('show');
                     form.reset();
                     form.style.display = 'none';
-                    if (typeof window.fbq === 'function') { try { window.fbq('track', 'Lead'); } catch (e) {} }
                     // Fallback: se send-lead não salvou no banco, reenviar direto para receive-lead (mesmo caminho do teste curl que funciona)
                     if (data.success && data.system_database_saved === false && typeof window.SENIOR_FLOORS_RECEIVE_LEAD_URL === 'string' && window.SENIOR_FLOORS_RECEIVE_LEAD_URL) {
                         fetch(window.SENIOR_FLOORS_RECEIVE_LEAD_URL, { method: 'POST', body: body, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' } }).catch(function() {});
@@ -533,6 +532,10 @@
         
         // Also handle button events directly (for mobile compatibility)
         if (submitBtn) {
+            // Meta Pixel: Lead event on submit button click
+            submitBtn.addEventListener('click', function() {
+                if (typeof window.fbq === 'function') { try { window.fbq('track', 'Lead'); } catch (e) {} }
+            }, false);
             // Prevent default form submission on button click
             submitBtn.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -552,6 +555,7 @@
             submitBtn.addEventListener('touchend', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
+                if (typeof window.fbq === 'function') { try { window.fbq('track', 'Lead'); } catch (e) {} }
                 console.log('Hero form button touchend');
                 if (!submitBtn.disabled) {
                     handleFormSubmit(e);
@@ -830,6 +834,10 @@
         
         // Also handle button events directly (for mobile compatibility)
         if (submitBtn) {
+            // Meta Pixel: Lead event on submit button click
+            submitBtn.addEventListener('click', function() {
+                if (typeof window.fbq === 'function') { try { window.fbq('track', 'Lead'); } catch (e) {} }
+            }, false);
             // Prevent default form submission on button click
             submitBtn.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -849,6 +857,7 @@
             submitBtn.addEventListener('touchend', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
+                if (typeof window.fbq === 'function') { try { window.fbq('track', 'Lead'); } catch (e) {} }
                 console.log('Contact form button touchend');
                 if (!submitBtn.disabled) {
                     handleContactFormSubmit(e);
