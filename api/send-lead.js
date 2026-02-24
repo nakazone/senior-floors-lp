@@ -1,7 +1,16 @@
 /**
  * Vercel Serverless: POST /api/send-lead
- * Recebe envio dos formulários da LP (Hero e Contact), valida e envia para o Railway (SYSTEM_API_URL).
- * Sem dependência de nodemailer: email é opcional (só envia se SMTP configurado e nodemailer instalado).
+ * Recebe envio dos formulários da LP (Hero e Contact), valida, envia para SYSTEM_API_URL e opcionalmente por email (SMTP).
+ *
+ * SMTP (receber leads por email): configure no Vercel (Settings → Environment Variables):
+ *   SMTP_HOST     - servidor (ex: smtp.gmail.com)
+ *   SMTP_PORT     - porta (ex: 587)
+ *   SMTP_USER     - usuário / email de login
+ *   SMTP_PASS     - senha ou App Password (Gmail: use App Password)
+ *   SMTP_FROM_NAME  - nome no "De:" (opcional)
+ *   SMTP_FROM_EMAIL - email no "De:" (opcional; default: SMTP_USER)
+ *   SMTP_TO_EMAIL   - email que recebe os leads (opcional; default: SMTP_FROM_EMAIL)
+ *   SMTP_SECURE   - "true" para porta 465 (opcional)
  */
 function parseBody(req) {
   if (req.body && typeof req.body === 'object' && (req.body.name != null || req.body.email != null)) {
@@ -114,10 +123,41 @@ export default async function handler(req, res) {
     csv_saved = true;
   } catch (_) {}
 
+  let email_sent = false;
+  const smtpHost = (process.env.SMTP_HOST || '').trim();
+  const smtpUser = (process.env.SMTP_USER || '').trim();
+  const smtpPass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
+  if (smtpHost && smtpUser && smtpPass && smtpPass.length >= 10 && smtpPass !== 'YOUR_APP_PASSWORD_HERE') {
+    try {
+      const nodemailer = (await import('nodemailer')).default;
+      const transport = nodemailer.createTransport({
+        host: smtpHost,
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: { user: smtpUser, pass: smtpPass },
+      });
+      const fromName = process.env.SMTP_FROM_NAME || 'Senior Floors LP';
+      const fromEmail = (process.env.SMTP_FROM_EMAIL || smtpUser).trim();
+      const toEmail = (process.env.SMTP_TO_EMAIL || fromEmail).trim();
+      const formLabel = form_name === 'hero-form' ? 'Hero Form' : 'Contact Form';
+      await transport.sendMail({
+        from: `"${fromName}" <${fromEmail}>`,
+        to: toEmail,
+        replyTo: `${name} <${email}>`,
+        subject: `New Lead - ${formLabel} - ${name}`,
+        text: `New Lead\n\nForm: ${form_name}\nName: ${name}\nPhone: ${phone}\nEmail: ${email}\nZip: ${zipcode}\n\nMessage:\n${message || '(none)'}\n\n---\n${new Date().toLocaleString()}`,
+        html: `<h2>New Lead - ${formLabel}</h2><p><strong>Name:</strong> ${name}</p><p><strong>Phone:</strong> ${phone}</p><p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p><p><strong>Zip:</strong> ${zipcode}</p>${message ? `<p><strong>Message:</strong><br>${String(message).replace(/\n/g, '<br>')}</p>` : ''}<hr><p><small>${new Date().toLocaleString()}</small></p>`,
+      });
+      email_sent = true;
+    } catch (_) {
+      // email is optional; do not fail the request
+    }
+  }
+
   const response = {
     success: true,
     message: "Thank you! We'll contact you within 24 hours.",
-    email_sent: false,
+    email_sent,
     system_sent,
     system_database_saved,
     database_saved: system_database_saved,
