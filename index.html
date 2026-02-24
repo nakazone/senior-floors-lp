@@ -18,11 +18,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Form URL: on Vercel use /api/send-lead (same origin); otherwise use Hostinger backend. -->
+    <!-- Form URL: on Vercel or lp.senior-floors.com use /api/send-lead (same origin); otherwise use Hostinger backend. -->
     <script>
     (function() {
-      var h = window.location.hostname || '';
-      if (h.includes('vercel.app') || h.includes('vercel.sh')) {
+      var h = (window.location.hostname || '').toLowerCase();
+      if (h.includes('vercel.app') || h.includes('vercel.sh') || h === 'lp.senior-floors.com') {
         window.SENIOR_FLOORS_FORM_URL = '/api/send-lead';
         window.SENIOR_FLOORS_RECEIVE_LEAD_URL = '/api/receive-lead';
       } else {
