@@ -532,10 +532,6 @@
         
         // Also handle button events directly (for mobile compatibility)
         if (submitBtn) {
-            // Meta Pixel: Lead event on submit button click
-            submitBtn.addEventListener('click', function() {
-                if (typeof window.fbq === 'function') { try { window.fbq('track', 'Lead'); } catch (e) {} }
-            }, false);
             // Prevent default form submission on button click
             submitBtn.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -555,7 +551,6 @@
             submitBtn.addEventListener('touchend', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                if (typeof window.fbq === 'function') { try { window.fbq('track', 'Lead'); } catch (e) {} }
                 console.log('Hero form button touchend');
                 if (!submitBtn.disabled) {
                     handleFormSubmit(e);
@@ -834,10 +829,6 @@
         
         // Also handle button events directly (for mobile compatibility)
         if (submitBtn) {
-            // Meta Pixel: Lead event on submit button click
-            submitBtn.addEventListener('click', function() {
-                if (typeof window.fbq === 'function') { try { window.fbq('track', 'Lead'); } catch (e) {} }
-            }, false);
             // Prevent default form submission on button click
             submitBtn.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -857,7 +848,6 @@
             submitBtn.addEventListener('touchend', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                if (typeof window.fbq === 'function') { try { window.fbq('track', 'Lead'); } catch (e) {} }
                 console.log('Contact form button touchend');
                 if (!submitBtn.disabled) {
                     handleContactFormSubmit(e);
