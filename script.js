@@ -83,6 +83,7 @@
                     errorEl.textContent = data.message || 'Erro ao enviar. Tente novamente.';
                     errorEl.style.display = 'block';
                 }
+                if (data && data.email_error) { console.warn('[LP] Email não enviado:', data.email_error); }
             })
             .catch(function(err) {
                 form.removeAttribute('data-submitting');

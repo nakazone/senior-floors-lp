@@ -124,19 +124,24 @@ export default async function handler(req, res) {
   } catch (_) {}
 
   let email_sent = false;
+  let email_error = null;
   const smtpHost = (process.env.SMTP_HOST || '').trim();
   const smtpUser = (process.env.SMTP_USER || '').trim();
   const smtpPass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
-  if (smtpHost && smtpUser && smtpPass && smtpPass.length >= 10 && smtpPass !== 'YOUR_APP_PASSWORD_HERE') {
+  const smtpConfigured = smtpHost && smtpUser && smtpPass && smtpPass !== 'YOUR_APP_PASSWORD_HERE';
+  if (smtpConfigured) {
     try {
       const nodemailer = (await import('nodemailer')).default;
+      const port = Number(process.env.SMTP_PORT) || 587;
+      const secure = process.env.SMTP_SECURE === 'true';
       const transport = nodemailer.createTransport({
         host: smtpHost,
-        port: Number(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true',
+        port,
+        secure,
         auth: { user: smtpUser, pass: smtpPass },
+        ...(port === 465 ? {} : { requireTLS: true }),
       });
-      const fromName = process.env.SMTP_FROM_NAME || 'Senior Floors LP';
+      const fromName = (process.env.SMTP_FROM_NAME || 'Senior Floors LP').trim();
       const fromEmail = (process.env.SMTP_FROM_EMAIL || smtpUser).trim();
       const toEmail = (process.env.SMTP_TO_EMAIL || fromEmail).trim();
       const formLabel = form_name === 'hero-form' ? 'Hero Form' : 'Contact Form';
@@ -149,9 +154,11 @@ export default async function handler(req, res) {
         html: `<h2>New Lead - ${formLabel}</h2><p><strong>Name:</strong> ${name}</p><p><strong>Phone:</strong> ${phone}</p><p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p><p><strong>Zip:</strong> ${zipcode}</p>${message ? `<p><strong>Message:</strong><br>${String(message).replace(/\n/g, '<br>')}</p>` : ''}<hr><p><small>${new Date().toLocaleString()}</small></p>`,
       });
       email_sent = true;
-    } catch (_) {
-      // email is optional; do not fail the request
+    } catch (e) {
+      email_error = e.code || e.message || String(e);
     }
+  } else if (process.env.SMTP_HOST || process.env.SMTP_USER) {
+    email_error = 'SMTP not fully configured (need SMTP_HOST, SMTP_USER, SMTP_PASS)';
   }
 
   const response = {
@@ -166,5 +173,6 @@ export default async function handler(req, res) {
     timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
   };
   if (system_error) response.system_error = system_error;
+  if (email_error) response.email_error = email_error;
   return res.status(200).json(response);
 }
