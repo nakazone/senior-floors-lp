@@ -32,6 +32,7 @@
         var emailVal = (form.querySelector('[name="email"]') || {}).value || '';
         var phoneVal = (form.querySelector('[name="phone"]') || {}).value || '';
         var zipVal = (form.querySelector('[name="zipcode"]') || {}).value || '';
+        var projectTypeVal = (form.querySelector('[name="project_type"]') || {}).value || '';
         function validationFail(msg) {
             form.removeAttribute('data-submitting');
             if (errorEl) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
@@ -39,6 +40,7 @@
         if (!nameVal || nameVal.trim().length < 2) { validationFail('Name is required.'); return; }
         if (!/^[^@]+@[^@]+\.[^@]+$/.test((emailVal || '').trim())) { validationFail('Valid email is required.'); return; }
         if (!phoneVal || phoneVal.replace(/\D/g, '').length < 10) { validationFail('Phone number is required.'); return; }
+        if (!projectTypeVal || !projectTypeVal.trim()) { validationFail('Please select a project type.'); return; }
         var zipClean = (zipVal || '').replace(/\D/g, '');
         if (!zipClean || zipClean.length < 5) { validationFail('Valid 5-digit zip code is required.'); return; }
         if (errorEl) errorEl.style.display = 'none';
@@ -50,6 +52,7 @@
             '&name=' + encodeURIComponent(nameVal.trim()) +
             '&email=' + encodeURIComponent(emailVal.trim()) +
             '&phone=' + encodeURIComponent(phoneVal.trim()) +
+            '&project_type=' + encodeURIComponent(projectTypeVal.trim()) +
             '&zipcode=' + encodeURIComponent(zipVal.trim()) +
             '&message=' + encodeURIComponent((form.querySelector('[name="message"]') || {}).value || '');
         var url = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
@@ -57,9 +60,29 @@
             : (window.location.hostname === 'lp.senior-floors.com'
                 ? 'https://senior-floors.com/send-lead.php'
                 : (new URL(form.getAttribute('action') || 'send-lead.php', window.location.href).href));
-        fetch(url, { method: 'POST', body: body, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' } })
-            .then(function(r) { return r.text().then(function(t) { return { status: r.status, text: t, ok: r.ok }; }); })
+        var validateZipThenSubmit = function() {
+          if (url.indexOf('/api/send-lead') === -1) return Promise.resolve(true);
+          var validateUrl = (window.location.origin || '') + '/api/validate-zip?zip=' + encodeURIComponent(zipClean);
+          return fetch(validateUrl, { method: 'GET', headers: { Accept: 'application/json' } })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+              if (d && d.ok === true && d.inRange === false) {
+                validationFail(d.message || 'We currently serve only areas within 50 miles of Denver, CO.');
+                if (btn) { btn.disabled = false; btn.textContent = isHero ? 'Get My Free Estimate' : 'Request My Free Estimate Now'; }
+                form.removeAttribute('data-submitting');
+                return false;
+              }
+              return true;
+            })
+            .catch(function() { return true; });
+        };
+        validateZipThenSubmit().then(function(ok) {
+          if (!ok) return undefined;
+          return fetch(url, { method: 'POST', body: body, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' } });
+        })
+            .then(function(r) { if (!r || typeof r.text !== 'function') return { __skip: true }; return r.text().then(function(t) { return { status: r.status, text: t, ok: r.ok }; }); })
             .then(function(r) {
+                if (r && r.__skip) return;
                 form.removeAttribute('data-submitting');
                 var data = null;
                 try { data = JSON.parse(r.text); } catch (err) {
@@ -105,8 +128,8 @@
         });
         
         // Hide specific error divs by ID
-        ['hero-nameError', 'hero-phoneError', 'hero-emailError', 'hero-zipcodeError', 
-         'nameError', 'phoneError', 'emailError', 'zipcodeError'].forEach(function(id) {
+        ['hero-nameError', 'hero-phoneError', 'hero-emailError', 'hero-zipcodeError', 'hero-project-typeError',
+         'nameError', 'phoneError', 'emailError', 'zipcodeError', 'project-typeError'].forEach(function(id) {
             const errorDiv = document.getElementById(id);
             if (errorDiv) {
                 errorDiv.classList.remove('show');
@@ -304,7 +327,7 @@
         });
         
         // Also hide specific error divs by ID
-        ['hero-nameError', 'hero-phoneError', 'hero-emailError', 'hero-zipcodeError'].forEach(id => {
+        ['hero-nameError', 'hero-phoneError', 'hero-emailError', 'hero-zipcodeError', 'hero-project-typeError'].forEach(id => {
             const errorDiv = document.getElementById(id);
             if (errorDiv) {
                 errorDiv.classList.remove('show');
@@ -325,6 +348,14 @@
                 }
             });
         });
+        const heroProjectTypeSelect = document.getElementById('hero-project-type');
+        if (heroProjectTypeSelect) {
+            heroProjectTypeSelect.addEventListener('change', () => {
+                heroProjectTypeSelect.classList.remove('error');
+                const errorDiv = document.getElementById('hero-project-typeError');
+                if (errorDiv) errorDiv.classList.remove('show');
+            });
+        }
 
         // Handle form submission — idêntico ao Contact: sempre delega para submitLPForm com o form correto
         const handleFormSubmit = async (e) => {
@@ -343,10 +374,12 @@
             const emailInput = document.getElementById('hero-email');
             const phoneInput = document.getElementById('hero-phone');
             const zipcodeInput = document.getElementById('hero-zipcode');
+            const projectTypeSelect = document.getElementById('hero-project-type');
             const name = (nameInput ? nameInput.value : '').trim();
             const email = (emailInput ? emailInput.value : '').trim();
             const phone = (phoneInput ? phoneInput.value : '').trim();
             const zipcode = (zipcodeInput ? zipcodeInput.value : '').trim();
+            const projectType = (projectTypeSelect ? projectTypeSelect.value : '').trim();
 
             // Validate
             let hasErrors = false;
@@ -372,6 +405,14 @@
             if (!phone || phone.replace(/\D/g, '').length < 10) {
                 if (phoneInput) phoneInput.classList.add('error');
                 const errorDiv = document.getElementById('hero-phoneError');
+                if (errorDiv) errorDiv.classList.add('show');
+                hasErrors = true;
+            }
+
+            // Project type validation
+            if (!projectType) {
+                if (projectTypeSelect) projectTypeSelect.classList.add('error');
+                const errorDiv = document.getElementById('hero-project-typeError');
                 if (errorDiv) errorDiv.classList.add('show');
                 hasErrors = true;
             }
@@ -561,6 +602,52 @@
     }
 
     // ============================================
+    // ZIP Code availability check (before submit)
+    // ============================================
+    function runZipCheck(zipInput, resultEl, checkBtn) {
+        var zip = (zipInput && zipInput.value || '').replace(/\D/g, '').slice(0, 5);
+        if (zip.length < 5) {
+            if (resultEl) { resultEl.style.display = 'none'; resultEl.textContent = ''; resultEl.className = 'zip-check-result'; }
+            return;
+        }
+        if (checkBtn) checkBtn.disabled = true;
+        if (resultEl) { resultEl.style.display = 'block'; resultEl.textContent = 'Checking...'; resultEl.className = 'zip-check-result'; }
+        var url = (window.location.origin || '') + '/api/validate-zip?zip=' + encodeURIComponent(zip);
+        fetch(url, { method: 'GET', headers: { Accept: 'application/json' } })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (resultEl) {
+                    resultEl.style.display = 'block';
+                    if (d && d.ok === true && d.inRange === true) {
+                        resultEl.textContent = '\u2705 Great news! We serve your area.';
+                        resultEl.className = 'zip-check-result success';
+                    } else {
+                        resultEl.textContent = '\u274C Sorry, we don\'t currently serve this ZIP Code.';
+                        resultEl.className = 'zip-check-result error';
+                    }
+                }
+            })
+            .catch(function() {
+                if (resultEl) { resultEl.style.display = 'block'; resultEl.textContent = '\u274C Sorry, we couldn\'t check this ZIP. Try again.'; resultEl.className = 'zip-check-result error'; }
+            })
+            .then(function() { if (checkBtn) checkBtn.disabled = false; });
+    }
+    var heroZipInput = document.getElementById('hero-zipcode');
+    var heroZipResult = document.getElementById('heroZipCheckResult');
+    var heroZipCheckBtn = document.getElementById('heroZipCheckBtn');
+    if (heroZipCheckBtn && heroZipInput) {
+        heroZipCheckBtn.addEventListener('click', function() { runZipCheck(heroZipInput, heroZipResult, heroZipCheckBtn); });
+        heroZipInput.addEventListener('blur', function() { if ((heroZipInput.value || '').replace(/\D/g, '').length === 5) runZipCheck(heroZipInput, heroZipResult, heroZipCheckBtn); });
+    }
+    var contactZipInput = document.getElementById('zipcode');
+    var contactZipResult = document.getElementById('contactZipCheckResult');
+    var contactZipCheckBtn = document.getElementById('contactZipCheckBtn');
+    if (contactZipCheckBtn && contactZipInput) {
+        contactZipCheckBtn.addEventListener('click', function() { runZipCheck(contactZipInput, contactZipResult, contactZipCheckBtn); });
+        contactZipInput.addEventListener('blur', function() { if ((contactZipInput.value || '').replace(/\D/g, '').length === 5) runZipCheck(contactZipInput, contactZipResult, contactZipCheckBtn); });
+    }
+
+    // ============================================
     // Contact Form Handling — mesmo fluxo do Hero Form
     // ============================================
     const contactForm = document.getElementById('contactForm');
@@ -588,7 +675,7 @@
             errorMsg.style.visibility = 'hidden';
             errorMsg.style.opacity = '0';
         });
-        ['nameError', 'phoneError', 'emailError', 'zipcodeError'].forEach(function(id) {
+        ['nameError', 'phoneError', 'emailError', 'zipcodeError', 'project-typeError'].forEach(function(id) {
             var errorDiv = document.getElementById(id);
             if (errorDiv) {
                 errorDiv.classList.remove('show');
@@ -617,6 +704,14 @@
                 if (this.value !== v) this.value = v;
             });
         }
+        const contactProjectTypeSelect = document.getElementById('project-type');
+        if (contactProjectTypeSelect) {
+            contactProjectTypeSelect.addEventListener('change', function() {
+                contactProjectTypeSelect.classList.remove('error');
+                var errorDiv = document.getElementById('project-typeError');
+                if (errorDiv) errorDiv.classList.remove('show');
+            });
+        }
 
         // Handle contact form submission — idêntico ao Hero: sempre delega para submitLPForm com o form correto
         const handleContactFormSubmit = async (e) => {
@@ -634,12 +729,14 @@
             const emailInput = document.getElementById('email');
             const phoneInput = document.getElementById('phone');
             const zipcodeInput = document.getElementById('zipcode');
+            const projectTypeSelect = document.getElementById('project-type');
             const name = (nameInput ? nameInput.value : '').trim();
             const email = (emailInput ? emailInput.value : '').trim();
             const phone = (phoneInput ? phoneInput.value : '').trim();
             const zipcode = (zipcodeInput ? zipcodeInput.value : '').trim();
+            const projectType = (projectTypeSelect ? projectTypeSelect.value : '').trim();
             const contactParams = new URLSearchParams();
-            contactForm.querySelectorAll('input, textarea').forEach(function(el) {
+            contactForm.querySelectorAll('input, textarea, select').forEach(function(el) {
                 if (el.name) contactParams.append(el.name, el.value || '');
             });
             if (!contactParams.has('form-name')) contactParams.append('form-name', 'contact-form');
@@ -668,6 +765,14 @@
             if (!phone || phone.replace(/\D/g, '').length < 10) {
                 if (phoneInput) phoneInput.classList.add('error');
                 const errorDiv = document.getElementById('phoneError');
+                if (errorDiv) errorDiv.classList.add('show');
+                hasErrors = true;
+            }
+
+            // Project type validation
+            if (!projectType) {
+                if (projectTypeSelect) projectTypeSelect.classList.add('error');
+                const errorDiv = document.getElementById('project-typeError');
                 if (errorDiv) errorDiv.classList.add('show');
                 hasErrors = true;
             }

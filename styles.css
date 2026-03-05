@@ -1237,6 +1237,62 @@ section {
     display: block;
 }
 
+/* ZIP check availability */
+.zip-check-hint {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.zip-input-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch;
+}
+
+.zip-input-row input {
+    flex: 1;
+    min-width: 0;
+}
+
+.btn-zip-check {
+    flex-shrink: 0;
+    padding: 0.625rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    background: var(--primary-color);
+    color: var(--bg-white);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+}
+
+.btn-zip-check:hover {
+    background: var(--primary-hover);
+}
+
+.btn-zip-check:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.zip-check-result {
+    margin-top: 0.5rem;
+    padding: 0.5rem 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.zip-check-result.success {
+    color: var(--success-color);
+}
+
+.zip-check-result.error {
+    color: #dc3545;
+}
+
 /* Final CTA Section */
 .final-cta {
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);

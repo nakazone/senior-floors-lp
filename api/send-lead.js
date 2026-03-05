@@ -1,6 +1,9 @@
 /**
  * Vercel Serverless: POST /api/send-lead
- * Recebe envio dos formulários da LP (Hero e Contact), valida, envia para SYSTEM_API_URL e opcionalmente por email (SMTP).
+ * Recebe envio dos formulários da LP (Hero e Contact), valida (incl. raio 50 mi de Denver), envia para SYSTEM_API_URL e opcionalmente por email (SMTP).
+ */
+
+import { isZipWithin50MilesOfDenver } from '../utils/denver-radius.js';
  *
  * SMTP (receber leads por email): configure no Vercel (Settings → Environment Variables):
  *   SMTP_HOST     - servidor (ex: smtp.gmail.com)
@@ -56,6 +59,7 @@ export default async function handler(req, res) {
   let name = (post.name || '').trim();
   let phone = (post.phone || '').trim();
   let email = (post.email || '').trim();
+  let project_type = (post.project_type || post.projectType || '').trim();
   let zipcode = (post.zipcode || '').trim();
   let message = (post.message || '').trim();
 
@@ -71,6 +75,14 @@ export default async function handler(req, res) {
 
   zipcode = zipDigits.slice(0, 5);
 
+  const radiusCheck = await isZipWithin50MilesOfDenver(zipcode);
+  if (!radiusCheck.inRange) {
+    const msg =
+      radiusCheck.error ||
+      `We currently serve only areas within 50 miles of Denver, CO. Your location is about ${radiusCheck.distanceMiles ?? '?'} miles away.`;
+    return res.status(400).json({ success: false, message: msg, zip_out_of_range: true });
+  }
+
   let system_sent = false;
   let system_database_saved = false;
   let system_error = '';
@@ -85,6 +97,7 @@ export default async function handler(req, res) {
         name,
         phone,
         email,
+        ...(project_type ? { project_type } : {}),
         zipcode,
         message: message || '',
       }).toString();
@@ -115,9 +128,9 @@ export default async function handler(req, res) {
     const path = await import('path');
     const csvDir = '/tmp';
     const csvPath = path.join(csvDir, 'leads.csv');
-    const csvLine = [new Date().toISOString().slice(0, 19).replace('T', ' '), form_name, name, phone, email, zipcode, (message || '').replace(/\r?\n/g, ' ')];
+    const csvLine = [new Date().toISOString().slice(0, 19).replace('T', ' '), form_name, name, phone, email, project_type || '', zipcode, (message || '').replace(/\r?\n/g, ' ')];
     if (!fs.existsSync(csvPath)) {
-      fs.writeFileSync(csvPath, 'Date,Form,Name,Phone,Email,ZipCode,Message\n');
+      fs.writeFileSync(csvPath, 'Date,Form,Name,Phone,Email,ProjectType,ZipCode,Message\n');
     }
     fs.appendFileSync(csvPath, csvLine.map(csvEscape).join(',') + '\n');
     csv_saved = true;
@@ -150,8 +163,8 @@ export default async function handler(req, res) {
         to: toEmail,
         replyTo: `${name} <${email}>`,
         subject: `New Lead - ${formLabel} - ${name}`,
-        text: `New Lead\n\nForm: ${form_name}\nName: ${name}\nPhone: ${phone}\nEmail: ${email}\nZip: ${zipcode}\n\nMessage:\n${message || '(none)'}\n\n---\n${new Date().toLocaleString()}`,
-        html: `<h2>New Lead - ${formLabel}</h2><p><strong>Name:</strong> ${name}</p><p><strong>Phone:</strong> ${phone}</p><p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p><p><strong>Zip:</strong> ${zipcode}</p>${message ? `<p><strong>Message:</strong><br>${String(message).replace(/\n/g, '<br>')}</p>` : ''}<hr><p><small>${new Date().toLocaleString()}</small></p>`,
+        text: `New Lead\n\nForm: ${form_name}\nName: ${name}\nPhone: ${phone}\nEmail: ${email}\nProject Type: ${project_type || '(not specified)'}\nZip: ${zipcode}\n\nMessage:\n${message || '(none)'}\n\n---\n${new Date().toLocaleString()}`,
+        html: `<h2>New Lead - ${formLabel}</h2><p><strong>Name:</strong> ${name}</p><p><strong>Phone:</strong> ${phone}</p><p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p><p><strong>Project Type:</strong> ${project_type || '(not specified)'}</p><p><strong>Zip:</strong> ${zipcode}</p>${message ? `<p><strong>Message:</strong><br>${String(message).replace(/\n/g, '<br>')}</p>` : ''}<hr><p><small>${new Date().toLocaleString()}</small></p>`,
       });
       email_sent = true;
     } catch (e) {

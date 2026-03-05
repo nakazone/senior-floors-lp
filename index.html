@@ -144,8 +144,25 @@
                             <div class="error-message" id="hero-emailError">Valid email is required</div>
                         </div>
                         <div class="form-group">
+                            <label for="hero-project-type">Project Type *</label>
+                            <select id="hero-project-type" name="project_type" aria-required="true">
+                                <option value="">Select project type</option>
+                                <option value="Hardwood Installation">Hardwood Installation</option>
+                                <option value="Hardwood Refinishing">Hardwood Refinishing</option>
+                                <option value="LVP / Luxury Vinyl Plank">LVP / Luxury Vinyl Plank</option>
+                                <option value="Laminate">Laminate</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <div class="error-message" id="hero-project-typeError">Please select a project type</div>
+                        </div>
+                        <div class="form-group">
                             <label for="hero-zipcode">Zip Code *</label>
-                            <input type="text" id="hero-zipcode" name="zipcode" aria-required="true" autocomplete="postal-code" pattern="[0-9]{5}" placeholder="12345" maxlength="5" inputmode="numeric">
+                            <p class="zip-check-hint">Enter your ZIP Code to check availability</p>
+                            <div class="zip-input-row">
+                                <input type="text" id="hero-zipcode" name="zipcode" aria-required="true" autocomplete="postal-code" pattern="[0-9]{5}" placeholder="12345" maxlength="5" inputmode="numeric">
+                                <button type="button" class="btn btn-zip-check" id="heroZipCheckBtn" aria-label="Check availability">Check</button>
+                            </div>
+                            <div class="zip-check-result" id="heroZipCheckResult" aria-live="polite" style="display: none;"></div>
                             <div class="error-message" id="hero-zipcodeError">Please enter a valid 5-digit US zip code</div>
                         </div>
                         <button type="submit" class="btn btn-primary btn-block">Get My Free Estimate</button>
@@ -395,8 +412,25 @@
                             <div class="error-message" id="emailError">Valid email is required</div>
                         </div>
                         <div class="form-group">
+                            <label for="project-type">Project Type *</label>
+                            <select id="project-type" name="project_type" aria-required="true">
+                                <option value="">Select project type</option>
+                                <option value="Hardwood Installation">Hardwood Installation</option>
+                                <option value="Hardwood Refinishing">Hardwood Refinishing</option>
+                                <option value="LVP / Luxury Vinyl Plank">LVP / Luxury Vinyl Plank</option>
+                                <option value="Laminate">Laminate</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <div class="error-message" id="project-typeError">Please select a project type</div>
+                        </div>
+                        <div class="form-group">
                             <label for="zipcode">Zip Code *</label>
-                            <input type="text" id="zipcode" name="zipcode" aria-required="true" autocomplete="postal-code" pattern="[0-9]{5}" placeholder="12345" maxlength="5" inputmode="numeric">
+                            <p class="zip-check-hint">Enter your ZIP Code to check availability</p>
+                            <div class="zip-input-row">
+                                <input type="text" id="zipcode" name="zipcode" aria-required="true" autocomplete="postal-code" pattern="[0-9]{5}" placeholder="12345" maxlength="5" inputmode="numeric">
+                                <button type="button" class="btn btn-zip-check" id="contactZipCheckBtn" aria-label="Check availability">Check</button>
+                            </div>
+                            <div class="zip-check-result" id="contactZipCheckResult" aria-live="polite" style="display: none;"></div>
                             <div class="error-message" id="zipcodeError">Please enter a valid 5-digit US zip code</div>
                         </div>
                         <div class="form-group">
