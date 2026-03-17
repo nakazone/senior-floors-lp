@@ -4,16 +4,10 @@
  */
 
 import { isZipWithin50MilesOfDenver } from '../utils/denver-radius.js';
- *
+
+/**
  * SMTP (receber leads por email): configure no Vercel (Settings → Environment Variables):
- *   SMTP_HOST     - servidor (ex: smtp.gmail.com)
- *   SMTP_PORT     - porta (ex: 587)
- *   SMTP_USER     - usuário / email de login
- *   SMTP_PASS     - senha ou App Password (Gmail: use App Password)
- *   SMTP_FROM_NAME  - nome no "De:" (opcional)
- *   SMTP_FROM_EMAIL - email no "De:" (opcional; default: SMTP_USER)
- *   SMTP_TO_EMAIL   - email que recebe os leads (opcional; default: SMTP_FROM_EMAIL)
- *   SMTP_SECURE   - "true" para porta 465 (opcional)
+ *   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM_NAME, SMTP_FROM_EMAIL, SMTP_TO_EMAIL, SMTP_SECURE
  */
 function parseBody(req) {
   if (req.body && typeof req.body === 'object' && (req.body.name != null || req.body.email != null)) {
@@ -55,6 +49,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, message: 'Method not allowed' });
   }
 
+  try {
   const post = parseBody(req);
   const form_name = (post['form-name'] || post.formName || 'contact-form').trim();
   let name = (post.name || '').trim();
@@ -189,4 +184,8 @@ export default async function handler(req, res) {
   if (system_error) response.system_error = system_error;
   if (email_error) response.email_error = email_error;
   return res.status(200).json(response);
+  } catch (err) {
+    console.error('[send-lead]', err);
+    return res.status(500).json({ success: false, message: 'Server error. Please try again.', debug: err.message });
+  }
 }
