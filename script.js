@@ -62,7 +62,10 @@
                 : (new URL(form.getAttribute('action') || 'send-lead.php', window.location.href).href));
         var validateZipThenSubmit = function() {
           if (url.indexOf('/api/send-lead') === -1) return Promise.resolve(true);
-          var validateUrl = (window.location.origin || '') + '/api/validate-zip?zip=' + encodeURIComponent(zipClean);
+          var apiBase = url.indexOf('http') === 0
+            ? url.replace(/\/api\/send-lead.*$/, '')
+            : (window.location.origin || '');
+          var validateUrl = apiBase + '/api/validate-zip?zip=' + encodeURIComponent(zipClean);
           return fetch(validateUrl, { method: 'GET', headers: { Accept: 'application/json' } })
             .then(function(r) { return r.json(); })
             .then(function(d) {

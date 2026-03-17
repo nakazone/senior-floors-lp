@@ -18,13 +18,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Form URL: only on Vercel use /api/send-lead (serverless). lp.senior-floors.com and others use PHP backend. -->
+    <!-- Form URL: Vercel API (same origin on Vercel; full URL on lp.senior-floors.com so form works without CORS/PHP). -->
     <script>
     (function() {
       var h = (window.location.hostname || '').toLowerCase();
       if (h.includes('vercel.app') || h.includes('vercel.sh')) {
         window.SENIOR_FLOORS_FORM_URL = '/api/send-lead';
         window.SENIOR_FLOORS_RECEIVE_LEAD_URL = '/api/receive-lead';
+      } else if (h === 'lp.senior-floors.com') {
+        window.SENIOR_FLOORS_FORM_URL = 'https://senior-floors-lp.vercel.app/api/send-lead';
+        window.SENIOR_FLOORS_RECEIVE_LEAD_URL = 'https://senior-floors-lp.vercel.app/api/receive-lead';
       } else {
         window.SENIOR_FLOORS_FORM_URL = 'https://senior-floors.com/send-lead.php';
         window.SENIOR_FLOORS_RECEIVE_LEAD_URL = 'https://senior-floors.com/system.php?api=receive-lead';
