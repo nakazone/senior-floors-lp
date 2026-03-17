@@ -34,7 +34,7 @@ API do Sistema CRM para **Railway**. Recebe leads da LP (Vercel) e expõe endpoi
 Na LP (Vercel), defina a variável **`SYSTEM_API_URL`** com a URL do Railway, ex.:
 
 ```
-SYSTEM_API_URL=https://senior-floors-system.up.railway.app
+SYSTEM_API_URL=https://senior-floors-system-production.up.railway.app
 ```
 
 Assim o formulário da LP pode enviar para a Vercel; a Vercel (send-lead) reenvia para o Railway (`/api/receive-lead`) quando quiser gravar no mesmo banco do System.

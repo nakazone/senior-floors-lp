@@ -3,23 +3,40 @@
 ## Problema
 Formulário da LP não está salvando leads nem enviando email.
 
+## ⚠️ Diferença: MySQL vs API no Railway
+
+| O que | Exemplo | Usado para |
+|-------|---------|------------|
+| **MySQL (banco)** | `mysql-production-d0e8.up.railway.app` | Só o backend Node.js conecta aqui. **Não use para o formulário.** |
+| **API (serviço Node.js)** | `https://senior-floors-system-production.up.railway.app` | É esta URL que a Vercel usa em **SYSTEM_API_URL**. O form envia para esta API. |
+
+**SYSTEM_API_URL** tem de ser a URL **HTTPS do serviço Node.js** no Railway (a que expõe `/api/receive-lead`), **não** o host do MySQL.
+
+**Onde pegar a URL da API no Railway:**  
+Railway Dashboard → projeto → **serviço da aplicação Node.js** (não o MySQL) → **Settings** → **Networking** / **Public Networking** → **Generate Domain** ou copie o domínio (ex: `senior-floors-system-production.up.railway.app`). A URL fica: `https://esse-dominio.up.railway.app`.
+
+---
+
 ## Solução
 
 ### ✅ Passo 1: Configurar SYSTEM_API_URL na Vercel
 
-1. Acesse **Vercel Dashboard** → seu projeto → **Settings** → **Environment Variables**
-2. Adicione a variável:
+1. Acesse **Vercel Dashboard** → seu projeto da **LP** → **Settings** → **Environment Variables**
+2. Adicione a variável (use a URL da **API**, não do MySQL):
 
 ```
-SYSTEM_API_URL=https://sua-url-railway.up.railway.app
+SYSTEM_API_URL=https://senior-floors-system-production.up.railway.app
 ```
 
-**Onde encontrar a URL do Railway:**
-- Railway → serviço Node.js → **Settings** → **Generate Domain**
-- Ou copie a URL pública do seu serviço (ex: `https://senior-floors-system-production.up.railway.app`)
+**URL correta do Railway (serviço Node):**
+
+```
+SYSTEM_API_URL=https://senior-floors-system-production.up.railway.app
+```
 
 **⚠️ IMPORTANTE:** 
-- Sem essa variável, os leads **NÃO serão salvos no banco**
+- **Não use** `mysql-production-d0e8.up.railway.app` em SYSTEM_API_URL (é o banco, não a API).
+- Sem SYSTEM_API_URL correta, os leads **não são salvos no Railway**.
 - A URL deve ser **sem barra no final** (ex: `https://...railway.app` não `https://...railway.app/`)
 
 ---
@@ -98,7 +115,7 @@ Deve retornar: `{"ok":true,"service":"senior-floors-system",...}`
 
 **Teste manual:**
 ```bash
-curl -X POST https://sua-url-railway.up.railway.app/api/receive-lead \
+curl -X POST https://senior-floors-system-production.up.railway.app/api/receive-lead \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "form-name=test&name=Test User&email=test@test.com&phone=3035551234&zipcode=80202&message=Test message"
 ```

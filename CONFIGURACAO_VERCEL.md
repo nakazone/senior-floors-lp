@@ -7,7 +7,7 @@ Configure estas variáveis no **Vercel Dashboard** → seu projeto → **Setting
 ### 1. Sistema Railway (OBRIGATÓRIO)
 
 ```
-SYSTEM_API_URL=https://sua-url-railway.up.railway.app
+SYSTEM_API_URL=https://senior-floors-system-production.up.railway.app
 ```
 
 **Onde encontrar:** No Railway → serviço Node.js → **Settings** → **Generate Domain** (ou copie a URL pública)
@@ -85,7 +85,7 @@ Se configurou SMTP, verifique a caixa de entrada de `SMTP_TO_EMAIL`.
 
 3. **Teste manualmente:**
    ```bash
-   curl -X POST https://sua-url-railway.up.railway.app/api/receive-lead \
+   curl -X POST https://senior-floors-system-production.up.railway.app/api/receive-lead \
      -H "Content-Type: application/x-www-form-urlencoded" \
      -d "form-name=test&name=Test&email=test@test.com&phone=1234567890&zipcode=80202&message=Test"
    ```

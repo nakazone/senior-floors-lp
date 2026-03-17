@@ -61,7 +61,7 @@ Abra no navegador ou use curl:
 
 ```bash
 # Health check
-curl https://sua-url-railway.up.railway.app/api/health
+curl https://senior-floors-system-production.up.railway.app/api/health
 
 # Deve retornar: {"ok":true,"service":"senior-floors-system","time":"..."}
 ```
@@ -71,7 +71,7 @@ curl https://sua-url-railway.up.railway.app/api/health
 Na Vercel, adicione a variável:
 
 ```
-SYSTEM_API_URL=https://sua-url-railway.up.railway.app
+SYSTEM_API_URL=https://senior-floors-system-production.up.railway.app
 ```
 
 Assim a LP poderá enviar leads para o System no Railway.

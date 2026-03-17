@@ -16,7 +16,7 @@ Os leads não estão sendo salvos no Railway System. Vamos diagnosticar passo a 
 3. **Deve estar configurada** com a URL do Railway
 
 **Se NÃO estiver configurada:**
-- Adicione: `SYSTEM_API_URL=https://sua-url-railway.up.railway.app`
+- Adicione: `SYSTEM_API_URL=https://senior-floors-system-production.up.railway.app`
 - Substitua pela URL real do seu Railway System
 - **Sem barra no final** (ex: `https://...railway.app` não `https://...railway.app/`)
 
@@ -64,7 +64,7 @@ curl https://sua-url-railway.up.railway.app/api/health
 **Teste se o Railway está recebendo leads:**
 
 ```bash
-curl -X POST https://sua-url-railway.up.railway.app/api/receive-lead \
+curl -X POST https://senior-floors-system-production.up.railway.app/api/receive-lead \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "form-name=test&name=Test User&email=test@test.com&phone=3035551234&zipcode=80202&message=Test message"
 ```
@@ -97,7 +97,7 @@ curl -X POST https://sua-url-railway.up.railway.app/api/receive-lead \
 
 **Solução:**
 1. Vercel → Settings → Environment Variables
-2. Adicione: `SYSTEM_API_URL=https://sua-url-railway.up.railway.app`
+2. Adicione: `SYSTEM_API_URL=https://senior-floors-system-production.up.railway.app`
 3. Force um novo deploy (ou aguarde redeploy automático)
 
 ---
