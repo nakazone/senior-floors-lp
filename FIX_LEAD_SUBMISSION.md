@@ -41,6 +41,26 @@ SYSTEM_API_URL=https://senior-floors-system-production.up.railway.app
 
 ---
 
+### 🔌 Se aparecer "Failed to fetch" ao enviar o formulário
+
+A LP em **lp.senior-floors.com** envia o form para a API na **Vercel**. Se a URL do deploy na Vercel for diferente de `senior-floors-lp.vercel.app`, a conexão falha.
+
+1. **Descubra a URL exata do deploy:**  
+   Vercel Dashboard → projeto da **LP** → **Settings** → **Domains** (ou na aba **Deployments** clique no deployment e veja a URL). Ex.: `https://senior-floors-lp-abc123.vercel.app`.
+
+2. **Defina a URL no HTML** (antes do `</head>`), logo após as outras tags `<script>`:
+   ```html
+   <script>window.SENIOR_FLOORS_LP_API_BASE = 'https://SUA-URL-EXATA.vercel.app';</script>
+   ```
+   Exemplo: se o domínio for `senior-floors-lp-xyz.vercel.app`, use:
+   ```html
+   <script>window.SENIOR_FLOORS_LP_API_BASE = 'https://senior-floors-lp-xyz.vercel.app';</script>
+   ```
+
+3. **Para ver o erro exato:** Abra **F12** → aba **Network (Rede)** → envie o formulário de novo. Clique na requisição que falhou (em vermelho) e veja: **Status** (404, 500, CORS, etc.) e **Response**.
+
+---
+
 ### ✅ Passo 2: Configurar Email (Opcional mas Recomendado)
 
 Para receber emails quando um lead é enviado:

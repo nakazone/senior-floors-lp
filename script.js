@@ -114,7 +114,11 @@
             .catch(function(err) {
                 form.removeAttribute('data-submitting');
                 if (btn) { btn.disabled = false; btn.textContent = isHero ? 'Get My Free Estimate' : 'Request My Free Estimate Now'; }
-                if (errorEl) { errorEl.textContent = err.message || 'Connection error. Please try again.'; errorEl.style.display = 'block'; }
+                var msg = err.message || 'Connection error. Please try again.';
+                if (msg === 'Failed to fetch' || msg.indexOf('fetch') !== -1) {
+                  msg = 'Falha na conexão com o servidor. Abra F12 → aba Network (Rede), envie o formulário de novo e veja qual requisição falhou (CORS, 404 ou timeout). Se a LP está em outro domínio, defina no HTML: window.SENIOR_FLOORS_LP_API_BASE = \'https://SUA-URL-VERCEL.vercel.app\';';
+                }
+                if (errorEl) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
             });
     };
 
