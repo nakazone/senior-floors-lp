@@ -9,6 +9,8 @@
  *    Relógio → a cada 5–15 minutos → syncMetaLeadsToCrm
  *
  * Cabeçalhos do Meta costumam variar; o script tenta vários nomes (case-insensitive).
+ * A coluna de nome da pessoa prioriza "Full name" e ignora cabeçalhos de serviço/campanha ([...], reels, etc.).
+ * Se precisar fixar: CONFIG.NAME_COLUMN_HEADER = 'Full name' (igual à célula da planilha).
  */
 
 var CONFIG = {
@@ -25,6 +27,11 @@ var CONFIG = {
   FORM_NAME: 'meta-instant-form',
   /** Linha do cabeçalho (1 = primeira linha) */
   HEADER_ROW: 1,
+  /**
+   * Opcional: nome EXATO do cabeçalho na planilha para o nome da pessoa (como no Meta).
+   * Use se o script ainda pegar a coluna errada. Ex.: "Full name"
+   */
+  NAME_COLUMN_HEADER: '',
 };
 
 function getApiSyncSecret_() {
@@ -43,7 +50,7 @@ function syncMetaLeadsToCrm() {
     return String(h || '').trim().toLowerCase();
   });
   var col = {
-    name: findCol(headers, ['full name', 'name', 'nome', 'first name']),
+    name: findNameColumn_(headers),
     email: findCol(headers, ['email', 'e-mail', 'email address']),
     phone: findCol(headers, ['phone', 'phone number', 'mobile', 'telefone', 'tel']),
     zip: findCol(headers, ['zip', 'zip code', 'postal code', 'postcode', 'cep']),
@@ -103,6 +110,75 @@ function syncMetaLeadsToCrm() {
   }
 
   Logger.log('syncMetaLeadsToCrm: enviadas ' + synced + ' linha(s).');
+}
+
+/**
+ * Cabeçalhos que costumam ser pergunta de serviço/campanha no Instant Form — não usar como nome da pessoa.
+ */
+function isLikelyServiceOrCampaignHeader_(h) {
+  if (!h) return false;
+  if (h.indexOf('[') !== -1 || h.indexOf(']') !== -1) return true;
+  if (h.indexOf('reel') !== -1) return true;
+  if (h.indexOf('which ') === 0 || h.indexOf('what service') !== -1 || h.indexOf('tipo de serviço') !== -1) return true;
+  if (h.indexOf('campaign') !== -1 || h.indexOf('campanha') !== -1) return true;
+  if (h.indexOf('ad set') !== -1 || h.indexOf('adset') !== -1) return true;
+  if (h.indexOf('lead form') !== -1 || h.indexOf('form id') !== -1) return true;
+  if (h.indexOf('service') !== -1 && h.indexOf('full') === -1 && h.indexOf('nome completo') === -1) return true;
+  return false;
+}
+
+/**
+ * Localiza coluna do nome real (Full Name), evitando colunas cujo título ou valor parecem opção de serviço.
+ */
+function findNameColumn_(headers) {
+  var exactOverride = String(CONFIG.NAME_COLUMN_HEADER || '').trim().toLowerCase();
+  if (exactOverride) {
+    for (var o = 0; o < headers.length; o++) {
+      if (headers[o] === exactOverride) return o;
+    }
+  }
+
+  var exactPersonName = [
+    'full name',
+    'full_name',
+    'nome completo',
+    'first and last name',
+    'your full name',
+    'contact name',
+    'nome e sobrenome',
+    'first name',
+    'nome',
+  ];
+  var i;
+  var j;
+  for (i = 0; i < exactPersonName.length; i++) {
+    var want = exactPersonName[i].toLowerCase();
+    for (j = 0; j < headers.length; j++) {
+      if (headers[j] === want && !isLikelyServiceOrCampaignHeader_(headers[j])) return j;
+    }
+  }
+
+  var containsPrefer = ['full name', 'first and last', 'nome completo', 'contact name'];
+  for (i = 0; i < containsPrefer.length; i++) {
+    var w = containsPrefer[i].toLowerCase();
+    for (j = 0; j < headers.length; j++) {
+      if (headers[j].indexOf(w) !== -1 && !isLikelyServiceOrCampaignHeader_(headers[j])) return j;
+    }
+  }
+
+  for (j = 0; j < headers.length; j++) {
+    var h = headers[j];
+    if (isLikelyServiceOrCampaignHeader_(h)) continue;
+    if (h === 'name' || h === 'nome') return j;
+  }
+
+  for (j = 0; j < headers.length; j++) {
+    var h2 = headers[j];
+    if (isLikelyServiceOrCampaignHeader_(h2)) continue;
+    if (h2.indexOf('name') !== -1 && h2.indexOf('company') === -1 && h2.indexOf('business') === -1) return j;
+  }
+
+  return -1;
 }
 
 function findCol(headers, candidates) {
