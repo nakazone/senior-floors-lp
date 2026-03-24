@@ -540,6 +540,37 @@
         </div>
     </div>
 
+    <!-- Lightbox: Agendar visita -->
+    <div id="newVisitModal" class="modal modal-lightbox" aria-hidden="true">
+        <div class="modal-backdrop" onclick="closeVisitModal()"></div>
+        <div class="modal-content modal-content-lightbox">
+            <div class="modal-header modal-header-lightbox">
+                <h3>🏠 Agendar visita</h3>
+                <button type="button" class="modal-close modal-close-lightbox" onclick="closeVisitModal()" aria-label="Fechar">&times;</button>
+            </div>
+            <form id="newVisitForm" onsubmit="return submitVisitForm(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Data e hora <span class="required">*</span></label>
+                        <input type="datetime-local" id="visitScheduledAt" name="scheduled_at" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Endereço da visita</label>
+                        <input type="text" id="visitAddress" name="address" placeholder="Rua, número, cidade (opcional)">
+                    </div>
+                    <div class="form-group">
+                        <label>Notas</label>
+                        <textarea id="visitNotes" name="notes" rows="3" placeholder="Instruções, portão, contato no local…"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer-lightbox">
+                    <button type="button" class="btn btn-secondary" onclick="closeVisitModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar agendamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="lead-detail.js"></script>
 </body>
 </html>

@@ -662,7 +662,72 @@ function submitInteractionForm(e) {
 }
 
 function showNewVisitModal() {
-    alert('Funcionalidade de agendar visita em desenvolvimento');
+    var modal = document.getElementById('newVisitModal');
+    if (!modal) return;
+    var dt = document.getElementById('visitScheduledAt');
+    if (dt) {
+        dt.value = '';
+        var now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        dt.min = now.toISOString().slice(0, 16);
+    }
+    document.getElementById('visitAddress').value = '';
+    document.getElementById('visitNotes').value = '';
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeVisitModal() {
+    var modal = document.getElementById('newVisitModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+/** datetime-local (YYYY-MM-DDTHH:mm) → MySQL datetime string */
+function visitDatetimeLocalToSql(val) {
+    if (!val) return null;
+    var s = String(val).trim();
+    if (s.length === 16) s += ':00';
+    return s.replace('T', ' ');
+}
+
+function submitVisitForm(e) {
+    e.preventDefault();
+    var raw = document.getElementById('visitScheduledAt').value;
+    if (!raw) {
+        alert('Informe a data e hora da visita.');
+        return false;
+    }
+    var scheduled_at = visitDatetimeLocalToSql(raw);
+    var addressRaw = document.getElementById('visitAddress').value.trim();
+    var address = addressRaw || 'A confirmar';
+    var notes = document.getElementById('visitNotes').value.trim() || null;
+    closeVisitModal();
+    fetch('/api/visits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+            lead_id: currentLeadId,
+            scheduled_at: scheduled_at,
+            address: address,
+            notes: notes
+        })
+    })
+        .then(function (r) {
+            return r.json();
+        })
+        .then(function (data) {
+            if (data.success) loadVisits();
+            else alert('Erro ao agendar: ' + (data.error || 'Desconhecido'));
+        })
+        .catch(function () {
+            alert('Erro ao agendar visita');
+        });
+    return false;
 }
 
 function showNewProposalModal() {
