@@ -8,9 +8,14 @@
  * 4. Salve o projeto, rode syncMetaLeadsToCrm() uma vez (Autorizar), depois crie gatilho:
  *    Relógio → a cada 5–15 minutos → syncMetaLeadsToCrm
  *
- * Cabeçalhos do Meta costumam variar; o script tenta vários nomes (case-insensitive).
- * A coluna de nome da pessoa prioriza "Full name" e ignora cabeçalhos de serviço/campanha ([...], reels, etc.).
- * Se precisar fixar: CONFIG.NAME_COLUMN_HEADER = 'Full name' (igual à célula da planilha).
+ * Mapeamento padrão (cabeçalho na planilha → CRM), case-insensitive:
+ *   full_name → nome do lead
+ *   phone_number → telefone (remove p:+1 / +1, formata (XXX) XXX-XXXX se tiver 10 dígitos US)
+ *   email → email
+ *   zip_code → CEP/ZIP (5 dígitos US no CRM)
+ *   what_service_are_you_interested_in? → campo message / notas no CRM
+ * Fallbacks: outros nomes comuns (Full name, Phone number, etc.) e heurística antiga só para o nome.
+ * Override: CONFIG.NAME_COLUMN_HEADER = cabeçalho exato da coluna de nome (como na célula A1).
  */
 
 var CONFIG = {
@@ -41,6 +46,26 @@ function getApiSyncSecret_() {
   throw new Error('Defina a propriedade do script API_SYNC_SECRET (ou CONFIG.API_SYNC_SECRET).');
 }
 
+/**
+ * Meta/planilha: "p:+11234567890", "+1 303-555-0100", etc. → (303) 555-0100 (10 dígitos US).
+ * Se não der 10 dígitos após normalizar, devolve o texto original (até 50 chars).
+ */
+function formatUsPhoneForCrm_(raw) {
+  var s = String(raw || '').trim();
+  if (!s) return '';
+  s = s.replace(/^p:\s*/i, '');
+  s = s.replace(/^tel:\s*/i, '');
+  s = s.replace(/^whatsapp:\s*/i, '');
+  var digits = s.replace(/\D/g, '');
+  if (digits.length === 11 && digits.charAt(0) === '1') {
+    digits = digits.slice(1);
+  }
+  if (digits.length === 10) {
+    return '(' + digits.slice(0, 3) + ') ' + digits.slice(3, 6) + '-' + digits.slice(6);
+  }
+  return s.length > 50 ? s.slice(0, 50) : s;
+}
+
 function syncMetaLeadsToCrm() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var data = sheet.getDataRange().getValues();
@@ -50,10 +75,26 @@ function syncMetaLeadsToCrm() {
     return String(h || '').trim().toLowerCase();
   });
   var col = {
-    name: findNameColumn_(headers),
+    name: resolveNameColumn_(headers),
     email: findCol(headers, ['email', 'e-mail', 'email address']),
-    phone: findCol(headers, ['phone', 'phone number', 'mobile', 'telefone', 'tel']),
-    zip: findCol(headers, ['zip', 'zip code', 'postal code', 'postcode', 'cep']),
+    phone: findCol(headers, [
+      'phone_number',
+      'phone number',
+      'phone',
+      'mobile',
+      'mobile phone',
+      'telefone',
+      'tel',
+    ]),
+    zip: findCol(headers, ['zip_code', 'zip code', 'zip', 'postal code', 'postcode', 'cep']),
+    service: findCol(headers, [
+      'what_service_are_you_interested_in?',
+      'what_service_are_you_interested_in',
+      'what service are you interested in?',
+      'what service are you interested in',
+      'which service are you interested in?',
+      'what_service_are_you_interested in',
+    ]),
     synced: findCol(headers, [CONFIG.SYNC_COLUMN_HEADER.toLowerCase(), 'crm synced', 'synced']),
   };
   if (col.synced < 0) {
@@ -73,8 +114,10 @@ function syncMetaLeadsToCrm() {
 
     var name = String(row[col.name] || '').trim();
     var email = String(row[col.email] || '').trim();
-    var phone = String(row[col.phone] || '').trim();
+    var phone = formatUsPhoneForCrm_(String(row[col.phone] || '').trim());
     var zipRaw = String(row[col.zip] || '').trim();
+    var service =
+      col.service >= 0 ? String(row[col.service] || '').trim() : '';
     if (!name || !email || !phone || !zipRaw) continue;
 
     var payload = {
@@ -84,6 +127,7 @@ function syncMetaLeadsToCrm() {
       zipcode: zipRaw,
       'form-name': CONFIG.FORM_NAME,
     };
+    if (service) payload.message = service;
 
     var options = {
       method: 'post',
@@ -128,19 +172,18 @@ function isLikelyServiceOrCampaignHeader_(h) {
 }
 
 /**
- * Localiza coluna do nome real (Full Name), evitando colunas cujo título ou valor parecem opção de serviço.
+ * Nome: prioriza full_name / CONFIG.NAME_COLUMN_HEADER; fallback heurístico (evita coluna de serviço).
  */
-function findNameColumn_(headers) {
+function resolveNameColumn_(headers) {
   var exactOverride = String(CONFIG.NAME_COLUMN_HEADER || '').trim().toLowerCase();
   if (exactOverride) {
     for (var o = 0; o < headers.length; o++) {
       if (headers[o] === exactOverride) return o;
     }
   }
-
-  var exactPersonName = [
-    'full name',
+  var direct = findCol(headers, [
     'full_name',
+    'full name',
     'nome completo',
     'first and last name',
     'your full name',
@@ -148,17 +191,18 @@ function findNameColumn_(headers) {
     'nome e sobrenome',
     'first name',
     'nome',
-  ];
+  ]);
+  if (direct >= 0) return direct;
+  return findNameColumnFallback_(headers);
+}
+
+/**
+ * Heurística antiga se não houver coluna full_name / full name explícita.
+ */
+function findNameColumnFallback_(headers) {
+  var containsPrefer = ['full name', 'first and last', 'nome completo', 'contact name'];
   var i;
   var j;
-  for (i = 0; i < exactPersonName.length; i++) {
-    var want = exactPersonName[i].toLowerCase();
-    for (j = 0; j < headers.length; j++) {
-      if (headers[j] === want && !isLikelyServiceOrCampaignHeader_(headers[j])) return j;
-    }
-  }
-
-  var containsPrefer = ['full name', 'first and last', 'nome completo', 'contact name'];
   for (i = 0; i < containsPrefer.length; i++) {
     var w = containsPrefer[i].toLowerCase();
     for (j = 0; j < headers.length; j++) {
