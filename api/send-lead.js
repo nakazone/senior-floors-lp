@@ -88,6 +88,12 @@ export default async function handler(req, res) {
   if (systemUrl) {
     try {
       const url = `${systemUrl}/api/receive-lead`;
+      const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'utm_adset', 'utm_ad', 'marketing_platform', 'landing_page'];
+      const extra = {};
+      for (const k of utmKeys) {
+        const v = post[k];
+        if (v != null && String(v).trim() !== '') extra[k] = String(v).trim();
+      }
       const body = new URLSearchParams({
         'form-name': form_name,
         name,
@@ -96,6 +102,7 @@ export default async function handler(req, res) {
         ...(project_type ? { project_type } : {}),
         zipcode,
         message: message || '',
+        ...extra,
       }).toString();
 
       const r = await fetch(url, {

@@ -55,6 +55,14 @@
             '&project_type=' + encodeURIComponent(projectTypeVal.trim()) +
             '&zipcode=' + encodeURIComponent(zipVal.trim()) +
             '&message=' + encodeURIComponent((form.querySelector('[name="message"]') || {}).value || '');
+        try {
+            var up = new URLSearchParams(window.location.search);
+            ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'utm_adset', 'utm_ad'].forEach(function (k) {
+                var v = up.get(k);
+                if (v) body += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(v);
+            });
+            body += '&landing_page=' + encodeURIComponent((window.location.origin || '') + (window.location.pathname || '') + (window.location.search || ''));
+        } catch (e2) { /* ignore */ }
         var url = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
             ? window.SENIOR_FLOORS_FORM_URL
             : ((window.location.origin || '') + '/api/send-lead');
