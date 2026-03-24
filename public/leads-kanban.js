@@ -7,8 +7,8 @@ let pipelineStages = [];
 let allLeads = [];
 let allUsers = [];
 
-// Load users for selects
-async function loadUsers() {
+// Load users for modais de lead (não confundir com loadUsers() da página Users em dashboard.js)
+async function loadLeadFormUsers() {
     try {
         const response = await fetch('/api/users?limit=100', { credentials: 'include' });
         const data = await response.json();
@@ -86,7 +86,7 @@ async function loadPipelineStages() {
 async function loadCRMKanban() {
     currentView = 'kanban';
     // Load required data first
-    await loadUsers();
+    await loadLeadFormUsers();
     await loadPipelineStages();
     // Then load kanban board
     loadKanbanBoard();
@@ -171,19 +171,20 @@ function renderKanbanCard(lead) {
             <div class="kanban-card-header">
                 <div class="kanban-card-title">${lead.name || 'Sem nome'}</div>
                 <div class="kanban-card-actions">
-                    <button onclick="viewLead(${lead.id})" title="Ver">👁️</button>
-                    <button onclick="showAssignLeadModal(${lead.id})" title="Designar">👤</button>
-                    <button onclick="showFollowupModal(${lead.id})" title="Follow-up">📅</button>
+                    <button onclick="viewLead(${lead.id})" title="Ver"><span class="action-btn-icon">V</span></button>
+                    <button onclick="showAssignLeadModal(${lead.id})" title="Designar"><span class="action-btn-icon">U</span></button>
+                    <button onclick="showFollowupModal(${lead.id})" title="Follow-up"><span class="action-btn-icon">D</span></button>
+                    <button type="button" class="btn-lead-delete-kanban" onclick="deleteLead(${lead.id})" title="Excluir">✕</button>
                 </div>
             </div>
             <div class="kanban-card-body">
-                <div>📧 ${lead.email || '-'}</div>
-                <div>📞 ${lead.phone || '-'}</div>
-                ${lead.estimated_value ? `<div>💰 $${parseFloat(lead.estimated_value).toLocaleString()}</div>` : ''}
+                <div><strong>Email:</strong> ${lead.email || '-'}</div>
+                <div><strong>Phone:</strong> ${lead.phone || '-'}</div>
+                ${lead.estimated_value ? `<div><strong>Value:</strong> $${parseFloat(lead.estimated_value).toLocaleString()}</div>` : ''}
             </div>
             <div class="kanban-card-footer">
                 <span class="kanban-card-priority ${priorityClass}">${priorityClass}</span>
-                <span>👤 ${ownerName}</span>
+                <span><span class="action-btn-icon small">U</span> ${ownerName}</span>
             </div>
         </div>
     `;
@@ -260,7 +261,7 @@ async function updateLeadStage(leadId, stageId, stageSlug) {
 
 // Show New Lead Modal
 function showNewLeadModal() {
-    loadUsers();
+    loadLeadFormUsers();
     document.getElementById('newLeadModal').classList.add('active');
     document.getElementById('newLeadModal').style.display = 'flex';
 }
@@ -313,7 +314,7 @@ async function createLeadManual(e) {
 
 // Show Assign Lead Modal
 function showAssignLeadModal(leadId) {
-    loadUsers();
+    loadLeadFormUsers();
     document.getElementById('assignLeadId').value = leadId;
     document.getElementById('assignLeadModal').classList.add('active');
     document.getElementById('assignLeadModal').style.display = 'flex';
@@ -355,7 +356,7 @@ async function assignLead(e) {
 
 // Show Follow-up Modal
 function showFollowupModal(leadId) {
-    loadUsers();
+    loadLeadFormUsers();
     document.getElementById('followupLeadId').value = leadId;
     
     // Set default due date to tomorrow
@@ -444,7 +445,7 @@ if (typeof window !== 'undefined') {
     if (originalLoadLeads) {
         window.loadLeads = async function() {
             await originalLoadLeads();
-            await loadUsers();
+            await loadLeadFormUsers();
             await loadPipelineStages();
         };
     }

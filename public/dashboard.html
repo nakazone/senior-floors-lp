@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#1a2036">
     <title>Senior Floors - Dashboard</title>
+    <!-- Favicon (mesmo padrão do site Senior Floors) -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/SeniorFloors.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/SeniorFloors.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/SeniorFloors.png">
+    <link rel="icon" type="image/png" href="/assets/SeniorFloors.png">
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,13 +18,13 @@
 </head>
 <body>
     <div class="dashboard-container">
-        <button class="mobile-menu-toggle" id="mobileMenuToggle">☰</button>
+        <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Menu">≡</button>
         <div class="mobile-overlay" id="mobileOverlay"></div>
         
         <!-- Fixed Sidebar -->
         <aside class="dashboard-sidebar" id="dashboardSidebar">
             <div class="sidebar-header">
-                <img src="assets/SeniorFloors.png" alt="Senior Floors" class="logo-image" onerror="this.style.display='none'">
+                <img src="/assets/SeniorFloors.png" alt="Senior Floors" class="logo-image" onerror="this.style.display='none'">
                 <h1>
                     <span class="mobile-hidden">Senior Floors CRM</span>
                     <span class="mobile-only">CRM</span>
@@ -28,37 +33,37 @@
             
             <nav class="sidebar-nav">
                     <a href="#" class="nav-item active" data-page="dashboard">
-                        <span>📊</span> Dashboard
+                        <span class="nav-icon" aria-hidden="true">📊</span> Dashboard
                     </a>
                     <a href="#" class="nav-item" data-page="marketing">
-                        <span>📈</span> Marketing
+                        <span class="nav-icon" aria-hidden="true">📈</span> Marketing
                     </a>
                     <a href="#" class="nav-item" data-page="leads">
-                        <span>📋</span> Leads
+                        <span class="nav-icon" aria-hidden="true">📋</span> Leads
                     </a>
                     <a href="#" class="nav-item" data-page="crm">
-                        <span>🎯</span> CRM
+                        <span class="nav-icon" aria-hidden="true">🎯</span> CRM
                     </a>
                     <a href="#" class="nav-item" data-page="customers">
-                        <span>👥</span> Customers
+                        <span class="nav-icon" aria-hidden="true">👥</span> Customers
                     </a>
                     <a href="#" class="nav-item" data-page="quotes">
-                        <span>💰</span> Quotes
+                        <span class="nav-icon" aria-hidden="true">💰</span> Quotes
                     </a>
                     <a href="#" class="nav-item" data-page="projects">
-                        <span>🏗️</span> Projects
+                        <span class="nav-icon" aria-hidden="true">🏗️</span> Projects
                     </a>
                     <a href="#" class="nav-item" data-page="schedule">
-                        <span>📅</span> Schedule
+                        <span class="nav-icon" aria-hidden="true">📅</span> Schedule
                     </a>
                     <a href="#" class="nav-item" data-page="financeiro">
-                        <span>💵</span> Financeiro
+                        <span class="nav-icon" aria-hidden="true">💵</span> Financeiro
                     </a>
                     <a href="#" class="nav-item" data-page="activities">
-                        <span>📝</span> Activities
+                        <span class="nav-icon" aria-hidden="true">📝</span> Activities
                     </a>
                     <a href="#" class="nav-item" data-page="users">
-                        <span>👤</span> Users
+                        <span class="nav-icon" aria-hidden="true">👤</span> Users
                     </a>
                 </nav>
                 
@@ -81,7 +86,7 @@
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
                         <h2 class="page-title">Dashboard</h2>
-                        <button class="btn btn-primary" onclick="loadDashboard()">🔄 Refresh</button>
+                        <button class="btn btn-primary" onclick="loadDashboard()">Refresh</button>
                     </div>
                     
                     <div id="dashboardStats" class="stats-grid">
@@ -133,7 +138,7 @@
                         <h2 class="page-title">Leads</h2>
                         <div style="display: flex; gap: var(--spacing-sm);">
                             <button class="btn btn-secondary" onclick="showNewLeadModal()">+ Novo Lead</button>
-                            <button class="btn btn-secondary" onclick="refreshLeads()">🔄 Refresh</button>
+                            <button class="btn btn-secondary" onclick="refreshLeads()">Refresh</button>
                         </div>
                     </div>
                     
@@ -175,7 +180,7 @@
                         <h2 class="page-title">CRM - Kanban Board</h2>
                         <div style="display: flex; gap: var(--spacing-sm);">
                             <button class="btn btn-secondary" onclick="showNewLeadModal()">+ Novo Lead</button>
-                            <button class="btn btn-secondary" onclick="if(typeof loadKanbanBoard === 'function') loadKanbanBoard(); else if(typeof loadCRMKanban === 'function') loadCRMKanban();">🔄 Refresh</button>
+                            <button class="btn btn-secondary" onclick="if(typeof loadKanbanBoard === 'function') loadKanbanBoard(); else if(typeof loadCRMKanban === 'function') loadCRMKanban();">Refresh</button>
                         </div>
                     </div>
                     
@@ -276,9 +281,9 @@
                             </table>
                         </div>
                     </div>
-                    <p class="text-muted" style="font-size: 0.85rem;">API no Railway: <code>/api/marketing/*</code>. Migração: <code>node database/migrate-marketing-analytics.js</code> no servidor CRM.</p>
+                    <p class="text-muted" style="font-size: 0.85rem;">Rode no servidor após deploy: <code>node database/migrate-marketing-analytics.js</code> — cria colunas UTM em <code>leads</code> e tabela <code>ad_spend</code>.</p>
                 </div>
-
+                
                 <!-- Modals -->
                 <!-- New Lead Modal -->
                 <div id="newLeadModal" class="modal" style="display: none;">
@@ -531,14 +536,15 @@
                 
                 <!-- Schedule Page (Smart Scheduling Engine) -->
                 <div id="schedulePage" class="page-content" style="display: none;">
+                    <p id="googleCalendarSyncBanner" style="display: none; font-size: 0.85rem; margin-bottom: var(--spacing-sm); padding: 8px 12px; border-radius: 8px; background: var(--bg-light, #f5f5f5);"></p>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);">
                         <h2 class="page-title">Smart Scheduling</h2>
                         <div style="display: flex; gap: var(--spacing-sm);">
-                            <button class="btn btn-secondary" onclick="showScheduleView('month')">📅 Month</button>
-                            <button class="btn btn-secondary" onclick="showScheduleView('week')">📆 Week</button>
-                            <button class="btn btn-secondary" onclick="showScheduleView('crew')">👥 Crew Timeline</button>
+                            <button class="btn btn-secondary" onclick="showScheduleView('month')">Month</button>
+                            <button class="btn btn-secondary" onclick="showScheduleView('week')">Week</button>
+                            <button class="btn btn-secondary" onclick="showScheduleView('crew')">Crew Timeline</button>
                             <button class="btn btn-primary" onclick="showNewScheduleModal()">+ Schedule Project</button>
-                            <button class="btn btn-secondary" onclick="loadScheduleDashboard()">🔄 Refresh</button>
+                            <button class="btn btn-secondary" onclick="loadScheduleDashboard()">Refresh</button>
                         </div>
                     </div>
                     
@@ -572,12 +578,12 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: var(--spacing-sm);">
                         <h2 class="page-title">Financial Management</h2>
                         <div style="display: flex; gap: var(--spacing-sm);">
-                            <button class="btn btn-secondary" onclick="showFinancialView('dashboard')">📊 Dashboard</button>
-                            <button class="btn btn-secondary" onclick="showFinancialView('expenses')">💰 Expenses</button>
-                            <button class="btn btn-secondary" onclick="showFinancialView('payroll')">👥 Payroll</button>
+                            <button class="btn btn-secondary" onclick="showFinancialView('dashboard')">Dashboard</button>
+                            <button class="btn btn-secondary" onclick="showFinancialView('expenses')">Expenses</button>
+                            <button class="btn btn-secondary" onclick="showFinancialView('payroll')">Payroll</button>
                             <button class="btn btn-primary" onclick="showNewExpenseModal()">+ New Expense</button>
                             <button class="btn btn-primary" onclick="showNewPayrollModal()">+ Payroll Entry</button>
-                            <button class="btn btn-secondary" onclick="loadFinancialDashboard()">🔄 Refresh</button>
+                            <button class="btn btn-secondary" onclick="loadFinancialDashboard()">Refresh</button>
                         </div>
                     </div>
                     
@@ -899,10 +905,28 @@
             </div>
         </main>
     </div>
+
+    <div class="notification-bell-wrap" id="notificationBellWrap">
+        <button type="button" id="notificationBellBtn" class="notification-bell-btn" aria-label="Notificações" aria-expanded="false" aria-controls="notificationPanel" title="Notificações">
+            <span class="notification-bell-icon" aria-hidden="true">🔔</span>
+            <span id="notificationBellBadge" class="notification-bell-badge" hidden>0</span>
+        </button>
+        <div id="notificationPanel" class="notification-panel" role="region" aria-label="Lista de notificações" hidden>
+            <div class="notification-panel-header">
+                <h3 class="notification-panel-title">Notificações</h3>
+                <div class="notification-panel-actions">
+                    <button type="button" class="btn-notification-text" id="notificationMarkAllRead">Marcar lidas</button>
+                    <button type="button" class="btn-notification-text btn-notification-text--danger" id="notificationClearAll">Limpar</button>
+                </div>
+            </div>
+            <div id="notificationPanelList" class="notification-panel-list"></div>
+        </div>
+    </div>
     
     <div id="toastContainer" class="toast-container" aria-live="polite"></div>
     
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="notification-center.js"></script>
     <script src="marketing-dashboard.js"></script>
     <script src="dashboard.js"></script>
     <script src="leads-kanban.js"></script>

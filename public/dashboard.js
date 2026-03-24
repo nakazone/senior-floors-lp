@@ -20,7 +20,7 @@ fetch('/api/auth/session', { credentials: 'include' })
         loadDashboard();
         startNewLeadPolling();
         const pageParam = new URLSearchParams(window.location.search).get('page');
-        if (pageParam && document.querySelector(`[data-page="${pageParam}"]`)) {
+        if (pageParam && document.querySelector(`#dashboardSidebar [data-page="${pageParam}"]`)) {
             showPage(pageParam);
         }
     })
@@ -31,16 +31,25 @@ fetch('/api/auth/session', { credentials: 'include' })
 
 // Popup toast no canto inferior – novo lead recebido
 function showNewLeadToast(count, message) {
+    var msg = message || (count === 1 ? '1 novo lead. Contate em até 30 min!' : count + ' novos leads. Contate em até 30 min!');
+    if (typeof window.addCrmNotification === 'function') {
+        window.addCrmNotification({
+            title: count === 1 ? 'Novo lead recebido' : count + ' novos leads',
+            body: msg,
+            type: 'lead_new',
+            action: { kind: 'page', page: 'leads' },
+        });
+    }
     var container = document.getElementById('toastContainer');
     if (!container) return;
     var toast = document.createElement('div');
     toast.className = 'toast-lead';
     toast.setAttribute('role', 'alert');
     toast.innerHTML =
-        '<span class="toast-lead-icon">🔔</span>' +
+        '<span class="toast-lead-icon">!</span>' +
         '<div class="toast-lead-body">' +
         '<div class="toast-lead-title">Novo lead recebido!</div>' +
-        '<div class="toast-lead-msg">' + (message || (count === 1 ? '1 novo lead. Contate em até 30 min!' : count + ' novos leads. Contate em até 30 min!')) + '</div>' +
+        '<div class="toast-lead-msg">' + msg + '</div>' +
         '</div>' +
         '<button type="button" class="toast-lead-btn" onclick="this.closest(\'.toast-lead\').remove(); showPage(\'leads\');">Ver leads</button>';
     container.appendChild(toast);
@@ -118,8 +127,8 @@ if (mobileMenuToggle && dashboardSidebar && mobileOverlay) {
         mobileOverlay.classList.remove('active');
     });
 
-    // Close mobile menu when clicking nav item
-    document.querySelectorAll('.nav-item').forEach(item => {
+    // Close mobile menu when clicking sidebar nav only (evita apanhar .nav-item noutras zonas)
+    dashboardSidebar.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
             if (isMobile()) {
                 dashboardSidebar.classList.remove('mobile-open');
@@ -139,22 +148,31 @@ if (mobileMenuToggle && dashboardSidebar && mobileOverlay) {
     updateMobileMenuVisibility();
 }
 
-// Navigation
-document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-        e.preventDefault();
-        showPage(item.dataset.page);
+// Navigation (só links da sidebar — nunca misturar com .nav-item noutros blocos)
+const dashboardSidebarEl = document.getElementById('dashboardSidebar');
+if (dashboardSidebarEl) {
+    dashboardSidebarEl.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const page = item.dataset.page;
+            if (page) showPage(page);
+        });
     });
-});
+}
 
 function showPage(pageName) {
     document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    
+
+    const side = document.getElementById('dashboardSidebar');
+    if (side) {
+        side.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    }
+
     const pageEl = document.getElementById(pageName + 'Page');
     if (pageEl) {
         pageEl.style.display = 'block';
-        document.querySelector(`[data-page="${pageName}"]`).classList.add('active');
+        const navLink = side && pageName ? side.querySelector(`[data-page="${pageName}"]`) : null;
+        if (navLink) navLink.classList.add('active');
         currentPageName = pageName;
         
         // Load page data
@@ -314,7 +332,7 @@ function renderDashboardStats() {
             </div>
         `;
         }).join('')
-        : '<div class="empty-state"><div class="empty-state-icon">📋</div><p>No recent leads</p></div>';
+        : '<div class="empty-state"><div class="empty-state-icon">L</div><p>No recent leads</p></div>';
     document.getElementById('recentLeads').innerHTML = recentLeadsHtml;
     
     // Upcoming visits
@@ -330,7 +348,7 @@ function renderDashboardStats() {
                 </div>
             </div>
         `).join('')
-        : '<div class="empty-state"><div class="empty-state-icon">📅</div><p>No upcoming visits</p></div>';
+        : '<div class="empty-state"><div class="empty-state-icon">S</div><p>No upcoming visits</p></div>';
     document.getElementById('upcomingVisits').innerHTML = visitsHtml;
 }
 
@@ -548,9 +566,10 @@ async function loadLeads() {
                             <td>${lead.source || '-'}</td>
                             <td>${lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '-'}</td>
                             <td>
-                                <button class="btn btn-sm" onclick="viewLead(${lead.id})" title="Ver">👁️</button>
-                                <button class="btn btn-sm" onclick="showAssignLeadModal(${lead.id})" title="Designar">👤</button>
-                                <button class="btn btn-sm" onclick="showFollowupModal(${lead.id})" title="Follow-up">📅</button>
+                                <button class="btn btn-sm" onclick="viewLead(${lead.id})" title="Ver"><span class="action-btn-icon">V</span></button>
+                                <button class="btn btn-sm" onclick="showAssignLeadModal(${lead.id})" title="Designar"><span class="action-btn-icon">U</span></button>
+                                <button class="btn btn-sm" onclick="showFollowupModal(${lead.id})" title="Follow-up"><span class="action-btn-icon">D</span></button>
+                                <button class="btn btn-sm btn-lead-delete" onclick="deleteLead(${lead.id})" title="Excluir">✕</button>
                             </td>
                         </tr>`;
                     }).join('');
@@ -587,8 +606,28 @@ function viewLead(id) {
     window.location.href = `lead-detail.html?id=${id}`;
 }
 
+async function deleteLead(id) {
+    if (!id || !confirm('Excluir este lead permanentemente? Esta ação não pode ser desfeita.')) return;
+    try {
+        const r = await fetch(`/api/leads/${id}`, { method: 'DELETE', credentials: 'include' });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || !d.success) {
+            alert(d.error || 'Não foi possível excluir o lead.');
+            return;
+        }
+        if (currentPageName === 'leads' && typeof loadLeads === 'function') loadLeads();
+        else if (currentPageName === 'crm') {
+            if (typeof loadCRMKanban === 'function') loadCRMKanban();
+            else if (typeof loadKanbanBoard === 'function') loadKanbanBoard();
+        }
+    } catch (e) {
+        alert('Erro de rede ao excluir.');
+    }
+}
+
 // Make functions globally available
 window.viewLead = viewLead;
+window.deleteLead = deleteLead;
 
 // Customers
 let customersPage = 1;
