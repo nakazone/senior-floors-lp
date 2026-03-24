@@ -57,9 +57,7 @@
             '&message=' + encodeURIComponent((form.querySelector('[name="message"]') || {}).value || '');
         var url = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
             ? window.SENIOR_FLOORS_FORM_URL
-            : (window.location.hostname === 'lp.senior-floors.com'
-                ? 'https://senior-floors.com/send-lead.php'
-                : (new URL(form.getAttribute('action') || 'send-lead.php', window.location.href).href));
+            : ((window.location.origin || '') + '/api/send-lead');
         var validateZipThenSubmit = function() {
           if (url.indexOf('/api/send-lead') === -1) return Promise.resolve(true);
           var apiBase = url.indexOf('http') === 0
@@ -472,12 +470,9 @@
                     fetchOptions.signal = controller.signal;
                 }
 
-                // Igual ao teste Lead#10: POST para senior-floors.com/send-lead.php
                 const formActionUrl = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
                     ? window.SENIOR_FLOORS_FORM_URL
-                    : (window.location.hostname === 'lp.senior-floors.com'
-                        ? 'https://senior-floors.com/send-lead.php'
-                        : (window.location.origin + '/send-lead.php'));
+                    : ((window.location.origin || '') + '/api/send-lead');
                 const response = await fetch(formActionUrl, fetchOptions);
                 
                 // Clear timeout if request succeeded
@@ -496,9 +491,9 @@
                     console.error('JSON parse error:', e, 'Response:', text);
                     // If response is not JSON, check status
                     if (response.status === 404) {
-                        throw new Error('Form handler not found (404). Please check if send-lead.php is uploaded correctly.');
+                        throw new Error('Form handler not found (404). Check Vercel function /api/send-lead.');
                     } else if (response.status === 500) {
-                        throw new Error('Server error (500). Please check PHP configuration or contact support.');
+                        throw new Error('Server error (500). Check Vercel logs or try again.');
                     } else {
                         throw new Error('Unexpected response from server. Please try again.');
                     }
@@ -557,9 +552,9 @@
                 } else if (error.message.includes('Failed to fetch') || error.message === 'Failed to fetch') {
                     errorMsg = 'Failed to connect to server. Please check your internet connection or call us at (720) 751-9813.';
                 } else if (error.message.includes('404')) {
-                    errorMsg = 'PHP handler not found. Make sure send-lead.php is in the same directory.';
+                    errorMsg = 'Form API not found (404). Check Vercel /api/send-lead.';
                 } else if (error.message.includes('500')) {
-                    errorMsg = 'Server error. Check PHP configuration or contact support.';
+                    errorMsg = 'Server error. Check Vercel logs or try again.';
                 } else if (!errorMsg || errorMsg === 'Failed to fetch') {
                     errorMsg = 'There was an error submitting the form. Please try again.';
                 }
@@ -832,12 +827,9 @@
                     fetchOptions.signal = controller.signal;
                 }
 
-                // Igual ao teste Lead#10: POST para senior-floors.com/send-lead.php
                 const formActionUrlContact = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
                     ? window.SENIOR_FLOORS_FORM_URL
-                    : (window.location.hostname === 'lp.senior-floors.com'
-                        ? 'https://senior-floors.com/send-lead.php'
-                        : (window.location.origin + '/send-lead.php'));
+                    : ((window.location.origin || '') + '/api/send-lead');
                 const response = await fetch(formActionUrlContact, fetchOptions);
                 
                 // Clear timeout if request succeeded
@@ -856,9 +848,9 @@
                     console.error('JSON parse error:', e, 'Response:', text);
                     // If response is not JSON, check status
                     if (response.status === 404) {
-                        throw new Error('Form handler not found (404). Please check if send-lead.php is uploaded correctly.');
+                        throw new Error('Form handler not found (404). Check Vercel function /api/send-lead.');
                     } else if (response.status === 500) {
-                        throw new Error('Server error (500). Please check PHP configuration or contact support.');
+                        throw new Error('Server error (500). Check Vercel logs or try again.');
                     } else {
                         throw new Error('Unexpected response from server. Please try again.');
                     }
@@ -918,9 +910,9 @@
                 } else if (error.message.includes('Failed to fetch') || error.message === 'Failed to fetch') {
                     errorMsg = 'Failed to connect to server. Please check your internet connection or call us at (720) 751-9813.';
                 } else if (error.message.includes('404')) {
-                    errorMsg = 'PHP handler not found. Make sure send-lead.php is in the same directory.';
+                    errorMsg = 'Form API not found (404). Check Vercel /api/send-lead.';
                 } else if (error.message.includes('500')) {
-                    errorMsg = 'Server error. Check PHP configuration or contact support.';
+                    errorMsg = 'Server error. Check Vercel logs or try again.';
                 } else if (!errorMsg || errorMsg === 'Failed to fetch') {
                     errorMsg = 'There was an error submitting the form. Please try again.';
                 }

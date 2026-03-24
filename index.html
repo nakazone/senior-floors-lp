@@ -18,29 +18,28 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Form URL: Vercel API. Se der "Failed to fetch", defina SENIOR_FLOORS_LP_API_BASE com a URL exata do deploy (Vercel → Project → Domains). -->
+    <!-- LP e site na Vercel; CRM no Railway. send-lead (Vercel) usa SYSTEM_API_URL para POST /api/receive-lead no Railway. -->
     <script>
     (function() {
       var h = (window.location.hostname || '').toLowerCase();
-      var apiBase = typeof window.SENIOR_FLOORS_LP_API_BASE === 'string' && window.SENIOR_FLOORS_LP_API_BASE.trim()
+      var explicitBase = typeof window.SENIOR_FLOORS_LP_API_BASE === 'string' && window.SENIOR_FLOORS_LP_API_BASE.trim()
         ? window.SENIOR_FLOORS_LP_API_BASE.replace(/\/$/, '')
-        : 'https://senior-floors-lp.vercel.app';
-      /** Fallback no browser se send-lead responder OK mas não gravar no CRM (Vercel não tem /api/receive-lead). Opcional: window.SENIOR_FLOORS_SYSTEM_RECEIVE_URL = base do Railway (sem path) ou URL completa terminando em /api/receive-lead */
+        : '';
+      var isLocal = h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || !h;
+      var devRemoteBase = 'https://senior-floors-lp.vercel.app';
+      /** Fallback no browser se send-lead OK mas CRM não gravou. Opcional: SENIOR_FLOORS_SYSTEM_RECEIVE_URL = base Railway ou URL com /api/receive-lead */
       var sysRecv = (typeof window.SENIOR_FLOORS_SYSTEM_RECEIVE_URL === 'string' && window.SENIOR_FLOORS_SYSTEM_RECEIVE_URL.trim())
         ? window.SENIOR_FLOORS_SYSTEM_RECEIVE_URL.trim().replace(/\/$/, '')
         : 'https://senior-floors-system-production.up.railway.app';
       var railwayReceiveLead = sysRecv.indexOf('/api/receive-lead') !== -1 ? sysRecv : sysRecv + '/api/receive-lead';
-      if (h.includes('vercel.app') || h.includes('vercel.sh')) {
-        window.SENIOR_FLOORS_FORM_URL = '/api/send-lead';
-        window.SENIOR_FLOORS_RECEIVE_LEAD_URL = railwayReceiveLead;
-      } else if (h === 'senior-floors.com' || h === 'www.senior-floors.com') {
-        /* Domínio principal: enviar pela Vercel (SYSTEM_API_URL grava no Railway). PHP no Hostinger não é usado. */
-        window.SENIOR_FLOORS_FORM_URL = apiBase + '/api/send-lead';
-        window.SENIOR_FLOORS_RECEIVE_LEAD_URL = railwayReceiveLead;
+      if (explicitBase) {
+        window.SENIOR_FLOORS_FORM_URL = explicitBase + '/api/send-lead';
+      } else if (isLocal) {
+        window.SENIOR_FLOORS_FORM_URL = devRemoteBase + '/api/send-lead';
       } else {
-        window.SENIOR_FLOORS_FORM_URL = apiBase + '/api/send-lead';
-        window.SENIOR_FLOORS_RECEIVE_LEAD_URL = railwayReceiveLead;
+        window.SENIOR_FLOORS_FORM_URL = '/api/send-lead';
       }
+      window.SENIOR_FLOORS_RECEIVE_LEAD_URL = railwayReceiveLead;
     })();
     </script>
     <!-- Meta Pixel Code -->
@@ -138,7 +137,7 @@
                         <strong>Submitted successfully!</strong> Thank you. We'll contact you within 24 hours.
                     </div>
                     <div class="error-message-general" id="heroErrorMessage"></div>
-                    <form class="hero-form" id="heroForm" name="hero-form" method="POST" action="https://senior-floors-lp.vercel.app/api/send-lead" novalidate aria-label="Quick estimate form" onsubmit="if(typeof window.fbq==='function'){try{window.fbq('track','Lead');}catch(e){}} if(window.submitLPForm){window.submitLPForm(event);} return false;">
+                    <form class="hero-form" id="heroForm" name="hero-form" method="POST" action="/api/send-lead" novalidate aria-label="Quick estimate form" onsubmit="if(typeof window.fbq==='function'){try{window.fbq('track','Lead');}catch(e){}} if(window.submitLPForm){window.submitLPForm(event);} return false;">
                         <input type="hidden" name="form-name" value="hero-form">
                         <h2 class="hero-form-title">Get Your Free In-Home Flooring Estimate</h2>
                         <p class="hero-form-subtitle">Schedule your free consultation today. We'll visit your Denver home within 24 hours to provide a detailed, no-obligation estimate.</p>
@@ -406,7 +405,7 @@
                         <strong>Submitted successfully!</strong> Thank you. We'll contact you within 24 hours.
                     </div>
                     <div class="error-message-general" id="contactErrorMessage"></div>
-                    <form class="contact-form" id="contactForm" name="contact-form" method="POST" action="https://senior-floors-lp.vercel.app/api/send-lead" novalidate aria-label="Contact form" onsubmit="if(typeof window.fbq==='function'){try{window.fbq('track','Lead');}catch(e){}} if(window.submitLPForm){window.submitLPForm(event);} return false;">
+                    <form class="contact-form" id="contactForm" name="contact-form" method="POST" action="/api/send-lead" novalidate aria-label="Contact form" onsubmit="if(typeof window.fbq==='function'){try{window.fbq('track','Lead');}catch(e){}} if(window.submitLPForm){window.submitLPForm(event);} return false;">
                         <input type="hidden" name="form-name" value="contact-form">
                         <h3 class="form-title">Get Your Free Flooring Estimate</h3>
                         <p class="form-subtitle">Fill out the form below and we'll contact you within 24 hours</p>
