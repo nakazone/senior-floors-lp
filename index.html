@@ -25,15 +25,21 @@
       var apiBase = typeof window.SENIOR_FLOORS_LP_API_BASE === 'string' && window.SENIOR_FLOORS_LP_API_BASE.trim()
         ? window.SENIOR_FLOORS_LP_API_BASE.replace(/\/$/, '')
         : 'https://senior-floors-lp.vercel.app';
+      /** Fallback no browser se send-lead responder OK mas não gravar no CRM (Vercel não tem /api/receive-lead). Opcional: window.SENIOR_FLOORS_SYSTEM_RECEIVE_URL = base do Railway (sem path) ou URL completa terminando em /api/receive-lead */
+      var sysRecv = (typeof window.SENIOR_FLOORS_SYSTEM_RECEIVE_URL === 'string' && window.SENIOR_FLOORS_SYSTEM_RECEIVE_URL.trim())
+        ? window.SENIOR_FLOORS_SYSTEM_RECEIVE_URL.trim().replace(/\/$/, '')
+        : 'https://senior-floors-system-production.up.railway.app';
+      var railwayReceiveLead = sysRecv.indexOf('/api/receive-lead') !== -1 ? sysRecv : sysRecv + '/api/receive-lead';
       if (h.includes('vercel.app') || h.includes('vercel.sh')) {
         window.SENIOR_FLOORS_FORM_URL = '/api/send-lead';
-        window.SENIOR_FLOORS_RECEIVE_LEAD_URL = '/api/receive-lead';
+        window.SENIOR_FLOORS_RECEIVE_LEAD_URL = railwayReceiveLead;
       } else if (h === 'senior-floors.com' || h === 'www.senior-floors.com') {
-        window.SENIOR_FLOORS_FORM_URL = 'https://senior-floors.com/send-lead.php';
-        window.SENIOR_FLOORS_RECEIVE_LEAD_URL = 'https://senior-floors.com/system.php?api=receive-lead';
+        /* Domínio principal: enviar pela Vercel (SYSTEM_API_URL grava no Railway). PHP no Hostinger não é usado. */
+        window.SENIOR_FLOORS_FORM_URL = apiBase + '/api/send-lead';
+        window.SENIOR_FLOORS_RECEIVE_LEAD_URL = railwayReceiveLead;
       } else {
         window.SENIOR_FLOORS_FORM_URL = apiBase + '/api/send-lead';
-        window.SENIOR_FLOORS_RECEIVE_LEAD_URL = apiBase + '/api/receive-lead';
+        window.SENIOR_FLOORS_RECEIVE_LEAD_URL = railwayReceiveLead;
       }
     })();
     </script>
@@ -132,7 +138,7 @@
                         <strong>Submitted successfully!</strong> Thank you. We'll contact you within 24 hours.
                     </div>
                     <div class="error-message-general" id="heroErrorMessage"></div>
-                    <form class="hero-form" id="heroForm" name="hero-form" method="POST" action="https://senior-floors.com/send-lead.php" novalidate aria-label="Quick estimate form" onsubmit="if(typeof window.fbq==='function'){try{window.fbq('track','Lead');}catch(e){}} if(window.submitLPForm){window.submitLPForm(event);} return false;">
+                    <form class="hero-form" id="heroForm" name="hero-form" method="POST" action="https://senior-floors-lp.vercel.app/api/send-lead" novalidate aria-label="Quick estimate form" onsubmit="if(typeof window.fbq==='function'){try{window.fbq('track','Lead');}catch(e){}} if(window.submitLPForm){window.submitLPForm(event);} return false;">
                         <input type="hidden" name="form-name" value="hero-form">
                         <h2 class="hero-form-title">Get Your Free In-Home Flooring Estimate</h2>
                         <p class="hero-form-subtitle">Schedule your free consultation today. We'll visit your Denver home within 24 hours to provide a detailed, no-obligation estimate.</p>
@@ -400,7 +406,7 @@
                         <strong>Submitted successfully!</strong> Thank you. We'll contact you within 24 hours.
                     </div>
                     <div class="error-message-general" id="contactErrorMessage"></div>
-                    <form class="contact-form" id="contactForm" name="contact-form" method="POST" action="https://senior-floors.com/send-lead.php" novalidate aria-label="Contact form" onsubmit="if(typeof window.fbq==='function'){try{window.fbq('track','Lead');}catch(e){}} if(window.submitLPForm){window.submitLPForm(event);} return false;">
+                    <form class="contact-form" id="contactForm" name="contact-form" method="POST" action="https://senior-floors-lp.vercel.app/api/send-lead" novalidate aria-label="Contact form" onsubmit="if(typeof window.fbq==='function'){try{window.fbq('track','Lead');}catch(e){}} if(window.submitLPForm){window.submitLPForm(event);} return false;">
                         <input type="hidden" name="form-name" value="contact-form">
                         <h3 class="form-title">Get Your Free Flooring Estimate</h3>
                         <p class="form-subtitle">Fill out the form below and we'll contact you within 24 hours</p>
