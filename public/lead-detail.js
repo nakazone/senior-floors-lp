@@ -51,8 +51,6 @@ window.addEventListener('DOMContentLoaded', () => {
     // Score automático da qualificação
     attachQualificationScoreListeners();
 
-    wireVisitScheduleHalfHourInputs_();
-
     // Menu lateral fixo: toggle mobile
     const sidebar = document.getElementById('dashboardSidebar');
     const overlay = document.getElementById('mobileOverlay');
@@ -60,27 +58,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (menuBtn && sidebar && overlay) {
         menuBtn.addEventListener('click', () => { sidebar.classList.toggle('mobile-open'); overlay.classList.toggle('active'); });
         overlay.addEventListener('click', () => { sidebar.classList.remove('mobile-open'); overlay.classList.remove('active'); });
-    }
-
-    const delBtn = document.getElementById('deleteLeadBtn');
-    if (delBtn) {
-        delBtn.addEventListener('click', async () => {
-            if (!currentLeadId || !confirm('Excluir este lead permanentemente? Esta ação não pode ser desfeita.')) return;
-            delBtn.disabled = true;
-            try {
-                const r = await fetch(`/api/leads/${currentLeadId}`, { method: 'DELETE', credentials: 'include' });
-                const d = await r.json().catch(() => ({}));
-                if (!r.ok || !d.success) {
-                    alert(d.error || 'Não foi possível excluir o lead.');
-                    delBtn.disabled = false;
-                    return;
-                }
-                window.location.href = 'dashboard.html?page=leads';
-            } catch (e) {
-                alert('Erro de rede ao excluir.');
-                delBtn.disabled = false;
-            }
-        });
     }
 });
 
@@ -467,59 +444,40 @@ async function saveQualification() {
 }
 
 async function loadInteractions() {
-    const list = document.getElementById('interactionsList');
-    if (!list) return;
     try {
         const response = await fetch(`/api/leads/${currentLeadId}/interactions`, { credentials: 'include' });
-        let data;
-        try {
-            data = await response.json();
-        } catch (_) {
-            list.innerHTML = '<li class="empty-state">Resposta inválida do servidor (status ' + response.status + ').</li>';
-            return;
-        }
-        if (!data.success) {
-            var msg = (data.error || 'Erro ao carregar interações.');
-            if (response.status === 401) msg = 'Sessão expirada. Faça login novamente.';
-            list.innerHTML = '<li class="empty-state">' + escapeHtml(msg) + '</li>';
-            return;
-        }
-        const items = data.data || [];
-        if (items.length > 0) {
-            list.innerHTML = items.map(interaction => {
-                const dateStr = interaction.created_at ? new Date(interaction.created_at).toLocaleString() : '-';
-                const typeLabel = getInteractionTypeLabel(interaction.type);
-                const notes = interaction.notes ? String(interaction.notes) : '';
-                const subject = interaction.subject ? String(interaction.subject) : '';
-                const userName = interaction.user_name ? String(interaction.user_name) : '';
-                return `<li class="timeline-item">
+        const data = await response.json();
+        
+        const list = document.getElementById('interactionsList');
+        if (data.success && data.data && data.data.length > 0) {
+            list.innerHTML = data.data.map(interaction => `
+                <li class="timeline-item">
                     <div class="timeline-item-header">
-                        <span class="timeline-item-title">${typeLabel}</span>
-                        <span class="timeline-item-date">${dateStr}</span>
+                        <span class="timeline-item-title">${getInteractionTypeLabel(interaction.type)}</span>
+                        <span class="timeline-item-date">${new Date(interaction.created_at).toLocaleString()}</span>
                     </div>
                     <div class="timeline-item-content">
-                        ${subject ? `<strong>${escapeHtml(subject)}</strong><br>` : ''}
-                        ${escapeHtml(notes)}
-                        ${userName ? `<br><small>Por: ${escapeHtml(userName)}</small>` : ''}
+                        ${interaction.subject ? `<strong>${interaction.subject}</strong><br>` : ''}
+                        ${interaction.notes || ''}
+                        ${interaction.user_name ? `<br><small>Por: ${interaction.user_name}</small>` : ''}
                     </div>
-                </li>`;
-            }).join('');
+                </li>
+            `).join('');
         } else {
             list.innerHTML = '<li class="empty-state">Nenhuma interação registrada ainda.</li>';
         }
     } catch (error) {
         console.error('Error loading interactions:', error);
-        list.innerHTML = '<li class="empty-state">Erro ao carregar interações. ' + escapeHtml(error.message || '') + '</li>';
     }
 }
 
 function getInteractionTypeLabel(type) {
     const labels = {
-        'call': 'Chamada',
-        'whatsapp': 'WhatsApp',
-        'email': 'Email',
-        'visit': 'Visita',
-        'meeting': 'Reunião'
+        'call': '📞 Chamada',
+        'whatsapp': '💬 WhatsApp',
+        'email': '📧 Email',
+        'visit': '🏠 Visita',
+        'meeting': '🤝 Reunião'
     };
     return labels[type] || type;
 }
@@ -620,59 +578,25 @@ function submitFollowupForm(e) {
     return false;
 }
 
-function getVisitStatusLabel(status) {
-    const labels = { scheduled: 'Agendada', confirmed: 'Confirmada', completed: 'Realizada', cancelled: 'Cancelada', no_show: 'Não compareceu' };
-    return labels[status] || status || 'Agendada';
-}
-
 async function loadVisits() {
-    const container = document.getElementById('visitsList');
-    if (!container) return;
     try {
         const response = await fetch(`/api/visits?lead_id=${currentLeadId}`, { credentials: 'include' });
-        let data;
-        try {
-            data = await response.json();
-        } catch (_) {
-            container.innerHTML = '<div class="empty-state">Resposta inválida do servidor (status ' + response.status + ').</div>';
-            return;
-        }
-        if (!data.success) {
-            var msg = (data.error || 'Erro ao carregar visitas.');
-            if (response.status === 401) msg = 'Sessão expirada. Faça login novamente.';
-            container.innerHTML = '<div class="empty-state">' + escapeHtml(msg) + '</div>';
-            return;
-        }
-        const items = data.data || [];
-        if (items.length > 0) {
-            container.innerHTML = items.map(visit => {
-                const dateStr = visit.scheduled_at ? new Date(visit.scheduled_at).toLocaleString() : '-';
-                const address = visit.address ? escapeHtml(visit.address) : '-';
-                const status = getVisitStatusLabel(visit.status);
-                const assigned = visit.assigned_to_name ? escapeHtml(visit.assigned_to_name) : '';
-                const notes = visit.notes ? escapeHtml(String(visit.notes)) : '';
-                const leadName = visit.lead_name ? escapeHtml(visit.lead_name) : (currentLead && currentLead.name ? escapeHtml(currentLead.name) : '');
-                const visitId = visit.id != null ? Number(visit.id) : null;
-                return `<div class="visit-card">
-                    <div class="visit-card-header">
-                        <span class="visit-card-date"><span class="visit-card-date-icon">D</span> ${dateStr}</span>
-                        <span class="visit-card-status visit-status-${(visit.status || 'scheduled')}">${status}</span>
-                    </div>
-                    ${leadName ? `<p class="visit-card-client"><strong>Cliente:</strong> ${leadName}</p>` : ''}
-                    <p class="visit-card-address"><strong>Endereço:</strong> ${address}</p>
-                    ${assigned ? `<p class="visit-card-assigned"><strong>Responsável:</strong> ${assigned}</p>` : ''}
-                    ${notes ? `<p class="visit-card-notes">${notes}</p>` : ''}
-                    <div class="visit-card-actions">
-                        ${visitId ? `<button type="button" class="btn btn-secondary btn-sm" onclick="showEditVisitModal(${visitId})">Editar visita</button>` : ''}
-                    </div>
-                </div>`;
-            }).join('');
+        const data = await response.json();
+        
+        const container = document.getElementById('visitsList');
+        if (data.success && data.data && data.data.length > 0) {
+            container.innerHTML = data.data.map(visit => `
+                <div style="padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;">
+                    <h3>${new Date(visit.scheduled_at).toLocaleString()}</h3>
+                    <p><strong>Endereço:</strong> ${visit.address || '-'}</p>
+                    <p><strong>Status:</strong> ${visit.status || 'scheduled'}</p>
+                </div>
+            `).join('');
         } else {
             container.innerHTML = '<div class="empty-state">Nenhuma visita agendada ainda.</div>';
         }
     } catch (error) {
         console.error('Error loading visits:', error);
-        container.innerHTML = '<div class="empty-state">Erro ao carregar visitas. ' + escapeHtml(error.message || '') + '</div>';
     }
 }
 
@@ -737,291 +661,73 @@ function submitInteractionForm(e) {
     return false;
 }
 
-/** Agendamento de visita só em :00 e :30 (datetime-local YYYY-MM-DDTHH:mm). */
-function snapVisitDatetimeLocalToHalfHour_(val) {
-    if (!val || typeof val !== 'string') return val;
-    const parts = val.split('T');
-    if (parts.length !== 2) return val;
-    let datePart = parts[0];
-    const tm = parts[1].match(/^(\d{2}):(\d{2})/);
-    if (!tm) return val;
-    let h = parseInt(tm[1], 10);
-    let min = parseInt(tm[2], 10);
-    if (isNaN(h) || isNaN(min)) return val;
-    if (min >= 45) {
-        h += 1;
-        min = 0;
-    } else if (min >= 15) {
-        min = 30;
-    } else {
-        min = 0;
-    }
-    if (h >= 24) {
-        const d = new Date(datePart + 'T12:00:00');
-        d.setDate(d.getDate() + 1);
-        datePart = d.toISOString().slice(0, 10);
-        h = 0;
-    }
-    return datePart + 'T' + String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
-}
-
-function wireVisitScheduleHalfHourInputs_() {
-    ['visitScheduledAt', 'editVisitScheduledAt'].forEach((id) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.setAttribute('step', '1800');
-        const snap = () => {
-            if (el.value) el.value = snapVisitDatetimeLocalToHalfHour_(el.value);
-        };
-        el.addEventListener('change', snap);
-        el.addEventListener('blur', snap);
-    });
-}
-
 function showNewVisitModal() {
-    const modal = document.getElementById('newVisitModal');
+    var modal = document.getElementById('newVisitModal');
     if (!modal) return;
-    var clientEl = document.getElementById('newVisitClientName');
-    if (clientEl) clientEl.textContent = (currentLead && currentLead.name) ? currentLead.name : '—';
-    const scheduled = document.getElementById('visitScheduledAt');
-    if (scheduled) {
-        const d = new Date();
-        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-        scheduled.value = snapVisitDatetimeLocalToHalfHour_(d.toISOString().slice(0, 16));
+    var dt = document.getElementById('visitScheduledAt');
+    if (dt) {
+        dt.value = '';
+        var now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        dt.min = now.toISOString().slice(0, 16);
     }
-    var addrEl = document.getElementById('visitAddress');
-    if (addrEl) {
-        var addr = (currentLead && (currentLead.address || currentLead.address_line1)) ? (currentLead.address || currentLead.address_line1) : '';
-        if (!addr && currentLead && currentLead.zipcode) addr = 'Zip: ' + currentLead.zipcode;
-        addrEl.value = addr;
-    }
+    document.getElementById('visitAddress').value = '';
     document.getElementById('visitNotes').value = '';
-    loadUsersForVisitSelect();
     modal.classList.add('active');
     modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
 }
 
 function closeVisitModal() {
-    const modal = document.getElementById('newVisitModal');
-    if (modal) {
-        modal.classList.remove('active');
-        modal.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
-    }
-}
-
-function closeEditVisitModal() {
-    const modal = document.getElementById('editVisitModal');
-    if (modal) {
-        modal.classList.remove('active');
-        modal.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
-    }
-}
-
-async function loadUsersForVisitSelect() {
-    const sel = document.getElementById('visitAssignedSelect');
-    if (!sel) return;
-    try {
-        const r = await fetch('/api/users?limit=100', { credentials: 'include' });
-        const d = await r.json();
-        sel.innerHTML = '<option value="">Eu mesmo</option>';
-        if (d.success && d.data && d.data.length) {
-            d.data.forEach(u => {
-                if (!u.id) return;
-                const opt = document.createElement('option');
-                opt.value = u.id;
-                opt.textContent = u.name || u.email || 'User ' + u.id;
-                sel.appendChild(opt);
-            });
-        }
-    } catch (e) { /* ignore */ }
-}
-
-async function loadUsersForEditVisitSelect(selectedUserId) {
-    const sel = document.getElementById('editVisitAssignedSelect');
-    if (!sel) return;
-    try {
-        const r = await fetch('/api/users?limit=100', { credentials: 'include' });
-        const d = await r.json();
-        sel.innerHTML = '<option value="">Eu mesmo</option>';
-        if (d.success && d.data && d.data.length) {
-            d.data.forEach(u => {
-                if (!u.id) return;
-                const opt = document.createElement('option');
-                opt.value = u.id;
-                opt.textContent = u.name || u.email || 'User ' + u.id;
-                if (selectedUserId && String(u.id) === String(selectedUserId)) opt.selected = true;
-                sel.appendChild(opt);
-            });
-        }
-    } catch (e) { /* ignore */ }
-}
-
-function parseAddressForEdit(addressStr) {
-    if (!addressStr || typeof addressStr !== 'string') return { addressLine1: '', addressLine2: '', city: '', zipcode: '' };
-    var s = addressStr.trim();
-    var parts = s.split(',').map(function (p) { return p.trim(); }).filter(Boolean);
-    if (parts.length >= 3) {
-        return { addressLine1: parts[0], addressLine2: parts.slice(1, -2).join(', '), city: parts[parts.length - 2], zipcode: parts[parts.length - 1] || '' };
-    }
-    if (parts.length === 2) return { addressLine1: parts[0], addressLine2: '', city: parts[1], zipcode: '' };
-    if (parts.length === 1) return { addressLine1: parts[0], addressLine2: '', city: '', zipcode: '' };
-    return { addressLine1: s, addressLine2: '', city: '', zipcode: '' };
-}
-
-function setAddressFields(prefix, obj) {
-    var o = obj || {};
-    var line1 = document.getElementById(prefix + 'AddressLine1');
-    var line2 = document.getElementById(prefix + 'AddressLine2');
-    var city = document.getElementById(prefix + 'City');
-    var zip = document.getElementById(prefix + 'ZipCode');
-    if (line1) line1.value = o.addressLine1 || '';
-    if (line2) line2.value = o.addressLine2 || '';
-    if (city) city.value = o.city || '';
-    if (zip) zip.value = o.zipcode || '';
-}
-
-async function showEditVisitModal(visitId) {
-    const modal = document.getElementById('editVisitModal');
+    var modal = document.getElementById('newVisitModal');
     if (!modal) return;
-    var clientEl = document.getElementById('editVisitClientName');
-    if (clientEl) clientEl.textContent = (currentLead && currentLead.name) ? currentLead.name : (currentLeadId ? 'Lead #' + currentLeadId : '—');
-    document.getElementById('editVisitId').value = visitId;
-    try {
-        const response = await fetch('/api/visits/' + visitId, { credentials: 'include' });
-        const data = await response.json();
-        if (!data.success || !data.data) {
-            alert('Não foi possível carregar a visita.');
-            return;
-        }
-        var v = data.data;
-        var scheduledEl = document.getElementById('editVisitScheduledAt');
-        if (scheduledEl && v.scheduled_at) {
-            var d = new Date(v.scheduled_at);
-            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-            scheduledEl.value = snapVisitDatetimeLocalToHalfHour_(d.toISOString().slice(0, 16));
-        }
-        setAddressFields('editVisit', parseAddressForEdit(v.address));
-        document.getElementById('editVisitNotes').value = v.notes || '';
-        document.getElementById('editVisitStatus').value = v.status || 'scheduled';
-        await loadUsersForEditVisitSelect(v.seller_id || v.assigned_to);
-        modal.classList.add('active');
-        modal.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-    } catch (err) {
-        console.error('Error loading visit:', err);
-        alert('Erro ao carregar visita.');
-    }
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
 }
 
-function submitEditVisitForm(e) {
-    e.preventDefault();
-    var visitId = document.getElementById('editVisitId').value;
-    if (!visitId) return false;
-    var editSchedEl = document.getElementById('editVisitScheduledAt');
-    var scheduledAt = snapVisitDatetimeLocalToHalfHour_(editSchedEl.value);
-    if (editSchedEl) editSchedEl.value = scheduledAt;
-    var addressLine1 = (document.getElementById('editVisitAddressLine1') && document.getElementById('editVisitAddressLine1').value) ? document.getElementById('editVisitAddressLine1').value.trim() : '';
-    var addressLine2 = (document.getElementById('editVisitAddressLine2') && document.getElementById('editVisitAddressLine2').value) ? document.getElementById('editVisitAddressLine2').value.trim() : '';
-    var city = (document.getElementById('editVisitCity') && document.getElementById('editVisitCity').value) ? document.getElementById('editVisitCity').value.trim() : '';
-    var zipcode = (document.getElementById('editVisitZipCode') && document.getElementById('editVisitZipCode').value) ? document.getElementById('editVisitZipCode').value.trim() : '';
-    var address = [addressLine1, addressLine2, city, zipcode].filter(Boolean).join(', ');
-    var notes = document.getElementById('editVisitNotes').value.trim() || null;
-    var sellerId = document.getElementById('editVisitAssignedSelect').value || null;
-    var status = document.getElementById('editVisitStatus').value || 'scheduled';
-    if (!scheduledAt || !addressLine1 || !city) {
-        alert('Preencha data/hora, endereço (linha 1) e cidade.');
-        return false;
-    }
-    var btn = document.querySelector('#editVisitForm button[type="submit"]');
-    if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
-    updateVisit(visitId, {
-        scheduled_at: scheduledAt,
-        address: address,
-        notes: notes,
-        seller_id: sellerId ? parseInt(sellerId, 10) : null,
-        status: status
-    }, btn);
-    return false;
-}
-
-async function updateVisit(visitId, payload, submitBtn) {
-    try {
-        const response = await fetch('/api/visits/' + visitId, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(payload)
-        });
-        const data = await response.json();
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Salvar alterações'; }
-        if (data.success) {
-            closeEditVisitModal();
-            await loadVisits();
-        } else {
-            alert('Erro ao salvar: ' + (data.error || 'Desconhecido'));
-        }
-    } catch (error) {
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Salvar alterações'; }
-        console.error('Error updating visit:', error);
-        alert('Erro ao salvar visita.');
-    }
+/** datetime-local (YYYY-MM-DDTHH:mm) → MySQL datetime string */
+function visitDatetimeLocalToSql(val) {
+    if (!val) return null;
+    var s = String(val).trim();
+    if (s.length === 16) s += ':00';
+    return s.replace('T', ' ');
 }
 
 function submitVisitForm(e) {
     e.preventDefault();
-    const schedEl = document.getElementById('visitScheduledAt');
-    const scheduledAt = snapVisitDatetimeLocalToHalfHour_(schedEl.value);
-    if (schedEl) schedEl.value = scheduledAt;
-    const addressLine1 = document.getElementById('visitAddressLine1').value.trim();
-    const addressLine2 = document.getElementById('visitAddressLine2').value.trim();
-    const city = document.getElementById('visitCity').value.trim();
-    const zipcode = document.getElementById('visitZipCode').value.trim();
-    const notes = document.getElementById('visitNotes').value.trim() || null;
-    const sellerId = document.getElementById('visitAssignedSelect').value || null;
-    if (!scheduledAt || !addressLine1 || !city) {
-        alert('Preencha data/hora, Address line 1 e City.');
+    var raw = document.getElementById('visitScheduledAt').value;
+    if (!raw) {
+        alert('Informe a data e hora da visita.');
         return false;
     }
-    var btn = document.querySelector('#newVisitForm button[type="submit"]');
-    if (btn) { btn.disabled = true; btn.textContent = 'Agendando...'; }
-    createVisit({
-        lead_id: parseInt(currentLeadId, 10),
-        scheduled_at: scheduledAt,
-        address_line1: addressLine1,
-        address_line2: addressLine2 || null,
-        city: city,
-        zipcode: zipcode || null,
-        notes: notes,
-        seller_id: sellerId ? parseInt(sellerId, 10) : null
-    }, btn);
-    return false;
-}
-
-async function createVisit(payload, submitBtn) {
-    try {
-        const response = await fetch('/api/visits', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(payload)
+    var scheduled_at = visitDatetimeLocalToSql(raw);
+    var addressRaw = document.getElementById('visitAddress').value.trim();
+    var address = addressRaw || 'A confirmar';
+    var notes = document.getElementById('visitNotes').value.trim() || null;
+    closeVisitModal();
+    fetch('/api/visits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+            lead_id: currentLeadId,
+            scheduled_at: scheduled_at,
+            address: address,
+            notes: notes
+        })
+    })
+        .then(function (r) {
+            return r.json();
+        })
+        .then(function (data) {
+            if (data.success) loadVisits();
+            else alert('Erro ao agendar: ' + (data.error || 'Desconhecido'));
+        })
+        .catch(function () {
+            alert('Erro ao agendar visita');
         });
-        const data = await response.json();
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Agendar visita'; }
-        if (data.success) {
-            closeVisitModal();
-            await loadLead();
-            switchTab('visits');
-        } else {
-            alert('Erro ao agendar visita: ' + (data.error || 'Desconhecido'));
-        }
-    } catch (error) {
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Agendar visita'; }
-        console.error('Error creating visit:', error);
-        alert('Erro ao agendar visita');
-    }
+    return false;
 }
 
 function showNewProposalModal() {
@@ -1039,8 +745,7 @@ async function createInteraction(interaction) {
 
         const data = await response.json();
         if (data.success) {
-            await loadInteractions();
-            switchTab('interactions');
+            loadInteractions();
         } else {
             alert('Erro: ' + (data.error || 'Desconhecido'));
         }
