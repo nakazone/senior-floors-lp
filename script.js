@@ -32,17 +32,11 @@
         var emailVal = (form.querySelector('[name="email"]') || {}).value || '';
         var phoneVal = (form.querySelector('[name="phone"]') || {}).value || '';
         var zipVal = (form.querySelector('[name="zipcode"]') || {}).value || '';
-        var projectTypeVal = (form.querySelector('[name="project_type"]') || {}).value || '';
-        function validationFail(msg) {
-            form.removeAttribute('data-submitting');
-            if (errorEl) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
-        }
-        if (!nameVal || nameVal.trim().length < 2) { validationFail('Name is required.'); return; }
-        if (!/^[^@]+@[^@]+\.[^@]+$/.test((emailVal || '').trim())) { validationFail('Valid email is required.'); return; }
-        if (!phoneVal || phoneVal.replace(/\D/g, '').length < 10) { validationFail('Phone number is required.'); return; }
-        if (!projectTypeVal || !projectTypeVal.trim()) { validationFail('Please select a project type.'); return; }
+        if (!nameVal || nameVal.trim().length < 2) { if (errorEl) { errorEl.textContent = 'Name is required.'; errorEl.style.display = 'block'; } return; }
+        if (!/^[^@]+@[^@]+\.[^@]+$/.test((emailVal || '').trim())) { if (errorEl) { errorEl.textContent = 'Valid email is required.'; errorEl.style.display = 'block'; } return; }
+        if (!phoneVal || phoneVal.replace(/\D/g, '').length < 10) { if (errorEl) { errorEl.textContent = 'Phone number is required.'; errorEl.style.display = 'block'; } return; }
         var zipClean = (zipVal || '').replace(/\D/g, '');
-        if (!zipClean || zipClean.length < 5) { validationFail('Valid 5-digit zip code is required.'); return; }
+        if (!zipClean || zipClean.length < 5) { if (errorEl) { errorEl.textContent = 'Valid 5-digit zip code is required.'; errorEl.style.display = 'block'; } return; }
         if (errorEl) errorEl.style.display = 'none';
         var btn = form.querySelector('button[type="submit"]');
         if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
@@ -52,56 +46,21 @@
             '&name=' + encodeURIComponent(nameVal.trim()) +
             '&email=' + encodeURIComponent(emailVal.trim()) +
             '&phone=' + encodeURIComponent(phoneVal.trim()) +
-            '&project_type=' + encodeURIComponent(projectTypeVal.trim()) +
             '&zipcode=' + encodeURIComponent(zipVal.trim()) +
             '&message=' + encodeURIComponent((form.querySelector('[name="message"]') || {}).value || '');
-        try {
-            var up = new URLSearchParams(window.location.search);
-            ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'utm_adset', 'utm_ad'].forEach(function (k) {
-                var v = up.get(k);
-                if (v) body += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(v);
-            });
-            body += '&landing_page=' + encodeURIComponent((window.location.origin || '') + (window.location.pathname || '') + (window.location.search || ''));
-        } catch (e2) { /* ignore */ }
         var url = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
             ? window.SENIOR_FLOORS_FORM_URL
-            : ((window.location.origin || '') + '/api/send-lead');
-        var validateZipThenSubmit = function() {
-          if (url.indexOf('/api/send-lead') === -1) return Promise.resolve(true);
-          var apiBase = url.indexOf('http') === 0
-            ? url.replace(/\/api\/send-lead.*$/, '')
-            : (window.location.origin || '');
-          var validateUrl = apiBase + '/api/validate-zip?zip=' + encodeURIComponent(zipClean);
-          return fetch(validateUrl, { method: 'GET', headers: { Accept: 'application/json' } })
-            .then(function(r) { return r.json(); })
-            .then(function(d) {
-              if (d && d.ok === true && d.inRange === false) {
-                validationFail(d.message || 'We currently serve only areas within 50 miles of Denver, CO.');
-                if (btn) { btn.disabled = false; btn.textContent = isHero ? 'Get My Free Estimate' : 'Request My Free Estimate Now'; }
-                form.removeAttribute('data-submitting');
-                return false;
-              }
-              return true;
-            })
-            .catch(function() { return true; });
-        };
-        validateZipThenSubmit().then(function(ok) {
-          if (!ok) return undefined;
-          return fetch(url, { method: 'POST', body: body, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' } });
-        })
-            .then(function(r) { if (!r || typeof r.text !== 'function') return { __skip: true }; return r.text().then(function(t) { return { status: r.status, text: t, ok: r.ok }; }); })
+            : (window.location.hostname === 'lp.senior-floors.com'
+                ? 'https://senior-floors.com/send-lead.php'
+                : (new URL(form.getAttribute('action') || 'send-lead.php', window.location.href).href));
+        fetch(url, { method: 'POST', body: body, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' } })
+            .then(function(r) { return r.text().then(function(t) { return { status: r.status, text: t }; }); })
             .then(function(r) {
-                if (r && r.__skip) return;
                 form.removeAttribute('data-submitting');
                 var data = null;
-                try { data = JSON.parse(r.text); } catch (err) {
-                    if (r.status === 404) data = { success: false, message: 'Serviço de envio indisponível. Tente novamente em instantes ou ligue (720) 751-9813.' };
-                    else data = { success: false, message: (r.text && r.text.length < 200) ? r.text : 'Resposta inválida do servidor. Tente novamente.' };
-                }
-                if (!data || typeof data !== 'object') data = { success: false, message: 'Erro ao processar resposta. Tente novamente.' };
-                if (data && !data.success && r.status === 404) { data.message = 'Serviço de envio indisponível. Tente novamente em instantes ou ligue (720) 751-9813.'; }
+                try { data = JSON.parse(r.text); } catch (err) { data = { success: false, message: r.text || 'Invalid response' }; }
                 if (btn) { btn.disabled = false; btn.textContent = isHero ? 'Get My Free Estimate' : 'Request My Free Estimate Now'; }
-                if (data && data.success && successEl) {
+                if (data.success && successEl) {
                     successEl.style.display = 'block';
                     successEl.style.visibility = 'visible';
                     successEl.classList.add('show');
@@ -111,20 +70,22 @@
                     if (data.success && data.system_database_saved === false && typeof window.SENIOR_FLOORS_RECEIVE_LEAD_URL === 'string' && window.SENIOR_FLOORS_RECEIVE_LEAD_URL) {
                         fetch(window.SENIOR_FLOORS_RECEIVE_LEAD_URL, { method: 'POST', body: body, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' } }).catch(function() {});
                     }
-                } else if (errorEl && data) {
+                    var formLabel = isHero ? 'Hero Form' : 'Contact Form';
+                    if (typeof gtag !== 'undefined') {
+                        gtag('event', 'form_submission', { event_category: 'Contact', event_label: formLabel });
+                    }
+                    if (typeof fbq !== 'undefined') {
+                        fbq('track', 'Lead', { content_name: formLabel });
+                    }
+                } else if (errorEl) {
                     errorEl.textContent = data.message || 'Erro ao enviar. Tente novamente.';
                     errorEl.style.display = 'block';
                 }
-                if (data && data.email_error) { console.warn('[LP] Email não enviado:', data.email_error); }
             })
             .catch(function(err) {
                 form.removeAttribute('data-submitting');
                 if (btn) { btn.disabled = false; btn.textContent = isHero ? 'Get My Free Estimate' : 'Request My Free Estimate Now'; }
-                var msg = err.message || 'Connection error. Please try again.';
-                if (msg === 'Failed to fetch' || msg.indexOf('fetch') !== -1) {
-                  msg = 'Falha na conexão com o servidor. Abra F12 → aba Network (Rede), envie o formulário de novo e veja qual requisição falhou (CORS, 404 ou timeout). Se a LP está em outro domínio, defina no HTML: window.SENIOR_FLOORS_LP_API_BASE = \'https://SUA-URL-VERCEL.vercel.app\';';
-                }
-                if (errorEl) { errorEl.textContent = msg; errorEl.style.display = 'block'; }
+                if (errorEl) { errorEl.textContent = err.message || 'Connection error. Please try again.'; errorEl.style.display = 'block'; }
             });
     };
 
@@ -141,8 +102,8 @@
         });
         
         // Hide specific error divs by ID
-        ['hero-nameError', 'hero-phoneError', 'hero-emailError', 'hero-zipcodeError', 'hero-project-typeError',
-         'nameError', 'phoneError', 'emailError', 'zipcodeError', 'project-typeError'].forEach(function(id) {
+        ['hero-nameError', 'hero-phoneError', 'hero-emailError', 'hero-zipcodeError', 
+         'nameError', 'phoneError', 'emailError', 'zipcodeError'].forEach(function(id) {
             const errorDiv = document.getElementById(id);
             if (errorDiv) {
                 errorDiv.classList.remove('show');
@@ -232,50 +193,75 @@
     }
 
     // ============================================
-    // Sticky Mobile CTA - Shows on scroll down
+    // Legacy scroll-triggered sticky CTA (optional; LP uses CSS-only .mobile-sticky-bar)
     // ============================================
     const stickyCta = document.getElementById('stickyCta');
-    let lastScrollY = window.scrollY;
-    let isScrollingDown = false;
+    if (stickyCta) {
+        let lastScrollY = window.scrollY;
+        let isScrollingDown = false;
 
-    function handleStickyCta() {
-        // Only show on mobile devices (viewport width < 1024px)
-        if (window.innerWidth >= 1024) {
-            stickyCta.style.display = 'none';
-            return;
+        function handleStickyCta() {
+            if (window.innerWidth >= 1024) {
+                stickyCta.style.display = 'none';
+                return;
+            }
+
+            const currentScrollY = window.scrollY;
+            const scrollThreshold = 300;
+
+            isScrollingDown = currentScrollY > lastScrollY;
+            lastScrollY = currentScrollY;
+
+            if (currentScrollY > scrollThreshold && isScrollingDown) {
+                stickyCta.style.display = 'flex';
+            } else if (currentScrollY < scrollThreshold) {
+                stickyCta.style.display = 'none';
+            }
         }
 
-        const currentScrollY = window.scrollY;
-        const scrollThreshold = 300; // Show after scrolling 300px
+        let scrollTimeout;
+        window.addEventListener('scroll', function() {
+            if (scrollTimeout) {
+                window.cancelAnimationFrame(scrollTimeout);
+            }
+            scrollTimeout = window.requestAnimationFrame(handleStickyCta);
+        });
 
-        // Determine scroll direction
-        isScrollingDown = currentScrollY > lastScrollY;
-        lastScrollY = currentScrollY;
+        window.addEventListener('resize', function() {
+            handleStickyCta();
+        });
 
-        // Show sticky CTA when scrolled down past threshold
-        if (currentScrollY > scrollThreshold && isScrollingDown) {
-            stickyCta.style.display = 'flex';
-        } else if (currentScrollY < scrollThreshold) {
-            stickyCta.style.display = 'none';
-        }
+        handleStickyCta();
     }
 
-    // Throttle scroll events for performance
-    let scrollTimeout;
-    window.addEventListener('scroll', function() {
-        if (scrollTimeout) {
-            window.cancelAnimationFrame(scrollTimeout);
-        }
-        scrollTimeout = window.requestAnimationFrame(handleStickyCta);
-    });
-
-    // Handle window resize
-    window.addEventListener('resize', function() {
-        handleStickyCta();
-    });
-
-    // Initial check
-    handleStickyCta();
+    // Mobile sticky bar: conversion tracking (tel + estimate)
+    const mobileStickyBar = document.getElementById('mobileStickyBar');
+    if (mobileStickyBar) {
+        mobileStickyBar.querySelectorAll('a').forEach(function(link) {
+            link.addEventListener('click', function() {
+                var href = (this.getAttribute('href') || '');
+                if (href.indexOf('tel:') === 0) {
+                    if (typeof gtag !== 'undefined') {
+                        gtag('event', 'phone_click', {
+                            event_category: 'Contact',
+                            event_label: 'Mobile sticky bar — Call Now'
+                        });
+                    }
+                    if (typeof fbq !== 'undefined') {
+                        fbq('track', 'Contact', { content_name: 'Mobile sticky Call Now' });
+                    }
+                } else {
+                    if (typeof gtag !== 'undefined') {
+                        gtag('event', 'cta_click', {
+                            event_category: 'Engagement',
+                            event_label: 'Mobile sticky bar — Get Free Estimate',
+                            value: 1
+                        });
+                    }
+                }
+            });
+        });
+    }
 
     // ============================================
     // Smooth Scroll for Anchor Links
@@ -302,7 +288,6 @@
                     behavior: 'smooth'
                 });
 
-                // Hide sticky CTA when navigating to contact form
                 if (href === '#contact' && stickyCta) {
                     stickyCta.style.display = 'none';
                 }
@@ -340,7 +325,7 @@
         });
         
         // Also hide specific error divs by ID
-        ['hero-nameError', 'hero-phoneError', 'hero-emailError', 'hero-zipcodeError', 'hero-project-typeError'].forEach(id => {
+        ['hero-nameError', 'hero-phoneError', 'hero-emailError', 'hero-zipcodeError'].forEach(id => {
             const errorDiv = document.getElementById(id);
             if (errorDiv) {
                 errorDiv.classList.remove('show');
@@ -361,14 +346,6 @@
                 }
             });
         });
-        const heroProjectTypeSelect = document.getElementById('hero-project-type');
-        if (heroProjectTypeSelect) {
-            heroProjectTypeSelect.addEventListener('change', () => {
-                heroProjectTypeSelect.classList.remove('error');
-                const errorDiv = document.getElementById('hero-project-typeError');
-                if (errorDiv) errorDiv.classList.remove('show');
-            });
-        }
 
         // Handle form submission — idêntico ao Contact: sempre delega para submitLPForm com o form correto
         const handleFormSubmit = async (e) => {
@@ -387,12 +364,10 @@
             const emailInput = document.getElementById('hero-email');
             const phoneInput = document.getElementById('hero-phone');
             const zipcodeInput = document.getElementById('hero-zipcode');
-            const projectTypeSelect = document.getElementById('hero-project-type');
             const name = (nameInput ? nameInput.value : '').trim();
             const email = (emailInput ? emailInput.value : '').trim();
             const phone = (phoneInput ? phoneInput.value : '').trim();
             const zipcode = (zipcodeInput ? zipcodeInput.value : '').trim();
-            const projectType = (projectTypeSelect ? projectTypeSelect.value : '').trim();
 
             // Validate
             let hasErrors = false;
@@ -418,14 +393,6 @@
             if (!phone || phone.replace(/\D/g, '').length < 10) {
                 if (phoneInput) phoneInput.classList.add('error');
                 const errorDiv = document.getElementById('hero-phoneError');
-                if (errorDiv) errorDiv.classList.add('show');
-                hasErrors = true;
-            }
-
-            // Project type validation
-            if (!projectType) {
-                if (projectTypeSelect) projectTypeSelect.classList.add('error');
-                const errorDiv = document.getElementById('hero-project-typeError');
                 if (errorDiv) errorDiv.classList.add('show');
                 hasErrors = true;
             }
@@ -478,9 +445,12 @@
                     fetchOptions.signal = controller.signal;
                 }
 
+                // Igual ao teste Lead#10: POST para senior-floors.com/send-lead.php
                 const formActionUrl = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
                     ? window.SENIOR_FLOORS_FORM_URL
-                    : ((window.location.origin || '') + '/api/send-lead');
+                    : (window.location.hostname === 'lp.senior-floors.com'
+                        ? 'https://senior-floors.com/send-lead.php'
+                        : (window.location.origin + '/send-lead.php'));
                 const response = await fetch(formActionUrl, fetchOptions);
                 
                 // Clear timeout if request succeeded
@@ -499,9 +469,9 @@
                     console.error('JSON parse error:', e, 'Response:', text);
                     // If response is not JSON, check status
                     if (response.status === 404) {
-                        throw new Error('Form handler not found (404). Check Vercel function /api/send-lead.');
+                        throw new Error('Form handler not found (404). Please check if send-lead.php is uploaded correctly.');
                     } else if (response.status === 500) {
-                        throw new Error('Server error (500). Check Vercel logs or try again.');
+                        throw new Error('Server error (500). Please check PHP configuration or contact support.');
                     } else {
                         throw new Error('Unexpected response from server. Please try again.');
                     }
@@ -560,9 +530,9 @@
                 } else if (error.message.includes('Failed to fetch') || error.message === 'Failed to fetch') {
                     errorMsg = 'Failed to connect to server. Please check your internet connection or call us at (720) 751-9813.';
                 } else if (error.message.includes('404')) {
-                    errorMsg = 'Form API not found (404). Check Vercel /api/send-lead.';
+                    errorMsg = 'PHP handler not found. Make sure send-lead.php is in the same directory.';
                 } else if (error.message.includes('500')) {
-                    errorMsg = 'Server error. Check Vercel logs or try again.';
+                    errorMsg = 'Server error. Check PHP configuration or contact support.';
                 } else if (!errorMsg || errorMsg === 'Failed to fetch') {
                     errorMsg = 'There was an error submitting the form. Please try again.';
                 }
@@ -612,52 +582,6 @@
     }
 
     // ============================================
-    // ZIP Code availability check (before submit)
-    // ============================================
-    function runZipCheck(zipInput, resultEl, checkBtn) {
-        var zip = (zipInput && zipInput.value || '').replace(/\D/g, '').slice(0, 5);
-        if (zip.length < 5) {
-            if (resultEl) { resultEl.style.display = 'none'; resultEl.textContent = ''; resultEl.className = 'zip-check-result'; }
-            return;
-        }
-        if (checkBtn) checkBtn.disabled = true;
-        if (resultEl) { resultEl.style.display = 'block'; resultEl.textContent = 'Checking...'; resultEl.className = 'zip-check-result'; }
-        var url = (window.location.origin || '') + '/api/validate-zip?zip=' + encodeURIComponent(zip);
-        fetch(url, { method: 'GET', headers: { Accept: 'application/json' } })
-            .then(function(r) { return r.json(); })
-            .then(function(d) {
-                if (resultEl) {
-                    resultEl.style.display = 'block';
-                    if (d && d.ok === true && d.inRange === true) {
-                        resultEl.textContent = '\u2705 Great news! We serve your area.';
-                        resultEl.className = 'zip-check-result success';
-                    } else {
-                        resultEl.textContent = '\u274C Sorry, we don\'t currently serve this ZIP Code.';
-                        resultEl.className = 'zip-check-result error';
-                    }
-                }
-            })
-            .catch(function() {
-                if (resultEl) { resultEl.style.display = 'block'; resultEl.textContent = '\u274C Sorry, we couldn\'t check this ZIP. Try again.'; resultEl.className = 'zip-check-result error'; }
-            })
-            .then(function() { if (checkBtn) checkBtn.disabled = false; });
-    }
-    var heroZipInput = document.getElementById('hero-zipcode');
-    var heroZipResult = document.getElementById('heroZipCheckResult');
-    var heroZipCheckBtn = document.getElementById('heroZipCheckBtn');
-    if (heroZipCheckBtn && heroZipInput) {
-        heroZipCheckBtn.addEventListener('click', function() { runZipCheck(heroZipInput, heroZipResult, heroZipCheckBtn); });
-        heroZipInput.addEventListener('blur', function() { if ((heroZipInput.value || '').replace(/\D/g, '').length === 5) runZipCheck(heroZipInput, heroZipResult, heroZipCheckBtn); });
-    }
-    var contactZipInput = document.getElementById('zipcode');
-    var contactZipResult = document.getElementById('contactZipCheckResult');
-    var contactZipCheckBtn = document.getElementById('contactZipCheckBtn');
-    if (contactZipCheckBtn && contactZipInput) {
-        contactZipCheckBtn.addEventListener('click', function() { runZipCheck(contactZipInput, contactZipResult, contactZipCheckBtn); });
-        contactZipInput.addEventListener('blur', function() { if ((contactZipInput.value || '').replace(/\D/g, '').length === 5) runZipCheck(contactZipInput, contactZipResult, contactZipCheckBtn); });
-    }
-
-    // ============================================
     // Contact Form Handling — mesmo fluxo do Hero Form
     // ============================================
     const contactForm = document.getElementById('contactForm');
@@ -685,7 +609,7 @@
             errorMsg.style.visibility = 'hidden';
             errorMsg.style.opacity = '0';
         });
-        ['nameError', 'phoneError', 'emailError', 'zipcodeError', 'project-typeError'].forEach(function(id) {
+        ['nameError', 'phoneError', 'emailError', 'zipcodeError'].forEach(function(id) {
             var errorDiv = document.getElementById(id);
             if (errorDiv) {
                 errorDiv.classList.remove('show');
@@ -714,14 +638,6 @@
                 if (this.value !== v) this.value = v;
             });
         }
-        const contactProjectTypeSelect = document.getElementById('project-type');
-        if (contactProjectTypeSelect) {
-            contactProjectTypeSelect.addEventListener('change', function() {
-                contactProjectTypeSelect.classList.remove('error');
-                var errorDiv = document.getElementById('project-typeError');
-                if (errorDiv) errorDiv.classList.remove('show');
-            });
-        }
 
         // Handle contact form submission — idêntico ao Hero: sempre delega para submitLPForm com o form correto
         const handleContactFormSubmit = async (e) => {
@@ -739,14 +655,12 @@
             const emailInput = document.getElementById('email');
             const phoneInput = document.getElementById('phone');
             const zipcodeInput = document.getElementById('zipcode');
-            const projectTypeSelect = document.getElementById('project-type');
             const name = (nameInput ? nameInput.value : '').trim();
             const email = (emailInput ? emailInput.value : '').trim();
             const phone = (phoneInput ? phoneInput.value : '').trim();
             const zipcode = (zipcodeInput ? zipcodeInput.value : '').trim();
-            const projectType = (projectTypeSelect ? projectTypeSelect.value : '').trim();
             const contactParams = new URLSearchParams();
-            contactForm.querySelectorAll('input, textarea, select').forEach(function(el) {
+            contactForm.querySelectorAll('input, textarea').forEach(function(el) {
                 if (el.name) contactParams.append(el.name, el.value || '');
             });
             if (!contactParams.has('form-name')) contactParams.append('form-name', 'contact-form');
@@ -775,14 +689,6 @@
             if (!phone || phone.replace(/\D/g, '').length < 10) {
                 if (phoneInput) phoneInput.classList.add('error');
                 const errorDiv = document.getElementById('phoneError');
-                if (errorDiv) errorDiv.classList.add('show');
-                hasErrors = true;
-            }
-
-            // Project type validation
-            if (!projectType) {
-                if (projectTypeSelect) projectTypeSelect.classList.add('error');
-                const errorDiv = document.getElementById('project-typeError');
                 if (errorDiv) errorDiv.classList.add('show');
                 hasErrors = true;
             }
@@ -835,9 +741,12 @@
                     fetchOptions.signal = controller.signal;
                 }
 
+                // Igual ao teste Lead#10: POST para senior-floors.com/send-lead.php
                 const formActionUrlContact = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
                     ? window.SENIOR_FLOORS_FORM_URL
-                    : ((window.location.origin || '') + '/api/send-lead');
+                    : (window.location.hostname === 'lp.senior-floors.com'
+                        ? 'https://senior-floors.com/send-lead.php'
+                        : (window.location.origin + '/send-lead.php'));
                 const response = await fetch(formActionUrlContact, fetchOptions);
                 
                 // Clear timeout if request succeeded
@@ -856,9 +765,9 @@
                     console.error('JSON parse error:', e, 'Response:', text);
                     // If response is not JSON, check status
                     if (response.status === 404) {
-                        throw new Error('Form handler not found (404). Check Vercel function /api/send-lead.');
+                        throw new Error('Form handler not found (404). Please check if send-lead.php is uploaded correctly.');
                     } else if (response.status === 500) {
-                        throw new Error('Server error (500). Check Vercel logs or try again.');
+                        throw new Error('Server error (500). Please check PHP configuration or contact support.');
                     } else {
                         throw new Error('Unexpected response from server. Please try again.');
                     }
@@ -918,9 +827,9 @@
                 } else if (error.message.includes('Failed to fetch') || error.message === 'Failed to fetch') {
                     errorMsg = 'Failed to connect to server. Please check your internet connection or call us at (720) 751-9813.';
                 } else if (error.message.includes('404')) {
-                    errorMsg = 'Form API not found (404). Check Vercel /api/send-lead.';
+                    errorMsg = 'PHP handler not found. Make sure send-lead.php is in the same directory.';
                 } else if (error.message.includes('500')) {
-                    errorMsg = 'Server error. Check Vercel logs or try again.';
+                    errorMsg = 'Server error. Check PHP configuration or contact support.';
                 } else if (!errorMsg || errorMsg === 'Failed to fetch') {
                     errorMsg = 'There was an error submitting the form. Please try again.';
                 }
@@ -1176,7 +1085,7 @@
         }, observerOptions);
 
         // Observe cards and sections for fade-in effect
-        const animatedElements = document.querySelectorAll('.service-card, .testimonial-card, .benefit-item, .process-step');
+        const animatedElements = document.querySelectorAll('.service-card, .testimonial-card, .benefit-item, .process-step, .ba-card, .faq-item');
         animatedElements.forEach(el => {
             el.style.opacity = '0';
             el.style.transform = 'translateY(20px)';

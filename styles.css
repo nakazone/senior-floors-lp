@@ -316,7 +316,7 @@ p {
 
 /* Hero Section - Above the fold conversion focus */
 .hero {
-    background-image: url('/assets/background.jpg');
+    background-image: url('assets/background.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -922,6 +922,18 @@ section {
     align-items: stretch;
 }
 
+.contact-gallery-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+    min-width: 0;
+}
+
+.contact .before-after-section {
+    padding: var(--spacing-md) 0;
+    background: transparent;
+}
+
 @media (min-width: 768px) {
     .contact-content-with-gallery {
         grid-template-columns: 1fr 1fr;
@@ -1235,62 +1247,6 @@ section {
 
 .error-message-general.show {
     display: block;
-}
-
-/* ZIP check availability */
-.zip-check-hint {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    margin-bottom: 0.5rem;
-}
-
-.zip-input-row {
-    display: flex;
-    gap: 0.5rem;
-    align-items: stretch;
-}
-
-.zip-input-row input {
-    flex: 1;
-    min-width: 0;
-}
-
-.btn-zip-check {
-    flex-shrink: 0;
-    padding: 0.625rem 1rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    background: var(--primary-color);
-    color: var(--bg-white);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: var(--transition);
-}
-
-.btn-zip-check:hover {
-    background: var(--primary-hover);
-}
-
-.btn-zip-check:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.zip-check-result {
-    margin-top: 0.5rem;
-    padding: 0.5rem 0;
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-.zip-check-result.success {
-    color: var(--success-color);
-}
-
-.zip-check-result.error {
-    color: #dc3545;
 }
 
 /* Final CTA Section */
@@ -1705,7 +1661,7 @@ section {
         margin-top: -60px; /* Offset for fixed header on mobile */
         padding-top: calc(var(--spacing-xl) + 60px); /* Add header height to padding */
         min-height: 100vh;
-        background-image: url('/assets/backgrounMobile.jpg'); /* Use mobile background image */
+        background-image: url('assets/backgrounMobile.jpg'); /* Use mobile background image */
     }
     
     .hero-ctas {
@@ -1813,6 +1769,10 @@ section {
     .process-steps {
         grid-template-columns: repeat(4, 1fr);
     }
+
+    .service-card--featured {
+        grid-column: 1 / -1;
+    }
     
     .sticky-cta {
         display: none; /* Hide on desktop */
@@ -1900,9 +1860,257 @@ select:invalid:not(:focus):not(:placeholder-shown) {
 /* Print styles */
 @media print {
     .sticky-cta,
+    .mobile-sticky-bar,
     .hero-form,
     .final-cta {
         display: none;
     }
 }
+
+/* ============================================
+   LP additions: pricing anchor, before/after, FAQ, mobile bar, featured service
+   ============================================ */
+
+.pricing-anchor {
+    background: #f0f4f8;
+    border-left: 4px solid var(--secondary-color);
+    font-size: 14px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-top: 12px;
+    color: var(--text-dark);
+    line-height: 1.5;
+}
+
+.pricing-anchor p {
+    margin: 0;
+}
+
+.before-after-section {
+    padding: var(--spacing-xl) var(--spacing-sm);
+    background: var(--bg-white);
+}
+
+.before-after-section .section-subtitle {
+    text-align: center;
+    max-width: 640px;
+    margin: 0 auto var(--spacing-md);
+    color: var(--text-light);
+}
+
+.ba-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+.ba-card {
+    background: var(--bg-light);
+    padding: var(--spacing-sm);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+.ba-images {
+    display: flex;
+    gap: 8px;
+}
+
+.ba-side {
+    flex: 1;
+    position: relative;
+}
+
+.ba-side img {
+    width: 100%;
+    border-radius: 8px;
+    display: block;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    background: #e2e8f0;
+}
+
+.ba-label {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    z-index: 1;
+}
+
+.ba-caption {
+    font-size: 13px;
+    color: #666;
+    text-align: center;
+    margin-top: 8px;
+}
+
+.ba-note {
+    font-size: 12px;
+    color: #888;
+    text-align: center;
+    margin-top: 1.5rem;
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+a.cta-button {
+    display: inline-block;
+    margin-top: 0;
+    padding: 1.125rem 2.25rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+    background-color: var(--primary-color);
+    color: var(--bg-white);
+    box-shadow: var(--shadow);
+}
+
+a.cta-button:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    color: var(--bg-white);
+}
+
+.faq-section {
+    padding: var(--spacing-xl) var(--spacing-sm);
+    background: var(--bg-white);
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.faq-section .section-title {
+    text-align: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.faq-item {
+    border-bottom: 1px solid var(--border-color);
+    padding: var(--spacing-md) 0;
+}
+
+.faq-item:last-of-type {
+    border-bottom: none;
+}
+
+.faq-item h3 {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: var(--spacing-xs);
+    color: var(--text-dark);
+}
+
+.faq-item p {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text-light);
+    margin: 0;
+}
+
+.review-count {
+    font-weight: 600;
+}
+
+/* Featured refinishing card vs secondary services */
+.service-card--featured {
+    grid-column: 1 / -1;
+    max-width: 100%;
+    padding: calc(var(--spacing-md) * 1.25);
+    border: 2px solid var(--secondary-color);
+    box-shadow: var(--shadow-lg);
+}
+
+.service-card--featured .service-title {
+    font-size: 1.35rem;
+}
+
+.service-card--featured .service-description {
+    font-size: 1rem;
+    line-height: 1.65;
+}
+
+.service-card--secondary .service-description {
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.service-card--secondary .service-title {
+    font-size: 1rem;
+}
+
+.service-card--secondary .service-icon {
+    width: 56px;
+    height: 56px;
+    padding: 0.65rem;
+}
+
+/* Mobile sticky phone bar (Google Ads LP) */
+.mobile-sticky-bar {
+    display: none;
     position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1001;
+    background: var(--primary-color);
+    padding: 10px 12px;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.25);
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: center;
+    gap: 10px;
+}
+
+.mobile-sticky-bar a {
+    flex: 1;
+    text-align: center;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 10px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.2;
+}
+
+.mobile-sticky-bar a:first-child {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.mobile-sticky-bar a:last-child {
+    background: var(--secondary-color);
+    color: var(--text-dark);
+    border-color: var(--secondary-dark);
+}
+
+@media (max-width: 768px) {
+    .mobile-sticky-bar {
+        display: flex;
+    }
+
+    body {
+        padding-bottom: 64px;
+    }
+}
+
+@media (min-width: 769px) {
+    .mobile-sticky-bar {
+        display: none !important;
+    }
+}

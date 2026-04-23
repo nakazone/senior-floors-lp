@@ -3,65 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Denver's #1 Hardwood Flooring Company | Senior Floors | Free In-Home Estimates | Licensed & Insured | 5-Star Rated | Serving Denver, Cherry Creek, Greenwood Village, Lakewood, Morrison | Hardwood Installation, Refinishing, LVP, Laminate | Call (720) 573-0326">
+    <meta name="description" content="Denver's top-rated hardwood floor sanding & refinishing company. Licensed & insured. Serving Cherry Creek, Greenwood Village, Lakewood, Morrison & all Denver metro. Free in-home estimates. Call (720) 751-9813.">
     <meta name="keywords" content="Denver flooring, hardwood flooring Denver, flooring contractor Denver CO, floor installation Denver, hardwood refinishing Denver, luxury vinyl plank Denver, laminate flooring Denver, flooring company Denver metro, Cherry Creek flooring, Greenwood Village flooring, Lakewood flooring, Morrison flooring, Denver flooring contractor, hardwood floors Denver">
-    <title>Denver Hardwood Flooring Experts | Senior Floors | Free Estimate | (720) 751-9813</title>
+    <title>Denver's #1 Hardwood Floor Sanding & Refinishing Experts | Senior Floors</title>
     
     <!-- Favicon (cache-bust ?v=4 para ícone ao salvar no celular) -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/SeniorFloors.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/assets/SeniorFloors.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/SeniorFloors.png">
-    <link rel="icon" type="image/png" href="/assets/SeniorFloors.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/SeniorFloors.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/SeniorFloors.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/SeniorFloors.png">
+    <link rel="icon" type="image/png" href="assets/SeniorFloors.png">
     
-    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="styles.css">
+    <!--
+      Google Ads / GTM: Paste your full Google Tag Manager snippet (head + body noscript) from
+      tagmanager.google.com before launch. Form submits, tel: clicks, and CTAs already call
+      gtag() / dataLayer when the real tag loads. Shim below prevents errors until then.
+    -->
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    </script>
+    <!-- Meta / Facebook Pixel -->
+    <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '889933396989282');
+    fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=889933396989282&amp;ev=PageView&amp;noscript=1" alt="" /></noscript>
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- LP e site na Vercel; CRM no Railway. send-lead (Vercel) usa SYSTEM_API_URL para POST /api/receive-lead no Railway. -->
+    <!-- Form URL: on Vercel use /api/send-lead (same origin); otherwise use Hostinger backend. -->
     <script>
     (function() {
-      var h = (window.location.hostname || '').toLowerCase();
-      var explicitBase = typeof window.SENIOR_FLOORS_LP_API_BASE === 'string' && window.SENIOR_FLOORS_LP_API_BASE.trim()
-        ? window.SENIOR_FLOORS_LP_API_BASE.replace(/\/$/, '')
-        : '';
-      var isLocal = h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || !h;
-      var devRemoteBase = 'https://senior-floors-lp.vercel.app';
-      /** Fallback no browser se send-lead OK mas CRM não gravou. Opcional: SENIOR_FLOORS_SYSTEM_RECEIVE_URL = base Railway ou URL com /api/receive-lead */
-      var sysRecv = (typeof window.SENIOR_FLOORS_SYSTEM_RECEIVE_URL === 'string' && window.SENIOR_FLOORS_SYSTEM_RECEIVE_URL.trim())
-        ? window.SENIOR_FLOORS_SYSTEM_RECEIVE_URL.trim().replace(/\/$/, '')
-        : 'https://senior-floors-system-production.up.railway.app';
-      var railwayReceiveLead = sysRecv.indexOf('/api/receive-lead') !== -1 ? sysRecv : sysRecv + '/api/receive-lead';
-      if (explicitBase) {
-        window.SENIOR_FLOORS_FORM_URL = explicitBase + '/api/send-lead';
-      } else if (isLocal) {
-        window.SENIOR_FLOORS_FORM_URL = devRemoteBase + '/api/send-lead';
-      } else {
+      var h = window.location.hostname || '';
+      if (h.includes('vercel.app') || h.includes('vercel.sh')) {
         window.SENIOR_FLOORS_FORM_URL = '/api/send-lead';
+        window.SENIOR_FLOORS_RECEIVE_LEAD_URL = '/api/receive-lead';
+      } else {
+        window.SENIOR_FLOORS_FORM_URL = 'https://senior-floors.com/send-lead.php';
+        window.SENIOR_FLOORS_RECEIVE_LEAD_URL = 'https://senior-floors.com/system.php?api=receive-lead';
       }
-      window.SENIOR_FLOORS_RECEIVE_LEAD_URL = railwayReceiveLead;
     })();
     </script>
-    <!-- Meta Pixel Code -->
-    <script>
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '889933396989282', {
-      em: 'contact@senior-floors.com',
-      ph: '7207519813'
-    });
-    fbq('track', 'PageView');
-    </script>
-    <noscript><img height="1" width="1" style="display:none"
-    src="https://www.facebook.com/tr?id=889933396989282&ev=PageView&noscript=1"
-    alt="" /></noscript>
-    <!-- End Meta Pixel Code -->
 </head>
 <body>
     <!-- Header with Navigation -->
@@ -70,7 +59,7 @@
             <div class="header-content">
                 <div class="logo">
                     <a href="#hero" class="logo-link">
-                        <img src="/assets/SeniorFloors.png" alt="Senior Floors" class="logo-image">
+                        <img src="assets/SeniorFloors.png" alt="Senior Floors" class="logo-image">
                     </a>
                 </div>
                 
@@ -106,20 +95,20 @@
                 <div class="hero-text">
                     <!-- Certificate Badge -->
                     <div class="certificate-badge">
-                        <div class="certificate-stars">★★★★★ Google Reviews</div>
-                        <div class="certificate-text">Hardwood Flooring Specialists</div>
+                        <div class="certificate-stars">★★★★★ <span class="review-count">94 Google Reviews</span></div>
+                        <div class="certificate-text">Sanding &amp; Refinishing Specialists</div>
                     </div>
                     <!-- Title -->
                     <h1 class="hero-headline">
-                        Denver's #1 Hardwood Flooring<br>Installation & Refinishing Experts
+                        Denver's #1 Hardwood Floor Sanding &amp; Refinishing Experts
                     </h1>
-                    <p class="hero-subheadline">Transform your Denver home with premium hardwood flooring installation, refinishing, and luxury vinyl plank. Licensed & insured flooring contractors serving Cherry Creek, Greenwood Village, Lakewood, Morrison, and all Denver metro areas. Free in-home estimates. 5-star rated on Google.</p>
+                    <p class="hero-subheadline">Bring your worn, scratched, or dull hardwood floors back to life. Senior Floors specializes in professional hardwood floor sanding and refinishing across Denver, Cherry Creek, Greenwood Village, Lakewood, Morrison, and the entire metro area. Licensed &amp; insured. Free in-home estimates. 5-star rated on Google.</p>
                     
                     <!-- Trust Elements -->
                     <div class="trust-badges" role="list">
-                        <div class="trust-badge" role="listitem">Licensed & Insured</div>
-                        <div class="trust-badge" role="listitem">Premium Materials</div>
-                        <div class="trust-badge" role="listitem">Local Company</div>
+                        <div class="trust-badge" role="listitem">Sanding Specialists</div>
+                        <div class="trust-badge" role="listitem">Licensed &amp; Insured</div>
+                        <div class="trust-badge" role="listitem">Local Denver Company</div>
                     </div>
 
                     <!-- Phone CTA -->
@@ -137,7 +126,7 @@
                         <strong>Submitted successfully!</strong> Thank you. We'll contact you within 24 hours.
                     </div>
                     <div class="error-message-general" id="heroErrorMessage"></div>
-                    <form class="hero-form" id="heroForm" name="hero-form" method="POST" action="/api/send-lead" novalidate aria-label="Quick estimate form" onsubmit="if(typeof window.fbq==='function'){try{window.fbq('track','Lead');}catch(e){}} if(window.submitLPForm){window.submitLPForm(event);} return false;">
+                    <form class="hero-form" id="heroForm" name="hero-form" method="POST" action="https://senior-floors.com/send-lead.php" novalidate aria-label="Quick estimate form" onsubmit="if(window.submitLPForm){window.submitLPForm(event);} return false;">
                         <input type="hidden" name="form-name" value="hero-form">
                         <h2 class="hero-form-title">Get Your Free In-Home Flooring Estimate</h2>
                         <p class="hero-form-subtitle">Schedule your free consultation today. We'll visit your Denver home within 24 hours to provide a detailed, no-obligation estimate.</p>
@@ -158,29 +147,15 @@
                             <div class="error-message" id="hero-emailError">Valid email is required</div>
                         </div>
                         <div class="form-group">
-                            <label for="hero-project-type">Project Type *</label>
-                            <select id="hero-project-type" name="project_type" aria-required="true">
-                                <option value="">Select project type</option>
-                                <option value="Hardwood Installation">Hardwood Installation</option>
-                                <option value="Hardwood Refinishing">Hardwood Refinishing</option>
-                                <option value="LVP / Luxury Vinyl Plank">LVP / Luxury Vinyl Plank</option>
-                                <option value="Laminate">Laminate</option>
-                                <option value="Other">Other</option>
-                            </select>
-                            <div class="error-message" id="hero-project-typeError">Please select a project type</div>
-                        </div>
-                        <div class="form-group">
                             <label for="hero-zipcode">Zip Code *</label>
-                            <p class="zip-check-hint">Enter your ZIP Code to check availability</p>
-                            <div class="zip-input-row">
-                                <input type="text" id="hero-zipcode" name="zipcode" aria-required="true" autocomplete="postal-code" pattern="[0-9]{5}" placeholder="12345" maxlength="5" inputmode="numeric">
-                                <button type="button" class="btn btn-zip-check" id="heroZipCheckBtn" aria-label="Check availability">Check</button>
-                            </div>
-                            <div class="zip-check-result" id="heroZipCheckResult" aria-live="polite" style="display: none;"></div>
+                            <input type="text" id="hero-zipcode" name="zipcode" aria-required="true" autocomplete="postal-code" pattern="[0-9]{5}" placeholder="12345" maxlength="5" inputmode="numeric">
                             <div class="error-message" id="hero-zipcodeError">Please enter a valid 5-digit US zip code</div>
                         </div>
                         <button type="submit" class="btn btn-primary btn-block">Get My Free Estimate</button>
                         <p class="form-disclaimer">✓ No obligation · ✓ Free in-home consultation · ✓ Clear pricing, no hidden fees</p>
+                        <div class="pricing-anchor">
+                            <p>💡 <strong>Typical refinishing projects:</strong> Most Denver homeowners pay between <strong>$3–$6 per sq ft</strong> for professional sanding and refinishing — a 500 sq ft living room typically runs $1,500–$3,000. Pricing varies by floor condition, stain choice, and number of coats. Get your exact quote with a free in-home estimate.</p>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -203,7 +178,7 @@
         <div class="container">
             <div class="rating-header">
                 <div class="rating-stars-minimal">★★★★★</div>
-                <p class="rating-text-minimal">Average rating from verified homeowners</p>
+                <p class="rating-text-minimal"><strong>4.9 / 5</strong> — 94 verified reviews from Denver homeowners</p>
                 <h2 class="section-title">5-Star Rated Flooring Company</h2>
                 <a href="https://share.google/hLQEgyVnPVm99mozg" target="_blank" rel="noopener noreferrer" class="reviews-link">Read all reviews on Google →</a>
             </div>
@@ -233,47 +208,48 @@
             <h2 class="section-title">Denver Flooring Services We Offer</h2>
             <p class="section-subtitle">Complete hardwood flooring solutions for Denver homes — from installation to refinishing to repairs.</p>
             <div class="services-grid">
-                <div class="service-card">
+                <div class="service-card service-card--featured">
                     <div class="service-icon">
-                        <img src="/assets/parquet.png" alt="Hardwood Sanding & Refinishing" loading="lazy">
+                        <img src="assets/parquet.png" alt="Hardwood Sanding &amp; Refinishing" loading="lazy">
                     </div>
-                    <h3 class="service-title">Hardwood Sanding & Refinishing</h3>
-                    <p class="service-description">Renew old floors, fix scratches and stains, apply custom stain and finish that enhances your home's value.</p>
+                    <h3 class="service-title">Hardwood Sanding &amp; Refinishing</h3>
+                    <p class="service-description">Worn, scratched, or faded floors? Our Denver sanding and refinishing team restores your existing hardwood to like-new condition — without the cost of replacement. We sand down to bare wood, apply your choice of stain, and finish with 3 coats of professional-grade polyurethane or oil finish. Most projects completed in 2–3 days.</p>
+                    <p class="service-description" style="margin-top:0.65rem;"><a href="https://senior-floors-website.vercel.app/services/hardwood-refinishing" style="font-weight:600;" rel="noopener">Learn more about refinishing →</a></p>
                 </div>
-                <div class="service-card">
+                <div class="service-card service-card--secondary">
                     <div class="service-icon">
-                        <img src="/assets/hammer.png" alt="Hardwood & Engineered Wood Installation" loading="lazy">
+                        <img src="assets/hammer.png" alt="Hardwood &amp; Engineered Wood Installation" loading="lazy">
                     </div>
-                    <h3 class="service-title">Hardwood & Engineered Wood Installation Denver</h3>
-                    <p class="service-description">Expert hardwood floor installation in Denver homes. We handle subfloor preparation, moisture testing, and precise installation of solid hardwood and engineered wood. Serving all Denver metro neighborhoods with premium materials and professional craftsmanship.</p>
+                    <h3 class="service-title">Hardwood &amp; Engineered Wood Installation Denver</h3>
+                    <p class="service-description">Expert installation, subfloor prep, and moisture testing across the Denver metro.</p>
                 </div>
-                <div class="service-card">
+                <div class="service-card service-card--secondary">
                     <div class="service-icon">
-                        <img src="/assets/laminating.png" alt="Luxury Vinyl Plank (LVP) & Laminate" loading="lazy">
+                        <img src="assets/laminating.png" alt="Luxury Vinyl Plank (LVP) &amp; Laminate" loading="lazy">
                     </div>
-                    <h3 class="service-title">Luxury Vinyl Plank (LVP) & Laminate</h3>
-                    <p class="service-description">Durable, versatile solutions for high-traffic areas with wood-like appearance and easy maintenance.</p>
+                    <h3 class="service-title">Luxury Vinyl Plank (LVP) &amp; Laminate</h3>
+                    <p class="service-description">Durable, wood-look options for high-traffic areas.</p>
                 </div>
-                <div class="service-card">
+                <div class="service-card service-card--secondary">
                     <div class="service-icon">
-                        <img src="/assets/stairs.png" alt="Stairs, Rails & Custom Layouts" loading="lazy">
+                        <img src="assets/stairs.png" alt="Stairs, Rails &amp; Custom Layouts" loading="lazy">
                     </div>
-                    <h3 class="service-title">Stairs, Rails & Custom Flooring Patterns</h3>
-                    <p class="service-description">Custom hardwood stair installation, handrail updates, and specialty patterns (chevron, herringbone, medallions) for luxury Denver homes. Expert craftsmanship for high-end residential projects in Cherry Creek, Greenwood Village, and Morrison.</p>
+                    <h3 class="service-title">Stairs, Rails &amp; Custom Flooring Patterns</h3>
+                    <p class="service-description">Stairs, rails, chevron, herringbone, and specialty layouts for luxury homes.</p>
                 </div>
-                <div class="service-card">
+                <div class="service-card service-card--secondary">
                     <div class="service-icon">
-                        <img src="/assets/tools.png" alt="Repairs & Floor Restoration" loading="lazy">
+                        <img src="assets/tools.png" alt="Repairs &amp; Floor Restoration" loading="lazy">
                     </div>
-                    <h3 class="service-title">Repairs & Floor Restoration</h3>
-                    <p class="service-description">Fix loose pieces, damaged areas, transitions, and leveling to extend the life of your floors.</p>
+                    <h3 class="service-title">Repairs &amp; Floor Restoration</h3>
+                    <p class="service-description">Repairs, transitions, and leveling to extend floor life.</p>
                 </div>
-                <div class="service-card">
+                <div class="service-card service-card--secondary">
                     <div class="service-icon">
-                        <img src="/assets/house.png" alt="Residential & Select Commercial" loading="lazy">
+                        <img src="assets/house.png" alt="Residential &amp; Select Commercial" loading="lazy">
                     </div>
-                    <h3 class="service-title">Residential & Commercial Flooring Denver</h3>
-                    <p class="service-description">Premium flooring installation for Denver residential homes and select commercial spaces. We maintain the same high-quality standards whether you're updating a single-family home in Lakewood or a commercial space in the Denver Tech Center.</p>
+                    <h3 class="service-title">Residential &amp; Commercial Flooring Denver</h3>
+                    <p class="service-description">Residential and select commercial projects with the same quality standards.</p>
                 </div>
             </div>
             <div class="services-cta">
@@ -316,30 +292,65 @@
         </div>
     </section>
 
+    <!-- FAQ: refinishing objections -->
+    <section id="faq" class="faq-section">
+        <h2 class="section-title">Frequently Asked Questions — Hardwood Floor Refinishing Denver</h2>
+
+        <div class="faq-item">
+            <h3>How long does hardwood floor refinishing take?</h3>
+            <p>Most residential projects in Denver take 2–3 days from start to finish. This includes sanding, staining (if desired), and 3 coats of finish with drying time between each coat. We'll give you a precise timeline during your free in-home estimate.</p>
+        </div>
+
+        <div class="faq-item">
+            <h3>Do I need to leave my home during refinishing?</h3>
+            <p>We recommend staying out of the rooms being refinished during the process and for 24 hours after the final coat. For whole-home projects, many customers stay with family or in a hotel for 2–3 nights. We use low-VOC finishes to minimize fumes.</p>
+        </div>
+
+        <div class="faq-item">
+            <h3>How much does hardwood floor refinishing cost in Denver?</h3>
+            <p>Most Denver homeowners pay between $3–$6 per square foot for professional sanding and refinishing. A 500 sq ft living room typically runs $1,500–$3,000. Factors that affect price include floor condition, stain color choice, number of rooms, and finish type. We provide a detailed, no-obligation quote during your free in-home estimate.</p>
+        </div>
+
+        <div class="faq-item">
+            <h3>Can my floors be refinished, or do they need to be replaced?</h3>
+            <p>Most solid hardwood floors can be refinished 5–8 times over their lifetime. Engineered hardwood can typically be refinished 1–3 times depending on the veneer thickness. During our free estimate, we'll inspect your floors and give you an honest assessment — we'll never recommend refinishing if replacement is truly needed.</p>
+        </div>
+
+        <div class="faq-item">
+            <h3>What's the difference between sanding and buffing / screening?</h3>
+            <p>Full sanding removes the top layer of wood to eliminate deep scratches, stains, and wear. Buffing (or screening) is a lighter process that scuffs the existing finish so a new coat can adhere — it's faster and cheaper but only works on lightly worn floors. We'll recommend the right option based on your floor's condition.</p>
+        </div>
+
+        <div class="faq-item">
+            <h3>Do you offer dustless sanding?</h3>
+            <p>Yes. We use dustless sanding equipment that captures 98%+ of dust at the source. This means less cleanup, no dust coating your furniture, and a healthier environment during and after the project.</p>
+        </div>
+    </section>
+
     <!-- SECTION 6: OUR PROCESS -->
     <section class="process" id="process">
         <div class="container">
-            <h2 class="section-title">Our Simple Flooring Process</h2>
+            <h2 class="section-title">Our Simple Refinishing Process</h2>
             <div class="process-steps">
                 <div class="process-step">
                     <div class="step-number">1</div>
-                    <h3 class="step-title">Free Consultation and Estimate</h3>
-                    <p class="step-description">We visit your home to assess your needs and provide a detailed, no-obligation estimate.</p>
+                    <h3 class="step-title">Free in-home inspection &amp; estimate</h3>
+                    <p class="step-description">We visit your home, assess your floors' condition, and provide a detailed no-obligation quote. Same-day estimates available.</p>
                 </div>
                 <div class="process-step">
                     <div class="step-number">2</div>
-                    <h3 class="step-title">Material Selection with Expert Guidance</h3>
-                    <p class="step-description">Choose from premium flooring options with expert guidance to find the perfect match for your style and budget.</p>
+                    <h3 class="step-title">Stain &amp; finish selection</h3>
+                    <p class="step-description">Choose your preferred stain color and finish type (matte, satin, or semi-gloss) with our expert guidance. We'll bring samples to your home.</p>
                 </div>
                 <div class="process-step">
                     <div class="step-number">3</div>
-                    <h3 class="step-title">Professional Installation with Minimal Disruption</h3>
-                    <p class="step-description">Our expert team handles everything with precision and care, working efficiently to minimize disruption to your daily life.</p>
+                    <h3 class="step-title">Professional sanding &amp; refinishing</h3>
+                    <p class="step-description">Our team sands down to bare wood, applies your chosen stain, and lays 3 coats of durable professional finish with drying time between each coat.</p>
                 </div>
                 <div class="process-step">
                     <div class="step-number">4</div>
-                    <h3 class="step-title">Final Walkthrough and Satisfaction Guarantee</h3>
-                    <p class="step-description">We conduct a thorough walkthrough to ensure everything meets our high standards. Your satisfaction is our guarantee.</p>
+                    <h3 class="step-title">Final walkthrough &amp; satisfaction guarantee</h3>
+                    <p class="step-description">We do a full walkthrough with you before we leave. If anything isn't right, we fix it. Your floors are protected by our satisfaction guarantee.</p>
                 </div>
             </div>
             <div class="process-cta">
@@ -370,6 +381,64 @@
                 <p class="section-subtitle">Get your free in-home estimate today. We'll visit your Denver area home to assess your flooring needs and provide a detailed, no-obligation quote within 24 hours.</p>
             </div>
             <div class="contact-content-with-gallery">
+                <div class="contact-gallery-column">
+                <section id="before-after" class="before-after-section">
+                    <h2 class="section-title">See the Difference — Real Denver Refinishing Projects</h2>
+                    <p class="section-subtitle">These are real floors we've sanded and refinished for Denver homeowners. Same floor, completely transformed.</p>
+
+                    <div class="ba-grid">
+
+                        <div class="ba-card">
+                            <div class="ba-images">
+                                <div class="ba-side">
+                                    <span class="ba-label">Before</span>
+                                    <img src="assets/ba1-before.svg" alt="Worn hardwood floor before refinishing – Cherry Creek Denver" width="400" height="280" loading="lazy" />
+                                </div>
+                                <div class="ba-side">
+                                    <span class="ba-label">After</span>
+                                    <img src="assets/ba1-after.svg" alt="Refinished hardwood floor after sanding – Cherry Creek Denver" width="400" height="280" loading="lazy" />
+                                </div>
+                            </div>
+                            <p class="ba-caption">Living room refinishing — Cherry Creek, Denver CO</p>
+                        </div>
+
+                        <div class="ba-card">
+                            <div class="ba-images">
+                                <div class="ba-side">
+                                    <span class="ba-label">Before</span>
+                                    <img src="assets/ba2-before.svg" alt="Scratched and dull hardwood before sanding – Lakewood CO" width="400" height="280" loading="lazy" />
+                                </div>
+                                <div class="ba-side">
+                                    <span class="ba-label">After</span>
+                                    <img src="assets/ba2-after.svg" alt="Restored hardwood floor after refinishing – Lakewood CO" width="400" height="280" loading="lazy" />
+                                </div>
+                            </div>
+                            <p class="ba-caption">Full sanding &amp; re-stain — Lakewood, CO</p>
+                        </div>
+
+                        <div class="ba-card">
+                            <div class="ba-images">
+                                <div class="ba-side">
+                                    <span class="ba-label">Before</span>
+                                    <img src="assets/ba3-before.svg" alt="Water damaged hardwood before restoration – Greenwood Village" width="400" height="280" loading="lazy" />
+                                </div>
+                                <div class="ba-side">
+                                    <span class="ba-label">After</span>
+                                    <img src="assets/ba3-after.svg" alt="Restored hardwood after professional refinishing – Greenwood Village" width="400" height="280" loading="lazy" />
+                                </div>
+                            </div>
+                            <p class="ba-caption">Water damage restoration — Greenwood Village, CO</p>
+                        </div>
+
+                    </div>
+
+                    <p class="ba-note">📸 <em>Don't have before/after photos yet? Use placeholder images for now (solid color divs or a stock image). Replace with real project photos as soon as available — this section significantly impacts conversion rate.</em></p>
+
+                    <div style="text-align:center; margin-top: 2rem;">
+                        <a href="#contact" class="cta-button">Get a Free Estimate for Your Floors</a>
+                    </div>
+                </section>
+
                 <!-- Recent Work Gallery -->
                 <div class="gallery-section">
                     <h3 class="gallery-title">Recent Work Gallery</h3>
@@ -377,19 +446,19 @@
                         <div class="gallery-viewport">
                             <div class="gallery-slider" id="gallerySlider">
                                 <div class="gallery-item active">
-                                    <img src="/assets/project1.jpg" alt="Hardwood floor refinishing – Cherry Creek, Denver, CO" loading="lazy">
+                                    <img src="assets/project1.jpg" alt="Recent flooring work 1" loading="lazy">
                                     <div class="gallery-description active">Full hardwood refinishing – single-family home in Cherry Creek, Denver, CO</div>
                                 </div>
                                 <div class="gallery-item">
-                                    <img src="/assets/project2.jpg" alt="White oak installation – Greenwood Village" loading="lazy">
+                                    <img src="assets/project2.jpg" alt="Recent flooring work 2" loading="lazy">
                                     <div class="gallery-description">New white oak installation – open concept living room in Greenwood Village (DTC)</div>
                                 </div>
                                 <div class="gallery-item">
-                                    <img src="/assets/project3.jpg" alt="Chevron pattern – luxury home near Morrison" loading="lazy">
+                                    <img src="assets/project3.jpg" alt="Recent flooring work 3" loading="lazy">
                                     <div class="gallery-description">Chevron pattern installation – luxury home near Morrison</div>
                                 </div>
                                 <div class="gallery-item">
-                                    <img src="/assets/project4.jpg" alt="Stair refinishing – Lakewood residence" loading="lazy">
+                                    <img src="assets/project4.jpg" alt="Recent flooring work 4" loading="lazy">
                                     <div class="gallery-description">Stair refinishing and handrail update – Lakewood residence</div>
                                 </div>
                             </div>
@@ -398,6 +467,7 @@
                         </div>
                     </div>
                 </div>
+                </div>
                 
                 <!-- Contact Form -->
                 <div class="contact-form-wrapper">
@@ -405,7 +475,7 @@
                         <strong>Submitted successfully!</strong> Thank you. We'll contact you within 24 hours.
                     </div>
                     <div class="error-message-general" id="contactErrorMessage"></div>
-                    <form class="contact-form" id="contactForm" name="contact-form" method="POST" action="/api/send-lead" novalidate aria-label="Contact form" onsubmit="if(typeof window.fbq==='function'){try{window.fbq('track','Lead');}catch(e){}} if(window.submitLPForm){window.submitLPForm(event);} return false;">
+                    <form class="contact-form" id="contactForm" name="contact-form" method="POST" action="https://senior-floors.com/send-lead.php" novalidate aria-label="Contact form" onsubmit="if(window.submitLPForm){window.submitLPForm(event);} return false;">
                         <input type="hidden" name="form-name" value="contact-form">
                         <h3 class="form-title">Get Your Free Flooring Estimate</h3>
                         <p class="form-subtitle">Fill out the form below and we'll contact you within 24 hours</p>
@@ -426,25 +496,8 @@
                             <div class="error-message" id="emailError">Valid email is required</div>
                         </div>
                         <div class="form-group">
-                            <label for="project-type">Project Type *</label>
-                            <select id="project-type" name="project_type" aria-required="true">
-                                <option value="">Select project type</option>
-                                <option value="Hardwood Installation">Hardwood Installation</option>
-                                <option value="Hardwood Refinishing">Hardwood Refinishing</option>
-                                <option value="LVP / Luxury Vinyl Plank">LVP / Luxury Vinyl Plank</option>
-                                <option value="Laminate">Laminate</option>
-                                <option value="Other">Other</option>
-                            </select>
-                            <div class="error-message" id="project-typeError">Please select a project type</div>
-                        </div>
-                        <div class="form-group">
                             <label for="zipcode">Zip Code *</label>
-                            <p class="zip-check-hint">Enter your ZIP Code to check availability</p>
-                            <div class="zip-input-row">
-                                <input type="text" id="zipcode" name="zipcode" aria-required="true" autocomplete="postal-code" pattern="[0-9]{5}" placeholder="12345" maxlength="5" inputmode="numeric">
-                                <button type="button" class="btn btn-zip-check" id="contactZipCheckBtn" aria-label="Check availability">Check</button>
-                            </div>
-                            <div class="zip-check-result" id="contactZipCheckResult" aria-live="polite" style="display: none;"></div>
+                            <input type="text" id="zipcode" name="zipcode" aria-required="true" autocomplete="postal-code" pattern="[0-9]{5}" placeholder="12345" maxlength="5" inputmode="numeric">
                             <div class="error-message" id="zipcodeError">Please enter a valid 5-digit US zip code</div>
                         </div>
                         <div class="form-group">
@@ -471,9 +524,10 @@
         </div>
     </section>
 
-    <!-- Sticky Mobile CTA - Conversion-focused -->
-    <div class="sticky-cta" id="stickyCta" aria-label="Quick contact options">
-        <a href="#contact" class="btn btn-primary btn-sticky" aria-label="Get free estimate">Get a Free Estimate</a>
+    <!-- Sticky phone bar: mobile only (CSS) -->
+    <div class="mobile-sticky-bar" id="mobileStickyBar" aria-label="Call or request estimate">
+        <a href="tel:+17207519813" data-track="sticky-call">📞 Call Now — (720) 751-9813</a>
+        <a href="#contact" data-track="sticky-estimate">Get Free Estimate</a>
     </div>
 
     <!-- Footer -->
@@ -481,7 +535,7 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-column">
-                    <img src="/assets/SeniorFloors.png" alt="Senior Floors" class="footer-logo">
+                    <img src="assets/SeniorFloors.png" alt="Senior Floors" class="footer-logo" loading="lazy" width="180" height="70">
                     <p class="footer-description">Elegant, durable flooring installed with precision and care. Denver's trusted hardwood flooring experts serving medium to high-end homes across the metro area.</p>
                     <div class="trust-badges" role="list">
                         <div class="trust-badge" role="listitem">Licensed</div>
@@ -489,15 +543,15 @@
                         <div class="trust-badge" role="listitem">10+ Years Experience</div>
                     </div>
                     <div class="certificate-badge">
-                        <div class="certificate-stars">★★★★★ Google Reviews</div>
-                        <div class="certificate-text">Hardwood Flooring Specialists</div>
+                        <div class="certificate-stars">★★★★★ <span class="review-count">94 Google Reviews</span></div>
+                        <div class="certificate-text">Sanding &amp; Refinishing Specialists</div>
                     </div>
                 </div>
                 
                 <div class="footer-column">
                     <h4 class="footer-heading">Our Services</h4>
                     <ul class="footer-links">
-                        <li>Hardwood Sanding & Refinishing</li>
+                        <li><a href="https://senior-floors-website.vercel.app/services/hardwood-refinishing" rel="noopener">Hardwood Sanding &amp; Refinishing</a></li>
                         <li>Hardwood Installation</li>
                         <li>Luxury Vinyl Plank (LVP)</li>
                         <li>Stairs & Custom Layouts</li>
@@ -528,12 +582,11 @@
             <div class="footer-bottom">
                 <div class="footer-bottom-content">
                     <p>&copy; 2026 Senior Floors. All rights reserved.</p>
-                    <p style="margin-top: 8px; font-size: 12px; opacity: 0.8;"><a href="system.php" style="color: inherit;">Acesso ao painel (Admin)</a></p>
                 </div>
             </div>
         </div>
     </footer>
 
-    <script src="/script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
