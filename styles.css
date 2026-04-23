@@ -929,11 +929,6 @@ section {
     min-width: 0;
 }
 
-.contact .before-after-section {
-    padding: var(--spacing-md) 0;
-    background: transparent;
-}
-
 @media (min-width: 768px) {
     .contact-content-with-gallery {
         grid-template-columns: 1fr 1fr;
@@ -1868,120 +1863,19 @@ select:invalid:not(:focus):not(:placeholder-shown) {
 }
 
 /* ============================================
-   LP additions: pricing anchor, before/after, FAQ, mobile bar, featured service
+   LP additions: FAQ, mobile bar, featured service, refinishing link
    ============================================ */
 
-.pricing-anchor {
-    background: #f0f4f8;
-    border-left: 4px solid var(--secondary-color);
-    font-size: 14px;
-    padding: 12px 16px;
-    border-radius: 6px;
-    margin-top: 12px;
-    color: var(--text-dark);
-    line-height: 1.5;
-}
-
-.pricing-anchor p {
-    margin: 0;
-}
-
-.before-after-section {
-    padding: var(--spacing-xl) var(--spacing-sm);
-    background: var(--bg-white);
-}
-
-.before-after-section .section-subtitle {
-    text-align: center;
-    max-width: 640px;
-    margin: 0 auto var(--spacing-md);
-    color: var(--text-light);
-}
-
-.ba-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 24px;
-}
-
-.ba-card {
-    background: var(--bg-light);
-    padding: var(--spacing-sm);
-    border-radius: 10px;
-    box-shadow: var(--shadow);
-}
-
-.ba-images {
-    display: flex;
-    gap: 8px;
-}
-
-.ba-side {
-    flex: 1;
-    position: relative;
-}
-
-.ba-side img {
-    width: 100%;
-    border-radius: 8px;
-    display: block;
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
-    background: #e2e8f0;
-}
-
-.ba-label {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    background: rgba(0, 0, 0, 0.65);
-    color: #fff;
-    font-size: 11px;
+a.refinishing-learn-more {
+    color: var(--secondary-color);
     font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 4px;
-    letter-spacing: 0.5px;
-    z-index: 1;
-}
-
-.ba-caption {
-    font-size: 13px;
-    color: #666;
-    text-align: center;
-    margin-top: 8px;
-}
-
-.ba-note {
-    font-size: 12px;
-    color: #888;
-    text-align: center;
-    margin-top: 1.5rem;
-    max-width: 720px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-a.cta-button {
-    display: inline-block;
-    margin-top: 0;
-    padding: 1.125rem 2.25rem;
-    font-size: 1.05rem;
-    font-weight: 600;
-    text-align: center;
     text-decoration: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: var(--transition);
-    background-color: var(--primary-color);
-    color: var(--bg-white);
-    box-shadow: var(--shadow);
+    border-bottom: 1px solid var(--secondary-dark);
 }
 
-a.cta-button:hover {
-    background-color: var(--primary-hover);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-    color: var(--bg-white);
+a.refinishing-learn-more:hover {
+    color: var(--secondary-hover);
+    border-bottom-color: var(--secondary-hover);
 }
 
 .faq-section {

@@ -1085,7 +1085,7 @@
         }, observerOptions);
 
         // Observe cards and sections for fade-in effect
-        const animatedElements = document.querySelectorAll('.service-card, .testimonial-card, .benefit-item, .process-step, .ba-card, .faq-item');
+        const animatedElements = document.querySelectorAll('.service-card, .testimonial-card, .benefit-item, .process-step, .faq-item');
         animatedElements.forEach(el => {
             el.style.opacity = '0';
             el.style.transform = 'translateY(20px)';
