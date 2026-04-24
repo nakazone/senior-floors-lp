@@ -1069,29 +1069,67 @@
     // Intersection Observer for Animations (Optional)
     // Fade in elements as they come into view
     // ============================================
+    const scrollFadeSelector = '.service-card, .testimonial-card, .benefit-item, .process-step, .faq-item';
+
+    function revealScrollFadeEl(el) {
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
+    }
+
+    function isScrollFadeElInViewport(el) {
+        const rect = el.getBoundingClientRect();
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        return rect.top < vh + 120 && rect.bottom > -80;
+    }
+
     if ('IntersectionObserver' in window) {
         const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
+            threshold: 0.05,
+            rootMargin: '0px 0px 80px 0px'
         };
 
         const observer = new IntersectionObserver(function(entries) {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
+                    revealScrollFadeEl(entry.target);
+                    observer.unobserve(entry.target);
                 }
             });
         }, observerOptions);
 
-        // Observe cards and sections for fade-in effect
-        const animatedElements = document.querySelectorAll('.service-card, .testimonial-card, .benefit-item, .process-step, .faq-item');
+        const animatedElements = document.querySelectorAll(scrollFadeSelector);
         animatedElements.forEach(el => {
             el.style.opacity = '0';
             el.style.transform = 'translateY(20px)';
             el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-            observer.observe(el);
+            if (isScrollFadeElInViewport(el)) {
+                revealScrollFadeEl(el);
+            } else {
+                observer.observe(el);
+            }
         });
+
+        window.addEventListener('load', function() {
+            animatedElements.forEach(el => {
+                if (el.style.opacity !== '1' && isScrollFadeElInViewport(el)) {
+                    revealScrollFadeEl(el);
+                    observer.unobserve(el);
+                }
+            });
+        });
+
+        window.setTimeout(function() {
+            animatedElements.forEach(function(el) {
+                if (el.style.opacity !== '1') {
+                    revealScrollFadeEl(el);
+                    try {
+                        observer.unobserve(el);
+                    } catch (e) { /* already unobserved */ }
+                }
+            });
+        }, 2500);
+    } else {
+        document.querySelectorAll(scrollFadeSelector).forEach(revealScrollFadeEl);
     }
 
     // ============================================
