@@ -1133,6 +1133,115 @@
     }
 
     // ============================================
+    // Before/after sliders (same behavior as senior-floors-website BeforeAfterSlider)
+    // ============================================
+    (function initBeforeAfterSliders() {
+        document.querySelectorAll('[data-ba-slider]').forEach(function(track) {
+            var clip = track.querySelector('.ba-slider-before-clip');
+            var beforeImg = track.querySelector('.ba-slider-before-img');
+            var divider = track.querySelector('.ba-slider-divider');
+            var knob = track.querySelector('.ba-slider-knob');
+            var badgeAfter = track.querySelector('.ba-slider-badge-after');
+            var badgeBefore = track.querySelector('.ba-slider-badge-before');
+            if (!clip || !beforeImg || !divider || !knob) return;
+
+            var pct = 50;
+            var dragging = false;
+            var capturePointerId = null;
+
+            function setTrackWidthVar() {
+                var w = track.offsetWidth;
+                if (w > 0) {
+                    track.style.setProperty('--ba-track-w', w + 'px');
+                    beforeImg.style.width = w + 'px';
+                }
+            }
+
+            function applyPct(p) {
+                pct = Math.max(0, Math.min(100, Math.round(p)));
+                clip.style.width = pct + '%';
+                divider.style.left = pct + '%';
+                divider.style.transform = 'translateX(-50%)';
+                if (badgeAfter) badgeAfter.classList.toggle('is-dimmed', pct > 50);
+                if (badgeBefore) badgeBefore.classList.toggle('is-dimmed', pct < 50);
+                knob.setAttribute('aria-label', 'Drag to compare before and after, position ' + pct + ' percent');
+            }
+
+            function setFromClientX(clientX) {
+                var r = track.getBoundingClientRect();
+                var x = Math.min(Math.max(clientX - r.left, 0), r.width);
+                applyPct((x / r.width) * 100);
+            }
+
+            function onWindowPointerMove(e) {
+                if (!dragging) return;
+                setFromClientX(e.clientX);
+            }
+
+            function endDrag() {
+                dragging = false;
+                if (capturePointerId !== null) {
+                    try {
+                        track.releasePointerCapture(capturePointerId);
+                    } catch (err) { /* ignore */ }
+                    capturePointerId = null;
+                }
+                window.removeEventListener('pointermove', onWindowPointerMove);
+                window.removeEventListener('pointerup', endDrag);
+                window.removeEventListener('pointercancel', endDrag);
+            }
+
+            function startDrag(e) {
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                e.preventDefault();
+                dragging = true;
+                try {
+                    if (e.pointerId !== undefined) {
+                        track.setPointerCapture(e.pointerId);
+                        capturePointerId = e.pointerId;
+                    }
+                } catch (err) { /* ignore */ }
+                setFromClientX(e.clientX);
+                window.addEventListener('pointermove', onWindowPointerMove);
+                window.addEventListener('pointerup', endDrag);
+                window.addEventListener('pointercancel', endDrag);
+            }
+
+            setTrackWidthVar();
+            applyPct(50);
+
+            if (typeof ResizeObserver !== 'undefined') {
+                var ro = new ResizeObserver(function() {
+                    setTrackWidthVar();
+                });
+                ro.observe(track);
+            } else {
+                window.addEventListener('resize', setTrackWidthVar);
+            }
+
+            track.addEventListener('pointerdown', function(e) {
+                if (e.target.closest('.ba-slider-knob')) return;
+                startDrag(e);
+            });
+
+            knob.addEventListener('pointerdown', function(e) {
+                e.stopPropagation();
+                startDrag(e);
+            });
+
+            knob.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    applyPct(pct - 5);
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    applyPct(pct + 5);
+                }
+            });
+        });
+    })();
+
+    // ============================================
     // Track CTA Clicks for Analytics
     // ============================================
     document.querySelectorAll('.btn-primary, .btn-secondary').forEach(button => {
