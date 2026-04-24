@@ -2069,6 +2069,7 @@ a.refinishing-learn-more:hover {
     margin: 0;
 }
 
+/* Containing block for absolute badges + layers (same idea as .ba-side { position: relative } on older layouts) */
 .ba-slider-track {
     position: relative;
     aspect-ratio: 16 / 9;
@@ -2079,6 +2080,7 @@ a.refinishing-learn-more:hover {
     box-shadow: var(--shadow);
     user-select: none;
     touch-action: none;
+    isolation: isolate;
 }
 
 .ba-slider-layer {
@@ -2115,7 +2117,7 @@ a.refinishing-learn-more:hover {
 .ba-slider-badge {
     position: absolute;
     top: 10px;
-    z-index: 5;
+    z-index: 20;
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.55);
     color: #fff;
@@ -2124,6 +2126,8 @@ a.refinishing-learn-more:hover {
     padding: 3px 9px;
     pointer-events: none;
     transition: opacity 0.2s ease;
+    line-height: 1.2;
+    white-space: nowrap;
 }
 
 .ba-slider-badge-after {
