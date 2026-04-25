@@ -22,8 +22,6 @@
         }
         if (!form) form = document.getElementById('contactForm') || document.getElementById('heroForm');
         if (!form || form.tagName !== 'FORM') return;
-        if (form.getAttribute('data-submitting') === 'true') return;
-        form.setAttribute('data-submitting', 'true');
         var formId = form.id;
         var isHero = formId === 'heroForm';
         var successEl = document.getElementById(isHero ? 'heroSuccessMessage' : 'contactSuccessMessage');
@@ -38,6 +36,11 @@
         var zipClean = (zipVal || '').replace(/\D/g, '');
         if (!zipClean || zipClean.length < 5) { if (errorEl) { errorEl.textContent = 'Valid 5-digit zip code is required.'; errorEl.style.display = 'block'; } return; }
         if (errorEl) errorEl.style.display = 'none';
+
+        // Only lock the form once validation passed.
+        if (form.getAttribute('data-submitting') === 'true') return;
+        form.setAttribute('data-submitting', 'true');
+
         var btn = form.querySelector('button[type="submit"]');
         if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
         // Igual ao curl que salvou no banco (teste.curl@exemplo.com): mesmo URL, mesmo body (6 campos)
