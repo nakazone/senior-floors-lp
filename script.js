@@ -50,9 +50,11 @@
             '&message=' + encodeURIComponent((form.querySelector('[name="message"]') || {}).value || '');
         var url = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
             ? window.SENIOR_FLOORS_FORM_URL
-            : (window.location.hostname === 'lp.senior-floors.com'
-                ? 'https://senior-floors.com/send-lead.php'
-                : (new URL(form.getAttribute('action') || 'send-lead.php', window.location.href).href));
+            : (function() {
+                var host = window.location.hostname || '';
+                if (host.indexOf('lp.') === 0 && host.endsWith('senior-floors.com')) return '/api/send-lead';
+                return (new URL(form.getAttribute('action') || 'send-lead.php', window.location.href).href);
+            })();
         fetch(url, { method: 'POST', body: body, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' } })
             .then(function(r) { return r.text().then(function(t) { return { status: r.status, text: t }; }); })
             .then(function(r) {
