@@ -43,14 +43,28 @@
 
         var btn = form.querySelector('button[type="submit"]');
         if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
-        // Igual ao curl que salvou no banco (teste.curl@exemplo.com): mesmo URL, mesmo body (6 campos)
-        var formNameVal = (form.querySelector('[name="form-name"]') || {}).value || form.getAttribute('name') || 'contact-form';
-        var body = 'form-name=' + encodeURIComponent(formNameVal) +
-            '&name=' + encodeURIComponent(nameVal.trim()) +
-            '&email=' + encodeURIComponent(emailVal.trim()) +
-            '&phone=' + encodeURIComponent(phoneVal.trim()) +
-            '&zipcode=' + encodeURIComponent(zipVal.trim()) +
-            '&message=' + encodeURIComponent((form.querySelector('[name="message"]') || {}).value || '');
+        // Build body from all form fields (same strategy as Hero/Contact handlers)
+        // This keeps behavior consistent between the two forms and preserves any hidden tracking fields.
+        var params = new URLSearchParams();
+        try {
+            form.querySelectorAll('input, textarea, select').forEach(function(el) {
+                if (!el || !el.name) return;
+                // ignore unchecked radios/checkboxes
+                if ((el.type === 'checkbox' || el.type === 'radio') && !el.checked) return;
+                params.append(el.name, el.value || '');
+            });
+        } catch (_) {}
+        if (!params.has('form-name')) {
+            var formNameVal = (form.querySelector('[name="form-name"]') || {}).value || form.getAttribute('name') || 'contact-form';
+            params.append('form-name', formNameVal);
+        }
+        // Ensure we send normalized values for the required fields
+        params.set('name', nameVal.trim());
+        params.set('email', emailVal.trim());
+        params.set('phone', phoneVal.trim());
+        params.set('zipcode', zipClean.slice(0, 5));
+        if (!params.has('message')) params.set('message', (form.querySelector('[name="message"]') || {}).value || '');
+        var body = params.toString();
         var url = (typeof window.SENIOR_FLOORS_FORM_URL === 'string' && window.SENIOR_FLOORS_FORM_URL)
             ? window.SENIOR_FLOORS_FORM_URL
             : (function() {
