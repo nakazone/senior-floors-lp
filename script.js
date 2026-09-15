@@ -1055,19 +1055,40 @@
     // ============================================
     function formatPhoneInput(input) {
         input.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            
-            // Format as (XXX) XXX-XXXX
-            if (value.length > 0) {
-                if (value.length <= 3) {
-                    value = `(${value}`;
-                } else if (value.length <= 6) {
-                    value = `(${value.slice(0, 3)}) ${value.slice(3)}`;
+            let digits = e.target.value.replace(/\D/g, '');
+            let value = '';
+
+            if (digits.length === 0) {
+                e.target.value = '';
+                return;
+            }
+
+            // Leading 1 = US country code → +1 (XXX) XXX-XXXX (11 digits)
+            // Otherwise → (XXX) XXX-XXXX (10 digits)
+            if (digits[0] === '1') {
+                digits = digits.slice(0, 11);
+                const rest = digits.slice(1);
+                value = '+1';
+                if (rest.length > 0) {
+                    if (rest.length <= 3) {
+                        value += ` (${rest}`;
+                    } else if (rest.length <= 6) {
+                        value += ` (${rest.slice(0, 3)}) ${rest.slice(3)}`;
+                    } else {
+                        value += ` (${rest.slice(0, 3)}) ${rest.slice(3, 6)}-${rest.slice(6)}`;
+                    }
+                }
+            } else {
+                digits = digits.slice(0, 10);
+                if (digits.length <= 3) {
+                    value = `(${digits}`;
+                } else if (digits.length <= 6) {
+                    value = `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
                 } else {
-                    value = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6, 10)}`;
+                    value = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
                 }
             }
-            
+
             e.target.value = value;
         });
     }
